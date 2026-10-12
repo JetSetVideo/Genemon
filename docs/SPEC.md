@@ -83,7 +83,7 @@ Last updated: 2026-10-12 (pass 2). Measurements: `artifacts/balance/REPORT.md`, 
 | L3 | Ranked conditions are drawn, not picked | arena drawn by the ladder; real hour; real weather when the arena has it | `src/ladder/ranked.ts` | TESTED `[SPEC L3]` |
 | L4 | Rating and rewards cannot be pumped | a seed pays XP, W/L and rating once; practice/mirror/wild unrated; ranked abandon = forfeit | `ranked.ts`, `app.ts` finishBattle/abandonBattle | TESTED `[SPEC L4]` |
 | D5 | Hardware and session data | device, form factor, frame time, session clock | `src/ui/realworld.ts`, `stage.ts` | LIVE |
-| D6 | Neural networks, projections, data-science graphs | MLP win predictor vs ladder vs base rate; PCA + k-means of genomes | `src/ml/*`, Insights screen | MODEL (mlp.ts has no caller) - builder in progress |
+| D6 | Neural networks, projections, data-science graphs | MLP win predictor vs ladder vs base rate; PCA + k-means of genomes | `src/ml/*`, Insights screen | MODEL: the win predictor (MLP vs logistic vs ladder vs base rate) and the PCA / k-means projection are built; 9 tests pass. The Insights screen is written but NOT wired or browser-checked: quest D6. Builder's single 300-battle run (75 held out), log-loss: neural net 0.609, logistic 0.585, logistic on the ladder's 8 conditions 0.571 (70.7 %), live ladder after one pass 0.674, base rate 0.692. The neural net does not beat logistic regression. |
 | D7 | Real-world data at the top of the flow | local time, season, moon, deterministic weather-of-day, device | `realworld.ts` -> battles (hour, weather) | LIVE (offline; live weather API: OPEN, quest G1) |
 
 ## W - World, economy, quests
