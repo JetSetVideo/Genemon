@@ -11,8 +11,25 @@
 >    MLP + outcome predictor) are pure, seeded and have no dependencies.
 > 4. The ledger is the only data source. `ladder.match` rows become a dataset through `matchDataset()` and
 >    feed the outcome model; genome/phenotype rows feed the Genospace PCA and the archetype clusters.
-> 5. Status: **TESTED, not wired**. There are 25 unit tests, and every mutant with a behavioural effect is
->    caught. The engine/UI integration is OPEN (see §15).
+> 5. Status: **LIVE for the ladder** (25 unit tests + 11 integration tests; every mutant with a
+>    behavioural effect is caught). `src/ui/ladderStore.ts` records the ladder on every ranked battle and
+>    persists it under `genemon.ladder`; `src/ladder/context.ts` computes the pre-match features from the
+>    two teams and the arena; the Ladder screen shows the learned weights and the best/worst conditions.
+>    **Caveat (quest L2):** a fresh ladder starts with all condition weights at 0 and learns at lr 0.02, so
+>    in a 1,000-match simulation the conditions moved the expected score by under 1 point over the first
+>    300 matches. The fix is to seed the weights from a corpus fit; the fit must be re-measured, not copied.
+> 6. `context.ts` also RESCALED four of the §4 features away from the doc's first proposal (typeAdvantage
+>    ×1.5, arenaAffinity ×8, weatherAffinity ×4, synergyDiff ×2, and synergy now includes the real team
+>    modifiers) because at the doc's scale the learned weights exceeded the cap of 4. `powerDiff` still
+>    does: its spread is ~0.06, so it needs a `tanh(4·gap)`-style rescale before its weight fits under the
+>    cap. `rhythmFit` (the doc's own v2 name) is not yet in `CONTEXT_FEATURES`.
+> 7. The learned-model layer is **MODEL, not wired**: `src/ml/winModel.ts` (train + holdout scores,
+>    calibration, permutation importance) and `src/ml/projection.ts` (PCA, k-means, elbow) are built and
+>    tested (9 tests) and the screen that graphs them is written but not in the nav (quest D6). Measured
+>    once on 300 battles (75 held out), log-loss: **neural net 0.609**, logistic on the same 22 inputs
+>    0.585, logistic on the ladder's 8 conditions **0.571 (70.7 % accuracy)**, the live ladder after one
+>    pass 0.674, base rate 0.692. The neural network does **not** beat logistic regression: that is the
+>    result to report, not a tuning target.
 
 Owner: Data scientist (`src/ladder/*`, `src/ml/*`, this file). Tests: `tests/ladder_test.ts`,
 `tests/ml_test.ts`. Status vocabulary: `LIVE` = seen running in the game, `TESTED` = unit-tested but not

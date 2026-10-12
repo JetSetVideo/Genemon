@@ -5,7 +5,7 @@
 > 2. The ground is a **global** ~100 m cell grid. Cells are claimed **on site**, defended remotely, and decay when neglected. Homes keep a garrison floor.
 > 3. Wild spawns = base × place bias × ground × time of day × weather × **ecology**. Releases seed an element locally and catches deplete it; both fade with a 2-day half-life.
 > 4. Physical vs virtual is data: every action is physical everywhere or virtual everywhere. Only arena/dungeon/portal/stadium/museum/library are virtually reachable.
-> 5. Privacy by construction: a home is stored only as its 250 m cell centre, and ledger rows carry 100 m cell centres. Status: **TESTED** (18 tests, 14/14 mutants caught), **not integrated** yet.
+> 5. Privacy by construction: a home is stored only as its 250 m cell centre, and ledger rows carry 100 m cell centres. Status: **LIVE** (18 model tests + 10 store tests, 20/20 mutants caught; integrated in pass 2 as `src/render/worldView.ts` + `src/ui/worldStore.ts` + the World screen, captured on desktop and phone). Honest limits: there is no real GPS — a clearly labelled "Simulated GPS: I am physically here" toggle (default OFF) stands in for it, so physical-only actions are refused until the player declares presence; buying food in person costs nothing yet because nothing in the UI earns credits; the app can tag its own rows `simulated-gps` but cannot tag the engine's `world.*` rows; and the engine's refusal text still says "a epic" and "a arena".
 
 Owner: World designer (see `docs/team/ROSTER.md`). Code is the source of truth; the tables below were
 generated from the module on 2026-10-12 by a scratch probe (see [Evidence](#evidence)).

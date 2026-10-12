@@ -38,14 +38,15 @@ from a seed. Growth follows Gall's law: each layer was added only on top of a wo
 | data | `axes.ts` (26 axes, 6 spaces), `elements.ts` (14 elements, chart, 18 reactions), `grounds.ts` (17), `weather.ts` (12), `lifestyle.ts` (14 foods, 15 experiences, habitat nudges), `achievements.ts`, `quests.ts` | yes | core/content tests |
 | genome | `genome.ts`, `epigenetics.ts`, `phenotype.ts`, `genemon.ts` (individual + life functions), `breeding.ts` | yes | core tests |
 | body | `skeleton.ts` | yes (three math only) | core tests [SPEC K1] |
-| world | `arena.ts`, `physics.ts`; `worldmap.ts` (builder: map, places, territories, spawns) | yes | battle/world tests |
-| combat | `moves.ts` (77 moves + cost), `team.ts`, `battle.ts`, `scenario.ts` | yes | battle tests + `tools/scenarios.ts` |
-| economy | `items.ts`, `market.ts` (builder: auction house) | yes | `tests/market_test.ts` |
-| ladder / ml | `mmr.ts` (condition-aware MMR), `stats.ts` (PCA, k-means, Wilson...), `mlp.ts` (neural net) | yes | ladder/ml tests |
+| world | `arena.ts`, `physics.ts`, `worldmap.ts` (map, places, territories, spawns) | yes | battle/world tests |
+| combat | `moves.ts` (82 moves + cost + meta), `team.ts` (slots, synergies, formation), `battle.ts` (phases, AI, reactions, zones, statuses, cleave, tenacity), `scenario.ts` | yes | battle tests + `tools/scenarios.ts` |
+| economy | `items.ts`, `market.ts` (auction house + `toJSON`/`fromJSON`) | yes | `tests/market_test.ts` |
+| ladder / ml | `mmr.ts` (condition-aware MMR), `context.ts` (pre-match features from two teams + arena), `ranked.ts` (drawn conditions, what counts as rated), `stats.ts` (PCA, k-means, Wilson...), `mlp.ts`, `winModel.ts` + `projection.ts` (built, unwired) | yes | ladder/ml tests |
 | net | `protocol.ts` (envelopes, hashing, replay protection, rate limits), `antiCheat.ts` (GPS plausibility) | yes | `tests/net_test.ts` |
-| sim | `personas.ts` (12 simulated players) | yes | `tests/personas_test.ts` |
-| render | `stage.ts`, `creature.ts`, `textures.ts`, `animator.ts`, `arenaView.ts`, `fx.ts`, `battleCamera.ts`, `battleView.ts`, `labView.ts`, `genospaceView.ts` | no (WebGL) | `tools/capture.ts` |
-| ui | `app.ts`, `dom.ts`, `profile.ts`, `realworld.ts`, `charts.ts`, `widgets.ts`, `screens/*` | no (DOM) | `tools/capture.ts` |
+| progress | `events.ts` (ledger rows → content events), `progress.ts` (counters, quest log, rewards paid once) | yes | `tests/progress_test.ts` |
+| sim | `personas.ts` (12 simulated players); the simulator itself is parked in `artifacts/wip/sim/` (quest S1) | yes | `tests/personas_test.ts` |
+| render | `stage.ts`, `creature.ts`, `textures.ts`, `animator.ts`, `arenaView.ts`, `fx.ts`, `display.ts` (battle display scale), `battleCamera.ts`, `battleView.ts`, `labView.ts`, `genospaceView.ts`, `worldView.ts` | no (WebGL) | `tools/capture.ts` |
+| ui | `app.ts`, `dom.ts`, `profile.ts`, `realworld.ts`, `charts.ts`, `widgets.ts`, the stores (`ladderStore.ts`, `marketStore.ts`, `worldStore.ts`, `progressStore.ts`), `screens/*` | no (DOM) | `tools/capture.ts` |
 
 ## Key design decisions (and why)
 
@@ -68,15 +69,33 @@ from a seed. Growth follows Gall's law: each layer was added only on top of a wo
   copies `web/*`, and fails if the bundle contains a remote import.
 - `tools/serve.ts`: allowlisted static server with CSP `default-src 'self'` (no inline anything).
 - `tools/capture.ts`: real Chrome (headless, ANGLE/Metal), fixed clock, offline routing, per-shot
-  engine snapshots, contact sheets, console-error/overflow/blocked-request report.
+  engine snapshots, contact sheets, console-error/overflow/blocked-request report, a per-shot
+  readability table (smallest fighter on screen, HUD overlap — currently blind to fighters outside the
+  canvas: quest C2), and a roster-driven pass that photographs every screen in `screens/registry.ts`.
 - `tools/scenarios.ts`: the gameplay scenarios measured over many seeds with confidence intervals.
+- `tools/balance.ts`: element matrix at equal size class, big-vs-swarm parity at equal slots, and a
+  random-team corpus (draw rate, durations, hit rate, moves learned vs used) → `artifacts/balance/`.
+- `tools/gen-lists.ts` (`deno task lists`): regenerates every generated table of `docs/LISTS.md` from
+  the code, so the master lists cannot drift.
+
+Persistence today is per-profile `localStorage` plus four device-level documents, all with the same
+shape rules (JSON, versioned, restored through a rebuild rather than a deep merge): the profiles
+(`genemon.profiles`), the auction house (`genemon.market`), the world (`genemon.world`), the ladder
+(`genemon.ladder`) and per-profile progress (`genemon.progress.<id>`).
 
 ## Growth path (Gall's law)
 
 1. ✅ A working deterministic core: genome → phenotype → battle, tested and measured.
 2. ✅ A working 3D presentation of that core (arena, creatures from skeletons, FX, camera, HUD).
 3. ✅ A working personal loop: profiles, team, lab (feed / live / breed), settings, data.
-4. ⏳ Integrate the builder modules one at a time, each behind a measured probe: condition-aware
-   ladder → auction house → world map & territories → quests & achievements → persona simulator.
-5. ⏳ Online: deterministic replays verified by a server (`src/net/protocol.ts`), then presence,
-   then the persistent shared world. Never start the server before the local game is fun.
+4. ✅ The social layer: condition-aware ladder, auction house (persisted, keeps trading offline),
+   world map & territories, quests & achievements — integrated, browser-verified, and each with its
+   own screen. Caveat: the ladder learns its condition weights from zero (quest L2).
+5. ⏳ The simulated society: 12-persona simulator (half-built, parked in `artifacts/wip/sim/`).
+6. ⏳ The learning game: the win predictor and genome projections exist and are tested; wiring them
+   into the Insights screen is quest D6. In the one measured run the neural net did not beat logistic
+   regression — that is a result, not a bug: report it rather than tuning until it wins.
+7. ⏳ Online: deterministic replays verified by a server (`src/net/protocol.ts`), then presence, then
+   the persistent shared world. Never start the server before the local game is fun.
+8. ⏳ Quality gate before any of the above: the battle camera and readability (quest C2) — rounds 1 and
+   3 both scored the build not-ready-to-ship.

@@ -39,6 +39,9 @@ the ledger as JSONL and a profile as JSON from the Data screen.
 | `battle.fail` | e.g. dig on stone | move → reason |
 | `battle.ko` | `Battle.knockOut` | t → team |
 | `battle.end` | `Battle.checkEnd` | arena, weather start/end, hour, synergies → winner, duration, hpA, hpB, mvp, reactions |
+| `battle.conduction` | `Battle.hit` (electric chain) | move, ally, rank, conduction → damage, hp [SPEC X3] |
+| `battle.synergyLost` | `Battle.knockOut` → `dropSynergies` | lost, survivors → remaining [SPEC X4] |
+| `battle.settled` | `App.finishBattle` | seed, ranked, fresh, forfeit, kind → mmrDelta, mmr, winner [SPEC L4] |
 | `genemon.feed` | `feed()` | food, units → hunger, bond |
 | `genemon.experience` / `.denied` | `live()` | experience, units, physical → xp / reason |
 | `genemon.exposure` | `expose()` | ground, hours → total hours |
@@ -46,14 +49,16 @@ the ledger as JSONL and a profile as JSON from the Data screen.
 | `genemon.levelUp` | `settle()` | from → to, moves |
 | `genemon.evolve` | `settle()` | fromStage, growth, level → toStage, height, sizeClass |
 | `genemon.specialize` | `settle()` | primary/secondary before → after |
-| `genemon.create` / `genemon.release` | Lab screen | detail (operation, names) |
+| `genemon.create` / `genemon.release` | Lab screen | detail (operation, names). **Key mismatch:** the Lab's `genemon.release` row carries only `detail`, while the content contract's `genemon.release` expects `primary`/`sizeClass` → `spawn` (the world screen writes that shape). A release from the Lab therefore moves no element- or size-filtered achievement. Fix when the release flow is unified |
 | `team.change` | Team screen | detail (ordered ids) |
 | `ui.navigate`, `ui.settings`, `ui.profile.switch` | `App` | detail |
 | `device.session.start`, `device.session.pause`, `device.session.resume`, `device.gpu` | `Session`, `App` | cores, memory, touch, screen, dpr, form factor / active ms / renderer, max texture |
-| `market.*` (post, bid, buyout, cancel, sold, expired, deposit, withdraw, give, take, reject, company.restock, npc.round, genemon.appraise) | `src/economy/market.ts` | see `docs/ECONOMY.md` (not yet wired into the app) |
-| `ladder.match` | `src/ladder/mmr.ts` | see `docs/AI-AND-DATA.md` (not yet wired) |
-| `world.claim`, `world.move`, ... | `src/world/worldmap.ts` | see `docs/WORLD.md` (not yet wired) |
-| `net.reject`, `net.ratelimit`, `net.battle.reject`, `anticheat.gps`, `anticheat.presence`, `anticheat.throttle` | `src/net/*` | see `docs/NETWORK.md`, `docs/SECURITY.md` |
+| `market.*` (post, bid, buyout, cancel, sold, expired, deposit, withdraw, give, take, reject, company.restock, npc.round, genemon.appraise, **catchup, genemon.escrow, genemon.delivered, genemon.returned, genemon.departed, store.reset**) | `src/economy/market.ts` + `src/ui/marketStore.ts` | see `docs/ECONOMY.md` (wired pass 2) |
+| `ladder.match` | `src/ladder/mmr.ts`, `src/ui/ladderStore.ts` | conditions, expected, delta → see `docs/AI-AND-DATA.md` (wired pass 2) |
+| `world.claim`, `world.move`, `virtual.*`, `map.*`, `territory.reinforce`, `world.purchase`, `genemon.catch`, `genemon.release` | `src/world/worldmap.ts`, `src/ui/worldStore.ts` | see `docs/WORLD.md` (wired pass 2). `world.*` rows mean GPS-verified presence; everything else is virtual |
+| `quest.complete`, `achievement.unlock` | `src/progress/progress.ts` via `src/ui/progressStore.ts` | quest/achievement id, reward → totals (wired pass 2) |
+| `net.reject`, `net.ratelimit`, `net.battle.reject`, `anticheat.gps`, `anticheat.presence`, `anticheat.throttle` | `src/net/*` | see `docs/NETWORK.md`, `docs/SECURITY.md` (no server yet) |
+| `ml.winModel.trained` | `src/ui/screens/insights.ts` | corpus size, holdout scores → metrics (screen not wired yet: quest D6) |
 
 Battles can log in `detail: "summary"` mode (start / reactions / weather / KO / end only) for
 large simulations; the app uses `"full"`.
@@ -65,15 +70,17 @@ Profile {                       // localStorage "genemon.profile.<id>", index in
   id, name, kind: "human" | "ai", createdAt, seed,
   settings: { theme, quality, pixelRatio, shadows, camera, shake, speed, hourMode, hour, showSkeleton, units },
   credits, collection: Genemon[], team: string[] /* ordered ids */, mmr,
-  stats: { battles, wins, losses, draws }, history: BattleRecordLite[] /* last 60 */,
-  pokedex: string[] /* genome ids seen */, achievements: string[], home: {lat, lon} | null, friends: string[]
+  stats: { battles, wins, losses, draws }, history: BattleRecordLite[] /* last 60, each with kind: ranked | practice | replay | forfeit */,
+  pokedex: string[] /* genome ids seen */, achievements: string[], home: {lat, lon} | null, friends: string[],
+  rewardedSeeds: number[] /* seeds that already paid XP, record and rating: a rematch pays nothing twice [SPEC L4] */
 }
 Genemon { id, genome: Genome, name, owner, bornAt, conditions: Conditions, moves: string[], knowledge: Record<"fire>plant", number>, stage }
 Genome  { id /* content hash: the NFT token id candidate */, seeds: {genotype, environment}, generation, lineage: [parentA, parentB],
           kind, pattern, axes: Record<AxisId, [allele, allele]>, plan: Record<PlanGene, [allele, allele]>, hue: [a, b], mutations: string[] }
 Conditions { ageDays, xp, exposure: Record<GroundId, hours>, diet: Record<FoodId, units>, battles: { won, lost, draws, kos,
              damageTakenBy: Record<ElementId, number>, elementsUsed: Record<ElementId, number> },
-             experiences: Record<ExperienceId, units>, activeHour, bond, hunger }
+             experiences: Record<ExperienceId, units>, activeHour /* circular running mean of the local
+             hours the creature actually played, weight ACTIVE_HOUR_RATE; drives the rhythm axis [SPEC G2] */, bond, hunger }
 ```
 
 Derived (never stored): `Phenotype` (`express(genome, conditions)`), `Skeleton` (`buildSkeleton(ph)`),

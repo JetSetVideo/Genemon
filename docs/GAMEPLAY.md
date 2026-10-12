@@ -50,8 +50,15 @@ Abilities: **fly** (avian, or wings > 0.62 & altitude > 0.35 & density < 900), *
 
 ## 4. Teams — `src/combat/team.ts`
 
-Six slots, ordered: index 0 leads and acts first (initial cooldown 0.5 s + 0.35 s per position).
-Synergies (computed, then applied as stat or damage multipliers):
+Six slots, ordered. Order is BOTH initiative and formation: index 0 and 1 (a duo entirely; half of a
+bigger team, rounded up) stand in the front row and act first (initial cooldown 0.5 s + 0.35 s per
+position); the rest stand one row behind them (row gap 1.5-2.5 m by body height). Losing the members
+that enable a synergy takes it away mid-battle (`battle.synergyLost`).
+
+Two mechanics answer a swarm of small bodies: **cleave** (a body of 3+ slots that strikes in melee also
+deals 50 % to other enemies inside a 60-degree frontal arc) and **tenacity** (a harmful status applied
+to a big body lasts `1 / (1 + 0.2 (slots - 1))`, so a swarm cannot stack statuses with its extra
+actions). Synergies (computed, then applied as stat or damage multipliers):
 
 | Synergy | Condition | Effect |
 |---|---|---|
@@ -84,16 +91,27 @@ field), buff, heal, weather, terrain, dig, fly, phase.
 **Energy cost** = `max(4, round((damage × 0.3 × tempo + effects) × rarity × meta))` with
 `damage = power × (1 + 0.28·area) × (range > 4 ? 1 + 0.025(range − 4) : 1) × (0.6 + 0.5·accuracy)`,
 `tempo = 1 + clamp(0.9 − charge, −0.6, 0.6) × 0.45`, effects = statuses `9 × chance × duration/3`
-(self ×1.2), knockback/pull `1.4 × value`, ground change 9, weather 16, heal `40 × fraction`,
-dig/fly/phase +6; rarity: neutral 0.9, light/void 1.08, shadow/psychic 1.06; **meta** =
-`clamp(1 + 0.3 × (share × N − 1)/4, 0.8, 1.25)` from ladder usage share (model ready, live feed open).
-Energy starts at 60%, regenerates `7 + 7·vitality01` per second (×1.5 while resting); flying drains 1.5/s.
+(self ×1.2), knockback/pull `1.4 × value`, ground change 9, weather 16, heal `60 × fraction`,
+dig/fly/phase +6; rarity: neutral 0.9, light/void 1.08, shadow/psychic 1.06; **meta** = piecewise on
+`r = share × N` (1 = average): `0.8 + 0.2·r` below average, `1 + 0.0625·(r − 1)` above, clamped
+0.8..1.25 — from the balance corpus today; feeding the live ladder's usage shares into it is quest M1.
+Energy starts at 60%, regenerates `8.5 + 5·vitality01` per second (×1.5 while resting); flying drains
+1.5/s. A flyer that dives to melee stays low and hittable by ground melee for its move plus 0.8 s.
 
 ## 6. A hit — `Battle.hit()` in `src/combat/battle.ts`
 
 Hit chance = `move.accuracy × accuracy × visibility^(ranged ? 1 : 0.3)` × blinded 0.65 × focused 1.05
-× zone accuracy (smoke 0.65, dust 0.8, mist 0.85) − target evasion (evasive ×2 + 0.1; resting ×0.5;
-frozen/staggered 0), clamped 0.05..0.99.
+× zone accuracy (smoke 0.65, dust 0.8, mist 0.85) × **(1 − min(EVASION_CAP 0.35, evasion))**. Evasion
+is multiplicative and capped [SPEC X5]: evasive status `×1.6 + 0.06`; resting ×0.5; frozen or staggered
+0. Clamped 0.05..0.99. Evasion is also priced inside the power budget, so a dodge build pays for it in
+raw HP and attack.
+
+Heals have diminishing returns: each heal a fighter casts in one battle restores `HEAL_DECAY` 0.6 × the
+previous one (100 %, 60 %, 36 %...), so a heal tank cannot out-sustain the fight [SPEC X2].
+
+A creature's own clock matters too: every battle, feed and experience records its local hour into a
+circular running mean (`conditions.activeHour`, `noteActivity()`, [SPEC G2]), and that mean drives the
+rhythm axis (+day / −night), which the damage formula reads as a ±6 % day/night term.
 
 Damage = power × atk/40 × 100/(100 + def·shielded 1.6·softened 0.75) × **type** (chart, 0.25..4) ×
 STAB 1.2 × **weather** element multiplier × **ground affinity** of the attacker's tile × **conduction**
@@ -109,8 +127,11 @@ chances ×1.5 and knockback ×1.8, and on screen: slow motion, rings, a screen f
 
 After a hit: anger rises with damage taken, fear rises below 30% HP (less for brave Genemon),
 the attacker learns the real type multiplier (`memory["fire>plant"]`, faster when wise), statuses roll,
-knockback/pull impulses go to the physics, and **electric current chains** to every other body
-within 4.5 m that is wet or standing in water — allies included.
+knockback/pull impulses go to the physics, and **electric current chains** to the bodies within 4.5 m
+that are wet or standing in water — allies included [SPEC X3]. Each bystander takes the RAW strike
+re-weighted by its own type and defence, at the weaker of the two conductivities, nearest first, at
+most 2 others (falloff 1 / 0.6), and the chain is labelled `conduction` (or `conduction (ally)` for
+friendly fire, which the AI avoids choosing when its own team is standing wet).
 
 ## 7. Elements in space — reactions (`REACTIONS` in `src/data/elements.ts`)
 
@@ -151,7 +172,11 @@ and (for non-swimmers) deep water.
 
 ## 10. Winning
 
-A battle ends when a side has no conscious Genemon, or at 90 s on slot-weighted remaining HP (a draw
-within 2%). Results fold back into each Genemon: battle record, element exposure (epigenetics), XP,
-bond, learned type knowledge. The ladder (`src/ladder/mmr.ts`, being integrated) rates the result
-against the *conditions* of the match, not only the opponent's rating.
+A battle ends when a side has no conscious Genemon, or at 90 s on remaining HP share (plain Σhp/ΣmaxHp;
+slot weighting double-counted big bodies [SPEC X8]), a draw within 2 %. Leaving a ranked battle after
+it starts is a forfeit loss. Results fold back into each Genemon: battle record, element exposure
+(epigenetics), XP, bond, learned type knowledge. The condition-aware ladder (`src/ladder/mmr.ts` +
+`context.ts`, wired through `src/ui/ladderStore.ts`) rates the result against the *conditions* of the
+match, not only the opponent's rating — but its condition weights start at 0, so conditions barely move
+ratings for the first few hundred matches (quest L2). Ranked battles draw their own arena, and each seed
+pays XP, record and rating exactly once [SPEC L3] [SPEC L4].

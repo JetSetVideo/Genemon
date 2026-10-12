@@ -12,3 +12,6 @@ dist/
 artifacts/tmp/
 artifacts/**/*.webm
 artifacts/**/*.mp4
+
+# scratch probes stay reviewable, their datasets do not
+artifacts/tmp/*.json

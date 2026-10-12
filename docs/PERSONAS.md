@@ -545,14 +545,7 @@ time-of-day, ground exposure or battles; unsaturated). It is a direction, not a 
   Inès (a daily spicy pepper) or Yanis (gym → might, which no element signature reads). Unless ground
   exposure, time of day and battles open those paths, "your lifestyle shapes your monster" collapses to three
   elements. The simulator must measure reachability per favourite element (A5).
-- **F3 — `activeHour` must be a circular mean.** `Conditions.activeHour` is documented as a "mean local hour".
-  An arithmetic mean turns Thomas (plays mostly 20:00–03:00) into a midday creature (dayness +0.96 vs −0.75
-  circular) and Camille into a day player (+0.79 vs −0.28). Measured on the rhythm axis after 28 days (food +
-  experience + time terms of `epigeneticPressure`): arithmetic → Thomas **+0.58**, Gérard +0.50 (the night owl
-  ends MORE day-like than the early riser, so A5 fails); circular → Thomas **−0.06**, Camille +0.07, Gérard
-  +0.51, Karim +0.61. Use the circular mean and scale the rhythm push by its resultant length R, so an
-  all-hours account (Claude, R = 0.09) stays neutral instead of flipping on noise (circular alone gives it
-  −0.30).
+- **F3 — `activeHour` must be a circular mean. FIXED pass 3 ([SPEC G2]), with a caveat.** `Conditions.activeHour` is now a circular running mean: `noteActivity()` moves it along the shorter arc by `1 − (1 − 0.06)^weight` on every battle, feed and experience (battles call it with weight 2), and the test pins that alternating 23 h / 1 h settles near midnight — never noon, which is what an arithmetic mean gives. Before the fix nothing wrote `activeHour` at all, so every Genemon sat at 13 h and time of day shaped nothing. Measured need (28 days, rhythm axis): arithmetic → Thomas **+0.58**, Gérard +0.50 (the night owl ends MORE day-like than the early riser, so A5 fails); circular → Thomas **−0.06**, Camille +0.07, Gérard +0.51, Karim +0.61. **Not implemented:** scaling the rhythm push by the resultant length R. Without it an all-hours account (Claude, R = 0.09) flips on noise (circular alone gives it −0.30). That remains open.
 - **F4 — diet value exceeds most budgets.** One week of a persona's real diet is worth 119–329 credits at
   market price, more than the weekly budget of 10 of the 12 personas (only Karim and Lotte can cover theirs).
   That is fine while diet comes from real purchases; if food ever has to be BOUGHT in credits, casual and

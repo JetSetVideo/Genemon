@@ -4,7 +4,7 @@
 > 1. 31 concrete fights and upbringings (SC-01 … SC-31) that explain how Genemon plays and become balance tests.
 > 2. Every scenario ends with a machine-readable `json` fixture (teams, arena, weather, hour, expectations with tolerances) that `tests/content_test.ts` parses and validates against the real ids and the real `battle.hit` factors.
 > 3. SC-01 … SC-12 cover the mandated topics: the user's three examples, flyers, diggers, weather and terrain changers, phase shifters, eclipse, synergy, big-vs-swarm and day/night rhythm.
-> 4. Status: 27 ENGINE (the rules exist in `src/combat/battle.ts`; they need the `tools/scenarios.ts` harness and, for pinned floors, P1), 2 PROPOSAL (need an engine rule that does not exist yet), 2 MODEL (run today on every test run).
+> 4. Status: 27 ENGINE (the rules exist in `src/combat/battle.ts`), 2 PROPOSAL (need an engine rule that does not exist yet), 2 MODEL (run today on every test run). The harness now EXISTS: `tools/scenarios.ts` (`deno task scenarios`) measures SC-01 … SC-05 with the same meaning as here, and all five pass over 120 seeds each; it uses SC-06 for side parity instead, so this document's SC-06 (weather changers flipping a neutral matchup) is NOT asserted yet — renumber it or add it to the harness. The other 21 ENGINE scenarios still need harness entries; their expected factors are machine-readable and validated by `tests/content_test.ts`.
 > 5. Expectations marked `"target": true` (10, in SC-01, SC-09, SC-11, SC-14, SC-27, SC-28, SC-31) are design goals the current code is predicted to miss — measured balance risks, reported, never asserted.
 
 ## Why this document exists

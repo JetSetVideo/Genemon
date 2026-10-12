@@ -13,13 +13,31 @@ least two reviewers from different roles.
 |---|---|---|---|
 | 0 | Foundations | git history, legacy prototype frozen, Deno + three.js scaffold, deterministic RNG, Ledger | ✅ done |
 | 1 | The genome game (pure) | genome → phenotype → epigenetics → breeding; skeleton with coupled limits; physics; battle; scenarios pass | ✅ done, 6/6 scenarios measured |
-| 2 | The 3D game | creatures from skeletons, animator through constraints, arenas × weathers × hours, FX, camera, HUD | ✅ built; review round 1 in progress |
+| 2 | The 3D game | creatures from skeletons, animator through constraints, arenas × weathers × hours, FX, camera, HUD | ⚠️ built; rounds 1 and 3 reviewed — NOT SHIP (the camera leaves living fighters off-screen, the 48 px readability floor is unmet): quest C2 |
 | 3 | The personal loop | profiles (human + AI), team, lab (feed / live / habitat / breed / fuse / morph / mutate), settings, data screen | ✅ built |
-| 4 | The social game (local) | condition-aware ladder, auction house, quests & achievements, world map with places & territories — integrated one at a time behind probes | ⏳ modules built by agents, integration = quests L1, E1, Q1, W1 |
-| 5 | The simulated society | 12-persona simulator over weeks of play: economy inflation, MMR spread, element diversity, territory churn, retention proxy | ⏳ quest S1 (plan in `docs/PERSONAS.md` §9) |
-| 6 | The learning game | outcome predictor and battle policy trained on ledger datasets; live meta feeding move costs; projections of the population | ⏳ quests ML1, M1 |
+| 4 | The social game (local) | condition-aware ladder, auction house, quests & achievements, world map with places & territories — integrated one at a time behind probes | ✅ integrated and browser-verified (quests L1, E1, Q1Q, W1); caveat: the ladder's condition weights start at 0, so conditions barely move ratings at first — quest L2 |
+| 5 | The simulated society | 12-persona simulator over weeks of play: economy inflation, MMR spread, element diversity, territory churn, retention proxy | ⏳ half-built, parked in `artifacts/wip/sim/` — quest S1 |
+| 6 | The learning game | outcome predictor and battle policy trained on ledger datasets; live meta feeding move costs; projections of the population | ⏳ win predictor + PCA/k-means built and tested (9 tests); in its one measured run the neural net did NOT beat logistic regression, and the screen is unwired — quest D6; live meta — quest M1 |
 | 7 | Online | deterministic replay verification server-side, presence, persistent world tick, territory consistency | ⏳ quests N1+ (design in `docs/NETWORK.md`) |
 | 8 | Real-world data | opt-in geolocation, OpenStreetMap places, live weather, health/activity trackers (privacy first) | ⏳ quest G1 |
+
+## Current position (2026-10-12, commit `d2f49da`)
+
+Phases 0–4 have shipped working software: the deterministic core, its 3D presentation, the personal
+loop, and the local social layer (ladder, market, world, quests) are all in the app and verified in a
+browser. What is NOT finished is quality, not architecture: the battle camera loses fighters off-screen
+(quest C2), the readability floor is unmet, and three systems are built but not integrated (the
+Insights screen, the persona simulator, netcode).
+
+Next quests, in order (`docs/QUESTS.md`): **C2** camera keeps every living fighter in frame and the QA
+metric can fail · **A7** KO'd fliers fall, camera buttons off the HP cards, honest weather shots ·
+**L2** ladder conditions count from match 1 · **D6** wire the Insights screen · **S1** finish the
+persona simulator · **B2** balance pass (re-measure before tuning: an intermediate configuration
+measured 12/13 elements in band against today's 10/13) · **M1** live meta · **V2** view hand-off.
+
+Review history: round 1 (3 reviewers), round 3 (2 reviewers, after the fixes) — 3D/physics 30 → 34/100,
+designer 36 → 56/100. Both rounds scored "not ship"; the gap between the numbers and a ship verdict is
+`docs/reviews/round-3/*.md` plus the quest list above.
 
 ## The 12-player simulation plan
 

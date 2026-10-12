@@ -205,10 +205,10 @@ export const CONTENT_EVENTS: Record<string, EventSpec> = {
   ),
   "genemon.experience.denied": ev(GENEMON, "emitted", LIFE, { experience: "experience" }, { reason: "text" }, "a physical-only experience attempted from the sofa"),
   "genemon.exposure": ev(GENEMON, "emitted", LIFE, { ground: "ground", hours: "number" }, { totalHours: "number" }, "expose(); one row per session"),
-  // ---- proposed: life & lab
+  // ---- life & lab
   "genemon.catch": ev(
     WORLD,
-    "proposed",
+    "emitted",
     ["physical", "virtual"],
     {
       primary: "element",
@@ -225,7 +225,7 @@ export const CONTENT_EVENTS: Record<string, EventSpec> = {
     { genemon: "text" },
     "wild encounter caught; physical = caught at a GPS-verified spawn",
   ),
-  "genemon.release": ev(WORLD, "proposed", ["physical", "virtual"], { primary: "element", sizeClass: "sizeClass" }, { spawn: "text" }, "released Genemon become rescues for others"),
+  "genemon.release": ev(WORLD, "emitted", ["physical", "virtual"], { primary: "element", sizeClass: "sizeClass" }, { spawn: "text" }, "released Genemon become rescues for others (src/ui/worldStore.ts, and the Lab screen writes a lighter row with only `detail`: see docs/DATA-MODEL.md)"),
   "genemon.breed": ev(
     "src/genome/breeding.ts caller (lab)",
     "proposed",
@@ -381,19 +381,19 @@ export const CONTENT_EVENTS: Record<string, EventSpec> = {
   ),
   "battle.loss": ev(COMBAT, "proposed", ARENA, { ...BATTLE_CONTEXT }, { durationS: "number" }, "decisive loss"),
   "ladder.promote": ev("src/ladder", "proposed", ARENA, { tier: "ladderTier" }, { mmr: "number" }, "ladder tier reached"),
-  // ---- proposed: physical world (GPS-verified presence only)
+  // ---- physical world (GPS-verified presence only)
   "world.visit": ev(
     WORLD,
-    "proposed",
+    "emitted",
     GPS,
     { poi: "poi", firstVisit: "boolean", hour: "hour", night: "boolean", weather: "weather" },
     {},
     "arrived at a real point of interest; weather = real weather mapped to a WeatherId",
   ),
   "world.purchase": ev(WORLD, "proposed", GPS, { item: "food", units: "number", poi: "poi" }, {}, "bought food in a real shop while present (no receipt data stored)"),
-  "world.claim": ev(WORLD, "proposed", GPS, { territory: "text", ground: "ground", poi: "poi" }, {}, "territory cell claimed on site"),
-  "world.defend": ev(WORLD, "proposed", GPS, { territory: "text", ground: "ground", attackers: "number" }, { won: "boolean" }, "own territory attacked (passive, async)"),
-  "world.raid": ev(WORLD, "proposed", GPS, { territory: "text", ground: "ground" }, { won: "boolean" }, "attacked a rival territory on site"),
+  "world.claim": ev(WORLD, "emitted", GPS, { territory: "text", ground: "ground", poi: "poi" }, {}, "territory cell claimed on site"),
+  "world.defend": ev(WORLD, "emitted", GPS, { territory: "text", ground: "ground", attackers: "number" }, { won: "boolean" }, "own territory attacked (passive, async)"),
+  "world.raid": ev(WORLD, "emitted", GPS, { territory: "text", ground: "ground" }, { won: "boolean" }, "attacked a rival territory on site"),
   // ---- proposed: social, market, meta
   "social.friend": ev("src/net", "proposed", ["virtual", "physical"], { friend: "text" }, {}, "friendship accepted"),
   "social.visit": ev("src/net", "proposed", ["virtual"], { friend: "text" }, {}, "visited a friend's habitat"),
@@ -445,8 +445,8 @@ export const CONTENT_EVENTS: Record<string, EventSpec> = {
     { sellerId: "player", fee: "number", proceeds: "number", refundTo: "text", refundAmount: "number", balance: "number", unitPrice: "number" },
     "instant purchase at the buyout price; who = the buyer",
   ),
-  "quest.complete": ev("src/data/quests.ts consumer", "proposed", ["virtual", "physical"], { quest: "text", kind: "questKind", giver: "text", physical: "boolean" }, {}, "quest finished"),
-  "achievement.unlock": ev("src/data/achievements.ts consumer", "proposed", ["ui"], { achievement: "text", category: "achievementCategory", tier: "number" }, {}, "achievement unlocked"),
+  "quest.complete": ev("src/ui/progressStore.ts", "emitted", ["virtual", "physical"], { quest: "text", kind: "questKind", giver: "text", physical: "boolean" }, {}, "quest finished"),
+  "achievement.unlock": ev("src/ui/progressStore.ts", "emitted", ["ui"], { achievement: "text", category: "achievementCategory", tier: "number" }, {}, "achievement unlocked"),
 };
 
 const OPS = [">=", "<=", "!="] as const;

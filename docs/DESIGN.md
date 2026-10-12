@@ -17,7 +17,15 @@ safe frame and only adds drama (shake, lens punch, slow motion) on events that d
   skins are procedural canvases painted with the genome's pattern (stripes, spots, mottle, rings,
   scales, gradient, veins — veins also feed an emissive map).
 - **Emotion on the face.** Pupils widen with fear and narrow with anger; the posture layer of the
-  animator crouches when afraid, droops when sad, wags when joyful.
+  animator crouches when afraid, droops when sad, wags when joyful. Eyes and third eye sit on the upper
+  half of the head surface, facing forward (the "up" vector is world up made orthogonal to the head
+  axis; it used to point down, which buried the eyes in the lower half). No mouth/jaw is visible yet —
+  open (round-3 artist review).
+- **Battle display scale** (`display.ts`). Outside the Lab a Genemon shorter than 0.9 m is DRAWN larger
+  (`min(2, max(1, sqrt(0.9 / heightM)))`: ×1.9 at 0.25 m, ×1.34 at 0.5 m, ×1 from 0.9 m up), while
+  physics, reach and hit tests keep the true size — size order is preserved, so an XL still towers over
+  an XS. Added because small bodies measured 18–41 px on screen; the 48 px floor is still unmet in wide
+  shots (quest C2).
 
 ## Motion (`src/render/animator.ts`)
 
@@ -61,21 +69,51 @@ raises itself when terrain occludes; **readability equation** — if any fighter
 toward a big charge (power ≥ 70) and narrows the lens; trauma² shake, FOV punch and dutch roll on
 crits, KOs and lightning; modes auto / orbit / top / side / low / follow (keys 1–6), saved per profile.
 
+**Known failure (quest C2).** The framing test only checks the attacker and its target, by centre point,
+so in 7 of 12 auto-camera shots of round 3 a living fighter was entirely off canvas while the camera
+itself reported 0–1 outside; the HUD-band aim lift (`safeTop`, `setHudTop()`) pushed subjects further
+out; the tablet shot pulls back to ~30 m against 16.9 m on desktop; the "same frozen instant" camera set
+is not frozen for animation; and the low mode can be blocked by props while follow tracks no specific
+body. The fix is to frame the projected boxes of ALL living fighters, bound the aim lift, cap the tablet
+distance at the desktop distance, and make the capture's readability table count off-canvas fighters as
+failures rather than skipping them.
+
 ## Interface (`web/styles.css`, `src/ui/*`)
 
 - Layout: nav rail (screens generated from `screens/registry.ts`, each with a colour and a hint) ·
-  3D viewport · side panel. Tablet narrows both rails; mobile stacks viewport over panel with a bottom
-  tab bar.
+  3D viewport · side panel. Tablet narrows both rails; portrait tablets stack the 3D view (50 dvh) above
+  the panel; phones stack viewport over panel with a bottom bar of 4 primary tabs + a **More** sheet for
+  World, Market, Ladder, Feats, Data and Settings. The grid uses `minmax(0, 1fr)` so top-bar chips can
+  never widen the layout past the device (they did: a 390 px phone laid out at ~500 px in round 1).
 - Themes: dark and light via `[data-theme]` CSS variables, saved in the profile; the 3D lab/genospace
-  backgrounds follow the theme.
-- Battle HUD: per-fighter cards (element chip, size class, phase badge with the move name, HP and
-  energy bars, statuses and an emotion emoji), a live event feed, and a meta line (arena · weather ·
-  hour · time).
+  backgrounds follow the theme (battle arenas do not — they follow weather and hour).
+- Element chips: theme text on a 32 % tint of the element colour with a full-colour border; white text on
+  the raw colour measured 1.1–1.4:1 contrast on Electric, Ice, Air and Light chips.
+- Battle HUD: two labelled columns (**YOU** / **RIVAL**, side-coloured edge), per-fighter cards (element
+  chip, name, HP/energy bars, phase with the move name, statuses, emotion), a live event feed with KO
+  lines coloured by side, and a meta line (arena · weather at the start · hour · time). Cards are
+  `pointer-events: none` so they never swallow camera drags. On phones each side collapses to ONE row of
+  HP pills (measured: 2 wrapped rows covered 40–45 % of the 3D view; one row is the fix).
+- **Who is whose in 3D:** a ground ring in the side colour (sky blue = you, orange = rival; it stays on
+  the ground under fliers so depth reads), plus a name tag and an HP pip at constant screen size above
+  the head. Added because nothing showed sides before round 3.
 - Everything has a hint (`title`); colours never carry meaning alone (labels accompany chips).
+
+Measured HUD coverage (round 3, before the one-row phone change): desktop 23–27 %, phone 35.5 %,
+tablet 44.3 %, against a 15 % target; the camera-button column also overlaps the rival cards on phone
+and tablet (quest A7).
 
 ## Open design questions
 
-- Creature silhouettes per body kind need a reviewer pass at gameplay distance (see `docs/reviews/`).
-- Size-class readability: XS Genemon can be tiny next to XL ones; a minimum on-screen size or a ring
-  marker may be needed.
-- Mobile HUD density with 6 fighters per side.
+- **Camera framing (blocking, quest C2):** the camera must frame every living fighter, not the attacker
+  and its target, and the readability table must be able to report a fighter it cannot see.
+- **On-screen size:** the battle display scale plus a tighter wide shot is the current answer; the 48 px
+  floor at 1440×900 and ~6 % of the frame height on phones are still unmet in 6-vs-6 shots.
+- **Mobile HUD density with 6 fighters per side:** one row per side is in; the 15 % coverage target is
+  not (35–44 % measured on phone/tablet before the row change).
+- **Faces and phases:** no visible mouth, and charge reads like rest (numerically the same pose in round
+  3) — both still open after three review rounds.
+- Creature silhouettes per body kind still need a reviewer pass at gameplay distance; wings fold into
+  flat shelves rather than a continuous membrane (round-1 and round-3 artist reviews).
+- Ground-type readability: the arena floor changes colour per ground but the *type* is not named on
+  screen, and 06h renders as night while the volcano shows no lava (round-3).

@@ -358,7 +358,7 @@ A team holds 6 slots. *Parity budget* is the power budget a lone body needs to t
 | `S` | 1 | 1 | 1 | 45 | 1 | 1 |
 | `M` | 2 | 2 | 1 | 260 | 1.732 | 1.155 |
 | `L` | 3 | 2.9 | 0.967 | 1100 | 2.449 | 1.184 |
-| `XL` | 4 | 4.1 | 1.025 | inf | 3.162 | 1.297 |
+| `XL` | 4 | 3.9 | 0.975 | inf | 3.162 | 1.233 |
 <!-- /GEN:sizes -->
 
 **Expand.** `SIZE_CLASSES`, `SLOT_COST`, `POWER_BUDGET`, `MASS_THRESHOLDS` in `phenotype.ts`; then re-run SC-11 and SC-14.
@@ -393,7 +393,7 @@ Census: 20000 wild genomes (randomGenome(1..20000), level 5, age 13.5 d, no life
 | `S` | 46.9% | 91.3 | 91.3 |
 | `M` | 33.4% | 182.6 | 91.3 |
 | `L` | 6.6% | 265.0 | 88.3 |
-| `XL` | 0.5% | 373.9 | 93.5 |
+| `XL` | 0.5% | 355.7 | 88.9 |
 
 Abilities overall: fly 16.9%, phaseShift 24.7%, swim 26.4%, dig 22.5%, weatherShaper 10.4%, terraformer 1.0%.
 <!-- /GEN:census -->
@@ -487,7 +487,7 @@ Weather and terrain moves are learnable only by Genemon whose primary or seconda
 | `bodySlam` | neutral | melee | 60 | 0.9 | 0 | 0 | 0 | 0.8/0.3/0.8 | 1.90 | 2 (12) | 25 | 2.40 | 28.4 | knockback 5; staggered 30%/1s | - |
 | `stomp` | neutral | burst | 45 | 0.95 | 0 | 2.2 | 0 | 0.6/0.25/0.6 | 1.45 | 1 (1) | 20 | 2.25 | 29.5 | staggered 30%/1s | - |
 | `roar` | neutral | burst | 0 | 1 | 0 | 4.5 | 0 | 0.6/0.4/0.6 | 1.60 | 1 (1) | 4 | - | - | feared 60%/3s | - |
-| `rest` | neutral | heal | 0 | 1 | 0 | 0 | 0 | 0.4/1.2/0.6 | 2.20 | 1 (1) | 11 | - | - | heal 0.3 | - |
+| `rest` | neutral | heal | 0 | 1 | 0 | 0 | 0 | 0.4/1.2/0.6 | 2.20 | 1 (1) | 16 | - | - | heal 0.3 | - |
 | `meltForm` | neutral | phase | 0 | 1 | 0 | 0 | 0 | 0.5/0.4/0.4 | 1.30 | 1 (1) | 17 | - | - | self liquid 100%/6s | phaseShift |
 | `emberBite` | fire | melee | 55 | 0.95 | 0 | 0 | 0 | 0.45/0.25/0.5 | 1.20 | 1 (1) | 22 | 2.50 | 43.5 | burn 25%/3s | - |
 | `cinderSpit` | fire | projectile | 45 | 0.9 | 12 | 0 | 16 | 0.5/0.2/0.45 | 1.15 | 1 (1) | 20 | 2.25 | 35.2 | burn 15%/3s | - |
@@ -505,7 +505,7 @@ Weather and terrain moves are learnable only by Genemon whose primary or seconda
 | `seedShot` | plant | projectile | 42 | 0.93 | 12 | 0 | 18 | 0.4/0.2/0.4 | 1 | 1 (1) | 19 | 2.21 | 39.1 | - | - |
 | `thornSpray` | plant | burst | 55 | 0.95 | 0 | 2.8 | 0 | 0.8/0.3/0.7 | 1.80 | 2 (12) | 26 | 2.12 | 29.0 | - | - |
 | `rootSnare` | plant | zone | 32 | 0.95 | 10 | 2.4 | 0 | 0.7/0.3/0.6 | 1.60 | 2 (12) | 26 | 1.23 | 19.0 | slowed 80%/3s | - |
-| `sapMend` | plant | heal | 0 | 1 | 0 | 0 | 0 | 0.6/0.8/0.5 | 1.90 | 1 (1) | 28 | - | - | heal 0.25; self regen 100%/5s | - |
+| `sapMend` | plant | heal | 0 | 1 | 0 | 0 | 0 | 0.6/0.8/0.5 | 1.90 | 1 (1) | 33 | - | - | heal 0.25; self regen 100%/5s | - |
 | `overgrowth` | plant | terrain | 20 | 1 | 8 | 4 | 0 | 1/0.4/0.8 | 2.20 | 2 (12) | 46 | 0.43 | 9.1 | ground grass; self regen 100%/6s | terraformer |
 | `solarBloom` | plant | beam | 88 | 0.9 | 15 | 0 | 0 | 1.5/0.4/1 | 2.90 | 3 (30) | 35 | 2.51 | 27.3 | - | - |
 | `boulderCrush` | earth | melee | 65 | 0.9 | 0 | 0 | 0 | 0.7/0.3/0.7 | 1.70 | 1 (1) | 30 | 2.17 | 34.4 | knockback 5; staggered 30%/1s | - |
@@ -595,8 +595,8 @@ Achievements, quest steps and quest-giver arcs are all `Trigger { what, count, w
 | `genemon.experience` | **emitted** | src/genome/genemon.ts | physical/virtual/lab | experience:experience, units:number, physical:boolean | xp:number | 46 (46) | live(); units = sessions or km; physical-only experiences are refused when physical === false |
 | `genemon.experience.denied` | **emitted** | src/genome/genemon.ts | physical/virtual/lab | experience:experience | reason:text | 0 (0) | a physical-only experience attempted from the sofa |
 | `genemon.exposure` | **emitted** | src/genome/genemon.ts | physical/virtual/lab | ground:ground, hours:number | totalHours:number | 2 (2) | expose(); one row per session |
-| `genemon.catch` | proposed | src/world | physical/virtual | primary:element, secondary:elementOrNone, sizeClass:sizeClass, kind:bodyKind, pattern:pattern, ground:ground, weather:weather, hour:hour, night:boolean, physical:boolean | genemon:text | 18 (0) | wild encounter caught; physical = caught at a GPS-verified spawn |
-| `genemon.release` | proposed | src/world | physical/virtual | primary:element, sizeClass:sizeClass | spawn:text | 0 (0) | released Genemon become rescues for others |
+| `genemon.catch` | **emitted** | src/world | physical/virtual | primary:element, secondary:elementOrNone, sizeClass:sizeClass, kind:bodyKind, pattern:pattern, ground:ground, weather:weather, hour:hour, night:boolean, physical:boolean | genemon:text | 18 (18) | wild encounter caught; physical = caught at a GPS-verified spawn |
+| `genemon.release` | **emitted** | src/world | physical/virtual | primary:element, sizeClass:sizeClass | spawn:text | 0 (0) | released Genemon become rescues for others (src/ui/worldStore.ts, and the Lab screen writes a lighter row with only `detail`: see docs/DATA-MODEL.md) |
 | `genemon.breed` | proposed | src/genome/breeding.ts caller (lab) | lab | parentA:text, parentB:text, distance:number | child:text, generation:number, mutations:number, kind:bodyKind, primary:element, sizeClass:sizeClass | 15 (0) | breed(); distance = geneticDistance(a, b); mutations = child.mutations.length |
 | `genemon.fuse` | proposed | src/genome/breeding.ts caller (lab) | lab | a:text, b:text | child:text, generation:number, sizeClass:sizeClass, primary:element | 5 (0) | fuse(): the stronger pole wins per axis, the body grows |
 | `dex.register` | proposed | src/ui (collection) | virtual | primary:element, kind:bodyKind, pattern:pattern, sizeClass:sizeClass | - | 2 (0) | first time this player owns this element x kind x pattern x size combination |
@@ -615,11 +615,11 @@ Achievements, quest steps and quest-giver arcs are all `Trigger { what, count, w
 | `battle.win` | proposed | src/combat/battle.ts | arena | mode:battleMode, arena:arenaKind, weather:weather, hour:hour, night:boolean, teamSize:number, enemyCount:number, mySlots:number, enemySlots:number, myMaxSize:sizeClass, weatherChanged:boolean | survivors:number, flawless:boolean, reactions:number, durationS:number | 47 (0) | decisive win; weather = the sky at the start; reactions = reactions the winning side caused |
 | `battle.loss` | proposed | src/combat/battle.ts | arena | mode:battleMode, arena:arenaKind, weather:weather, hour:hour, night:boolean, teamSize:number, enemyCount:number, mySlots:number, enemySlots:number | durationS:number | 0 (0) | decisive loss |
 | `ladder.promote` | proposed | src/ladder | arena | tier:ladderTier | mmr:number | 2 (0) | ladder tier reached |
-| `world.visit` | proposed | src/world | physical | poi:poi, firstVisit:boolean, hour:hour, night:boolean, weather:weather | - | 26 (0) | arrived at a real point of interest; weather = real weather mapped to a WeatherId |
+| `world.visit` | **emitted** | src/world | physical | poi:poi, firstVisit:boolean, hour:hour, night:boolean, weather:weather | - | 26 (26) | arrived at a real point of interest; weather = real weather mapped to a WeatherId |
 | `world.purchase` | proposed | src/world | physical | item:food, units:number, poi:poi | - | 11 (0) | bought food in a real shop while present (no receipt data stored) |
-| `world.claim` | proposed | src/world | physical | territory:text, ground:ground, poi:poi | - | 6 (0) | territory cell claimed on site |
-| `world.defend` | proposed | src/world | physical | territory:text, ground:ground, attackers:number | won:boolean | 5 (0) | own territory attacked (passive, async) |
-| `world.raid` | proposed | src/world | physical | territory:text, ground:ground | won:boolean | 2 (0) | attacked a rival territory on site |
+| `world.claim` | **emitted** | src/world | physical | territory:text, ground:ground, poi:poi | - | 6 (6) | territory cell claimed on site |
+| `world.defend` | **emitted** | src/world | physical | territory:text, ground:ground, attackers:number | won:boolean | 5 (5) | own territory attacked (passive, async) |
+| `world.raid` | **emitted** | src/world | physical | territory:text, ground:ground | won:boolean | 2 (2) | attacked a rival territory on site |
 | `social.friend` | proposed | src/net | virtual/physical | friend:text | - | 2 (0) | friendship accepted |
 | `social.visit` | proposed | src/net | virtual | friend:text | - | 2 (0) | visited a friend's habitat |
 | `social.trade` | proposed | src/net | virtual/physical | partner:text, kind:itemKind | - | 2 (0) | trade completed |
@@ -630,10 +630,10 @@ Achievements, quest steps and quest-giver arcs are all `Trigger { what, count, w
 | `market.bid` | **emitted** | src/economy/market.ts | market | listingId:text, itemId:text, qty:number, amount:number, minBid:number, prevBid:number, msLeft:number | currentBid:number, endsAt:number, extended:boolean, refundTo:text, refundAmount:number, balance:number | 3 (3) | bid placed; who = the bidder |
 | `market.sold` | **emitted** | src/economy/market.ts | market | listingId:text, itemId:text, kind:itemKind, qty:number, price:number, bids:number, extensions:number, endsAt:number, +generation:number, +sizeClass:sizeClass | buyerId:player, sellerId:player, fee:number, proceeds:number, unitPrice:number | 11 (9) | auction closed with a winning bid; who = house, so content filters sellerId: ME or buyerId: ME |
 | `market.buyout` | **emitted** | src/economy/market.ts | market | listingId:text, itemId:text, kind:itemKind, qty:number, price:number, listPrice:number, promoActive:boolean, discount:number | sellerId:player, fee:number, proceeds:number, refundTo:text, refundAmount:number, balance:number, unitPrice:number | 0 (0) | instant purchase at the buyout price; who = the buyer |
-| `quest.complete` | proposed | src/data/quests.ts consumer | virtual/physical | quest:text, kind:questKind, giver:text, physical:boolean | - | 8 (0) | quest finished |
-| `achievement.unlock` | proposed | src/data/achievements.ts consumer | ui | achievement:text, category:achievementCategory, tier:number | - | 1 (0) | achievement unlocked |
+| `quest.complete` | **emitted** | src/ui/progressStore.ts | virtual/physical | quest:text, kind:questKind, giver:text, physical:boolean | - | 8 (8) | quest finished |
+| `achievement.unlock` | **emitted** | src/ui/progressStore.ts | ui | achievement:text, category:achievementCategory, tier:number | - | 1 (1) | achievement unlocked |
 
-45 events: 24 emitted today, 21 proposed. Keys marked + are requested from the emitter (25): `battle.start.mode`, `battle.hit.element`, `battle.hit.contact`, `battle.hit.targetGround`, `battle.hit.targetElement`, `battle.hit.attackerSize`, `battle.hit.targetSize`, `battle.hit.weatherId`, `battle.miss.reason`, `battle.reaction.ground`, `battle.reaction.weather`, `battle.reaction.allies`, `battle.ko.move`, `battle.ko.element`, `battle.ko.attackerSize`, `battle.ko.targetSize`, `battle.ko.targetElement`, `battle.ko.ground`, `battle.ko.weather`, `battle.ko.night`, `battle.ko.mult`, `market.post.generation`, `market.post.sizeClass`, `market.sold.generation`, `market.sold.sizeClass`. 128 of 315 triggers can progress on today's rows. Declared but used by no trigger: `genemon.xp`, `genemon.experience.denied`, `genemon.release`, `battle.start`, `battle.end`, `battle.loss`, `market.buyout`.
+45 events: 32 emitted today, 13 proposed. Keys marked + are requested from the emitter (25): `battle.start.mode`, `battle.hit.element`, `battle.hit.contact`, `battle.hit.targetGround`, `battle.hit.targetElement`, `battle.hit.attackerSize`, `battle.hit.targetSize`, `battle.hit.weatherId`, `battle.miss.reason`, `battle.reaction.ground`, `battle.reaction.weather`, `battle.reaction.allies`, `battle.ko.move`, `battle.ko.element`, `battle.ko.attackerSize`, `battle.ko.targetSize`, `battle.ko.targetElement`, `battle.ko.ground`, `battle.ko.weather`, `battle.ko.night`, `battle.ko.mult`, `market.post.generation`, `market.post.sizeClass`, `market.sold.generation`, `market.sold.sizeClass`. 194 of 315 triggers can progress on today's rows. Declared but used by no trigger: `genemon.xp`, `genemon.experience.denied`, `genemon.release`, `battle.start`, `battle.end`, `battle.loss`, `market.buyout`.
 <!-- /GEN:events -->
 
 Vocabularies introduced by content (proposals for the world, battle, ladder and economy owners):
@@ -718,19 +718,19 @@ Vocabularies introduced by content (proposals for the world, battle, ladder and 
 | `weather-eclipse` | Darkest Hour | battle | 3 | battle.win x3 {weather=eclipse} | 1000 cr | - |
 | `weather-acid-rain` | Corroded | battle | 2 | battle.win x5 {weather=acidRain} | 350 cr | - |
 | `weather-ashfall` | Ashen | battle | 3 | battle.win x3 {weather=ashfall} | 1000 cr | - |
-| `hello-world` | Hello, World | collection | 1 | genemon.catch x1 | 50 cr | - |
-| `field-researcher` | Field Researcher | collection | 2 | genemon.catch x100 | 400 cr | - |
-| `living-dex` | Living Dex | collection | 3 | genemon.catch x1000 | 2000 cr | - |
+| `hello-world` | Hello, World | collection | 1 | genemon.catch x1 | 50 cr | yes |
+| `field-researcher` | Field Researcher | collection | 2 | genemon.catch x100 | 400 cr | yes |
+| `living-dex` | Living Dex | collection | 3 | genemon.catch x1000 | 2000 cr | yes |
 | `cataloguer` | Cataloguer | collection | 1 | dex.register x25 | 150 cr | - |
 | `genomic-atlas` | Genomic Atlas | collection | 3 | dex.register x300 | 2500 cr, title "Atlas" | - |
-| `heavy-metal` | Heavy Metal | collection | 2 | genemon.catch x5 {primary=metal} | 400 cr | - |
-| `thin-ice` | Thin Ice | collection | 2 | genemon.catch x5 {primary=ice} | 350 cr | - |
-| `big-game` | Big Game | collection | 3 | genemon.catch x1 {sizeClass=XL} | 1200 cr | - |
-| `pocket-monster` | Pocket Monster | collection | 1 | genemon.catch x10 {sizeClass=XS} | 120 cr | - |
-| `bird-watcher` | Bird Watcher | collection | 1 | genemon.catch x10 {kind=avian} | 120 cr | - |
-| `boots-on-the-ground` | Boots on the Ground | collection | 2 | genemon.catch x100 @physical | 600 cr | - |
-| `night-collector` | Night Collector | collection | 2 | genemon.catch x10 {primary=shadow, night=true} | 400 cr, item lure.night | - |
-| `storm-chaser` | Storm Chaser | collection | 2 | genemon.catch x5 {weather=storm} | 400 cr, item lure.storm | - |
+| `heavy-metal` | Heavy Metal | collection | 2 | genemon.catch x5 {primary=metal} | 400 cr | yes |
+| `thin-ice` | Thin Ice | collection | 2 | genemon.catch x5 {primary=ice} | 350 cr | yes |
+| `big-game` | Big Game | collection | 3 | genemon.catch x1 {sizeClass=XL} | 1200 cr | yes |
+| `pocket-monster` | Pocket Monster | collection | 1 | genemon.catch x10 {sizeClass=XS} | 120 cr | yes |
+| `bird-watcher` | Bird Watcher | collection | 1 | genemon.catch x10 {kind=avian} | 120 cr | yes |
+| `boots-on-the-ground` | Boots on the Ground | collection | 2 | genemon.catch x100 @physical | 600 cr | yes |
+| `night-collector` | Night Collector | collection | 2 | genemon.catch x10 {primary=shadow, night=true} | 400 cr, item lure.night | yes |
+| `storm-chaser` | Storm Chaser | collection | 2 | genemon.catch x5 {weather=storm} | 400 cr, item lure.storm | yes |
 | `matchmaker` | Matchmaker | breeding | 1 | genemon.breed x1 | 80 cr | - |
 | `breeder` | Breeder | breeding | 2 | genemon.breed x50 | 500 cr, item incubator | - |
 | `third-generation` | Third Generation | breeding | 1 | genemon.breed x1 {generation>=3} | 150 cr | - |
@@ -746,27 +746,27 @@ Vocabularies introduced by content (proposals for the world, battle, ladder and 
 | `first-steps` | First Steps | exploration | 1 | genemon.experience x10 {experience=travelKm} | 80 cr | yes |
 | `trailblazer` | Trailblazer | exploration | 2 | genemon.experience x250 {experience=travelKm} | 500 cr, item map.fragment | yes |
 | `pilgrim` | Pilgrim | exploration | 4 | genemon.experience x2500 {experience=travelKm} | 5000 cr, title "Pilgrim" | yes |
-| `new-horizons` | New Horizons | exploration | 1 | world.visit x10 {firstVisit=true} | 120 cr | - |
-| `cartographer` | Cartographer | exploration | 3 | world.visit x250 {firstVisit=true} | 1500 cr, title "Cartographer" | - |
+| `new-horizons` | New Horizons | exploration | 1 | world.visit x10 {firstVisit=true} | 120 cr | yes |
+| `cartographer` | Cartographer | exploration | 3 | world.visit x250 {firstVisit=true} | 1500 cr, title "Cartographer" | yes |
 | `moonlit-stroll` | Moonlit Stroll | exploration | 1 | genemon.experience x5 {experience=nightWalk} | 100 cr | yes |
 | `creature-of-the-night` | Creature of the Night | exploration | 3 | genemon.experience x100 {experience=nightWalk} | 1200 cr, item cosmetic.lantern | yes |
 | `summit-fever` | Summit Fever | exploration | 2 | genemon.experience x20 {experience=climbing} | 400 cr | yes |
 | `frequent-flyer` | Frequent Flyer | exploration | 1 | genemon.experience x25 {experience=flightTime} | 100 cr | yes |
 | `mole` | Mole | exploration | 1 | genemon.experience x25 {experience=digging} | 100 cr | yes |
 | `deep-end` | Deep End | exploration | 1 | genemon.experience x25 {experience=swimming} | 100 cr | yes |
-| `lakeside` | Lakeside | exploration | 1 | world.visit x5 {poi=lake} | 100 cr | - |
-| `thin-air` | Thin Air | exploration | 2 | world.visit x5 {poi=mountain} | 350 cr | - |
-| `curator` | Curator | exploration | 1 | world.visit x3 {poi=museum} | 100 cr | - |
+| `lakeside` | Lakeside | exploration | 1 | world.visit x5 {poi=lake} | 100 cr | yes |
+| `thin-air` | Thin Air | exploration | 2 | world.visit x5 {poi=mountain} | 350 cr | yes |
+| `curator` | Curator | exploration | 1 | world.visit x3 {poi=museum} | 100 cr | yes |
 | `well-fed` | Well Fed | lifestyle | 1 | genemon.feed x100 | 80 cr | yes |
 | `gourmet` | Gourmet | lifestyle | 3 | genemon.feed x2000 | 1000 cr | yes |
 | `hot-stuff` | Hot Stuff | lifestyle | 1 | genemon.feed x25 {food=spicyPepper} | 120 cr | yes |
 | `sweet-tooth` | Sweet Tooth | lifestyle | 1 | genemon.feed x50 {food=candy} | 60 cr | yes |
 | `glow-up` | Glow Up | lifestyle | 2 | genemon.feed x30 {food=glowFruit} | 300 cr | yes |
-| `weekly-shop` | Weekly Shop | lifestyle | 1 | world.visit x5 {poi=supermarket} | 100 cr | - |
-| `regular-customer` | Regular Customer | lifestyle | 2 | world.visit x50 {poi=supermarket} | 500 cr | - |
+| `weekly-shop` | Weekly Shop | lifestyle | 1 | world.visit x5 {poi=supermarket} | 100 cr | yes |
+| `regular-customer` | Regular Customer | lifestyle | 2 | world.visit x50 {poi=supermarket} | 500 cr | yes |
 | `pepper-run` | Pepper Run | lifestyle | 1 | world.purchase x10 {item=spicyPepper} | 100 cr | - |
 | `gym-buddy` | Gym Buddy | lifestyle | 1 | genemon.experience x10 {experience=gymTraining} | 120 cr | yes |
-| `membership-card` | Membership Card | lifestyle | 2 | world.visit x30 {poi=gym} | 450 cr, item badge.gym | - |
+| `membership-card` | Membership Card | lifestyle | 2 | world.visit x30 {poi=gym} | 450 cr, item badge.gym | yes |
 | `iron-discipline` | Iron Discipline | lifestyle | 3 | genemon.experience x200 {experience=gymTraining} | 1500 cr | yes |
 | `inner-calm` | Inner Calm | lifestyle | 1 | genemon.experience x30 {experience=meditation} | 100 cr | yes |
 | `jam-session` | Jam Session | lifestyle | 1 | genemon.experience x30 {experience=music} | 80 cr | yes |
@@ -793,15 +793,15 @@ Vocabularies introduced by content (proposals for the world, battle, ladder and 
 | `collectors-eye` | Collector's Eye | market | 1 | market.sold x10 {buyerId=$me} | 150 cr | yes |
 | `auction-house` | Auction House | market | 2 | market.post x50 | 400 cr | yes |
 | `virtual-grocer` | Virtual Grocer | market | 1 | shop.buy x30 | 80 cr | - |
-| `stake-a-claim` | Stake a Claim | territory | 1 | world.claim x1 | 100 cr | - |
-| `landlord` | Landlord | territory | 2 | world.claim x25 | 600 cr | - |
-| `harbour-master` | Harbour Master | territory | 2 | world.claim x3 {ground=water} | 400 cr, item badge.harbour | - |
-| `volcano-lair` | Volcano Lair | territory | 3 | world.claim x1 {ground=lava} | 1200 cr | - |
-| `hold-the-line` | Hold the Line | territory | 1 | world.defend x5 {exits.won=true} | 150 cr | - |
-| `bulwark` | Bulwark | territory | 2 | world.defend x50 {exits.won=true} | 600 cr | - |
-| `unbreakable-wall` | Unbreakable Wall | territory | 4 | world.defend x500 {exits.won=true} | 6000 cr, title "Warden" | - |
-| `outnumbered` | Outnumbered | territory | 3 | world.defend x10 {exits.won=true, attackers>=3} | 1200 cr | - |
-| `raider` | Raider | territory | 2 | world.raid x10 {exits.won=true} | 450 cr | - |
+| `stake-a-claim` | Stake a Claim | territory | 1 | world.claim x1 | 100 cr | yes |
+| `landlord` | Landlord | territory | 2 | world.claim x25 | 600 cr | yes |
+| `harbour-master` | Harbour Master | territory | 2 | world.claim x3 {ground=water} | 400 cr, item badge.harbour | yes |
+| `volcano-lair` | Volcano Lair | territory | 3 | world.claim x1 {ground=lava} | 1200 cr | yes |
+| `hold-the-line` | Hold the Line | territory | 1 | world.defend x5 {exits.won=true} | 150 cr | yes |
+| `bulwark` | Bulwark | territory | 2 | world.defend x50 {exits.won=true} | 600 cr | yes |
+| `unbreakable-wall` | Unbreakable Wall | territory | 4 | world.defend x500 {exits.won=true} | 6000 cr, title "Warden" | yes |
+| `outnumbered` | Outnumbered | territory | 3 | world.defend x10 {exits.won=true, attackers>=3} | 1200 cr | yes |
+| `raider` | Raider | territory | 2 | world.raid x10 {exits.won=true} | 450 cr | yes |
 | `home-turf` | Home Turf | territory | 3 | battle.win x100 {mode=territory} | 1500 cr | - |
 | `seasoned` | Seasoned | mastery | 1 | genemon.levelUp x1 {exits.to>=20} | 150 cr | yes |
 | `elite` | Elite | mastery | 3 | genemon.levelUp x1 {exits.to>=50} | 1500 cr | yes |
@@ -809,34 +809,34 @@ Vocabularies introduced by content (proposals for the world, battle, ladder and 
 | `gold-league` | Gold League | mastery | 2 | ladder.promote x1 {tier=gold} | 600 cr | - |
 | `grandmaster` | Grandmaster | mastery | 4 | ladder.promote x1 {tier=master} | 10000 cr, title "Grandmaster" | - |
 | `ladder-climber` | Ladder Climber | mastery | 3 | battle.win x200 {mode=ranked} | 1800 cr | - |
-| `creature-of-habit` | Creature of Habit | mastery | 2 | quest.complete x30 {kind=daily} | 500 cr | - |
-| `lore-keeper` | Lore Keeper | mastery | 2 | quest.complete x10 {kind=story} | 600 cr | - |
-| `out-and-about` | Out and About | mastery | 2 | quest.complete x25 {physical=true} | 600 cr | - |
-| `quest-machine` | Quest Machine | mastery | 3 | quest.complete x300 | 2000 cr | - |
-| `completionist` | Completionist | mastery | 4 | achievement.unlock x100 | 7500 cr, title "Completionist" | - |
+| `creature-of-habit` | Creature of Habit | mastery | 2 | quest.complete x30 {kind=daily} | 500 cr | yes |
+| `lore-keeper` | Lore Keeper | mastery | 2 | quest.complete x10 {kind=story} | 600 cr | yes |
+| `out-and-about` | Out and About | mastery | 2 | quest.complete x25 {physical=true} | 600 cr | yes |
+| `quest-machine` | Quest Machine | mastery | 3 | quest.complete x300 | 2000 cr | yes |
+| `completionist` | Completionist | mastery | 4 | achievement.unlock x100 | 7500 cr, title "Completionist" | yes |
 | `hard-rock` | Hard Rock | secret | 1 | battle.fail x1 {move=burrow} | 100 cr | yes |
 | `smoke-on-the-water` | Smoke on the Water | secret | 1 | battle.reaction x1 {reaction=smoke, ground=water} | 150 cr | - |
 | `double-darkness` | Double Darkness | secret | 3 | battle.reaction x1 {reaction=eclipse, weather=eclipse} | 1000 cr, item egg.shadow | - |
 | `friendly-current` | Friendly Current | secret | 1 | battle.reaction x1 {reaction=conduction, allies>=1} | 100 cr | - |
 | `not-a-scratch` | Not Even a Scratch | secret | 2 | battle.hit x1 {type<=0.25} | 300 cr | yes |
 | `snowballs-chance` | Snowball's Chance | secret | 3 | battle.ko x1 {element=ice, weather=heatwave} | 900 cr | - |
-| `midnight-snack` | Midnight Snack | secret | 1 | world.visit x1 {poi=supermarket, night=true} | 120 cr | - |
-| `under-the-aurora` | Under the Aurora | secret | 3 | genemon.catch x1 {weather=aurora} | 1500 cr, item egg.light | - |
+| `midnight-snack` | Midnight Snack | secret | 1 | world.visit x1 {poi=supermarket, night=true} | 120 cr | yes |
+| `under-the-aurora` | Under the Aurora | secret | 3 | genemon.catch x1 {weather=aurora} | 1500 cr, item egg.light | yes |
 
 | category | count | tier 1 | tier 2 | tier 3 | tier 4 | live today |
 |---|---|---|---|---|---|---|
 | battle | 60 | 20 | 29 | 10 | 1 | 27 |
-| collection | 13 | 4 | 6 | 3 | 0 | 0 |
+| collection | 13 | 4 | 6 | 3 | 0 | 11 |
 | breeding | 12 | 3 | 4 | 3 | 2 | 2 |
-| exploration | 14 | 8 | 3 | 2 | 1 | 9 |
-| lifestyle | 18 | 10 | 6 | 2 | 0 | 14 |
+| exploration | 14 | 8 | 3 | 2 | 1 | 14 |
+| lifestyle | 18 | 10 | 6 | 2 | 0 | 17 |
 | social | 9 | 6 | 2 | 1 | 0 | 3 |
 | market | 9 | 4 | 3 | 2 | 0 | 7 |
-| territory | 10 | 2 | 4 | 3 | 1 | 0 |
-| mastery | 11 | 1 | 4 | 3 | 3 | 3 |
-| secret | 8 | 4 | 1 | 3 | 0 | 2 |
+| territory | 10 | 2 | 4 | 3 | 1 | 9 |
+| mastery | 11 | 1 | 4 | 3 | 3 | 8 |
+| secret | 8 | 4 | 1 | 3 | 0 | 4 |
 
-Total 164 achievements; 67 can progress on rows written today. Credits by tier: T1 50-150 (mean 112), T2 300-600 (mean 419), T3 900-2500 (mean 1400), T4 4000-10000 (mean 6438).
+Total 164 achievements; 102 can progress on rows written today. Credits by tier: T1 50-150 (mean 112), T2 300-600 (mean 419), T3 900-2500 (mean 1400), T4 4000-10000 (mean 6438).
 <!-- /GEN:achievements -->
 
 **Expand.** One `a(...)` row in `src/data/achievements.ts` (or a `REACTION_GOALS` / `WEATHER_GOALS` entry, which the compiler forces for every reaction and weather). The trigger must pass the contract test; credits must sit in the tier band (T1 1-200, T2 150-800, T3 500-3000, T4 2500-20000) and the tier means must keep rising. Secret achievements stay hidden until unlocked.
@@ -931,16 +931,16 @@ Rules (all tested): a physical quest contains only physical steps (a `world.*` r
 | kind | count | physical | sofa | live today |
 |---|---|---|---|---|
 | sofa | 7 | 0 | 7 | 3 |
-| physical | 14 | 14 | 0 | 0 |
+| physical | 14 | 14 | 0 | 11 |
 | social | 5 | 0 | 5 | 0 |
 | battle | 9 | 0 | 9 | 2 |
 | breeding | 4 | 0 | 4 | 0 |
 | market | 3 | 0 | 3 | 2 |
-| story | 19 | 4 | 15 | 4 |
+| story | 19 | 4 | 15 | 7 |
 | daily | 10 | 3 | 7 | 9 |
-| weekly | 6 | 3 | 3 | 0 |
+| weekly | 6 | 3 | 3 | 2 |
 
-Total 77 quests (24 physical, 53 sofa); 20 completable with events emitted today. Reward per step (pooled): physical 149 cr / 122 xp, sofa 134 cr / 192 xp. Median quest reward per step: physical 123 cr / 100 xp, sofa 100 cr / 150 xp.
+Total 77 quests (24 physical, 53 sofa); 36 completable with events emitted today. Reward per step (pooled): physical 149 cr / 122 xp, sofa 134 cr / 192 xp. Median quest reward per step: physical 123 cr / 100 xp, sofa 100 cr / 150 xp.
 <!-- /GEN:quests -->
 
 **Expand.** A `Quest` object in `src/data/quests.ts`: pick a giver and kind, 1-4 steps, a `note` that says WHY; physical quests wrap their credits in `physicalCredits()`.
