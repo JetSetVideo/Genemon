@@ -94,4 +94,25 @@ Honest gaps after pass 2:
 - Readability: 6-vs-6 WIDE shots stay at 36-41 px; next lever is framing on projected extents instead
   of a bounding sphere. Fixed camera modes (top/side/low/follow/orbit) are not held to the floor.
 - Not changed yet: faces (eyes/mouth), distinct charge vs rest poses, ground-type readability, 06h dusk.
-- Market, World, Quests, Insights, Simulation: built or being built by subagents; integration pending.
+- Insights (neural-network win predictor + PCA) and the 12-persona simulation: built by subagents, NOT integrated or verified (untracked files); the simulation builder was stopped before finishing.
+
+## Round-3 reviews (2 agents, `docs/reviews/round-3/`): follow-up, verdicts not upgraded
+
+- Verdicts:
+  - 3D artist + physics: 34/100 (round 1: 30), NOT SHIP.
+  - Designer: 56/100 (round 1: 36), REVISE.
+  - Pro player: HOLD. Both reviewers stopped early on request, so X1-X8 were not re-judged.
+- **Correction to the pass-2 readability numbers.**
+  - The capture's readability table never checked that a fighter is INSIDE the canvas.
+  - Both reviewers found living fighters entirely off-screen in the auto shots: 7 of 12 auto shots, and 4 of 5 of your fighters in the canyon shot.
+  - The camera's own `outside` counter read 0-1, because it only checks the attacker and the target, by centre point.
+  - The HUD-band aim lift (`battleCamera.ts`, `safeTop`) made it worse.
+  - So "smallest fighter 41 px" overstates readability.
+- Also found:
+  - The tablet camera pulls back to ~30 m: fighters 18-44 px (round 2: 25-73 px).
+  - KO'd fliers hang in mid-air, because KO bodies skip physics.
+  - The camera buttons cover the rival HP cards on phone and tablet.
+  - Charge and rest are numerically the same pose.
+  - The "heatwave / fog / sandstorm" arena shots were captured during a storm a move triggered.
+  - The panel's weather line was stale. Fixed after round 3: it now reads "started in ...".
+- Eyes were judged on round-3 images, which predate the eye fix (`1a9b31c`): still to verify.

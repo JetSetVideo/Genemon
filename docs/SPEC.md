@@ -69,7 +69,7 @@ Last updated: 2026-10-12 (pass 2). Measurements: `artifacts/balance/REPORT.md`, 
 | id | requirement | bound | owner | status |
 |---|---|---|---|---|
 | C1 | Intelligent battle camera aware of space and effects | director: WIDE / ACTION shots, >= 1.4 s between cuts, occlusion checks, trauma shake, FOV punch | `src/render/battleCamera.ts` | LIVE |
-| C2 | Fighters readable | smallest living fighter >= 48 px at 1440x900; no fighter under a HUD box | `tools/capture.ts` readability table | measured from round 2 on |
+| C2 | Fighters readable | every living fighter INSIDE the canvas; smallest >= 48 px at 1440x900; no fighter under a HUD box | `tools/capture.ts` readability table, `battleCamera.ts` | BROKEN: round-3 reviewers found living fighters off-canvas in 7 of 12 auto shots, and the metric ignored off-canvas fighters: quest C2 |
 | C3 | Who is whose | side ring + name tag + HP pip in the side colour; YOU / RIVAL HUD headers | `src/render/battleView.ts`, `src/ui/app.ts` | built pass 2; verify round 2 |
 
 ## D - Data, AI, ladder
