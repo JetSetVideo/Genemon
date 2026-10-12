@@ -79,7 +79,7 @@ Last updated: 2026-10-12 (pass 2). Measurements: `artifacts/balance/REPORT.md`, 
 | D1 | Every mechanic answers where/when/who/what/why/from/to/entries/exits | one flat ledger row per state change | `src/core/ledger.ts` | TESTED; LIVE (Data screen, export) |
 | D2 | Profiles for you and me | Max (human), Claude (ai); settings saved per profile | `src/ui/profile.ts` | LIVE |
 | D3 | Instant fights | Home "Instant battle" = a ranked battle with ladder-drawn arena | `app.ts` startRanked | built pass 2 |
-| D4 | MMR that uses all conditions, not only the opponent's rating | logistic Elo with learned context weights on pre-match features | `src/ladder/mmr.ts`, `context.ts`, `src/ui/ladderStore.ts` | TESTED; wired pass 2 (Ladder screen) |
+| D4 | MMR that uses all conditions, not only the opponent's rating | logistic Elo with learned context weights on pre-match features | `src/ladder/mmr.ts`, `context.ts`, `src/ui/ladderStore.ts` | TESTED; wired pass 2 (Ladder screen). Caveat: context weights start at 0, so conditions barely move ratings for the first ~300 matches (integrator measurement): quest L2 |
 | L3 | Ranked conditions are drawn, not picked | arena drawn by the ladder; real hour; real weather when the arena has it | `src/ladder/ranked.ts` | TESTED `[SPEC L3]` |
 | L4 | Rating and rewards cannot be pumped | a seed pays XP, W/L and rating once; practice/mirror/wild unrated; ranked abandon = forfeit | `ranked.ts`, `app.ts` finishBattle/abandonBattle | TESTED `[SPEC L4]` |
 | D5 | Hardware and session data | device, form factor, frame time, session clock | `src/ui/realworld.ts`, `stage.ts` | LIVE |
