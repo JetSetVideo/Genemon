@@ -15,13 +15,13 @@ export function renderArena(app: App): HTMLElement {
       h("h1", {}, "Battle in progress"),
       h("p", {}, `${ARENA_INFO[b.arena.spec.kind].name} · ${b.weatherDef.name} · ${Math.floor(b.setup.arena.hour)}h. ${b.weatherDef.note}`),
       section("Controls",
-        h("p", { class: "muted" }, "Camera buttons are on the right edge of the 3D view (keys 1-6). Space pauses."),
+        h("p", { class: "muted" }, "Camera buttons are on the right edge of the 3D view ", h("span", { class: "kbd-only" }, "(keys 1-6). Space pauses."), h("span", { class: "touch-only" }, "(tap them). ⏯ pauses.")),
         h("div", { class: "row" }, ...[0.5, 1, 2, 3].map((s) => h("button", { class: `btn small ${app.profile.settings.speed === s ? "on" : ""}`, onclick: () => app.updateSettings({ speed: s }) }, `${s}×`)),
           h("button", { class: "btn small", onclick: () => app.togglePause() }, "⏯ pause")),
         h("button", { class: "btn", onclick: () => {
-          app.closeBattle();
+          app.abandonBattle();
           app.go("arena");
-        } }, "Abandon battle")),
+        } }, app.lastBattle?.opts.ranked ? "Forfeit (counts as a loss)" : "Abandon practice battle")),
       section("Teams",
         ...b.setup.teams.map((t, i) => h("p", {}, h("b", {}, `${i === 0 ? "You" : "Opponent"}: `), `${t.name} - ${t.members.map((g) => g.name).join(", ")}`)),
         h("p", { class: "muted" }, `Synergies: ${b.synergies[0].map((s) => s.name).join(", ") || "none"} vs ${b.synergies[1].map((s) => s.name).join(", ") || "none"}`)),
@@ -45,7 +45,7 @@ export function renderArena(app: App): HTMLElement {
           h("tr", {}, h("th", {}, "Genemon"), h("th", {}, "Side"), h("th", {}, "Dealt"), h("th", {}, "Hits"), h("th", {}, "Crits"), h("th", {}, "KOs"), h("th", {}, "HP")),
           ...res.fighters.map((f) => h("tr", {}, h("td", {}, f.name), h("td", {}, f.team === 0 ? "you" : "opp"), h("td", {}, fmt(f.tally.dealt)), h("td", {}, `${f.tally.hits}/${f.tally.hits + f.tally.misses}`), h("td", {}, String(f.tally.crits)), h("td", {}, String(f.tally.kos)), h("td", {}, `${Math.round(f.hpFrac * 100)}%`))))),
       h("div", { class: "row" },
-        h("button", { class: "btn primary", onclick: () => app.lastBattle && app.startBattle({ ...app.lastBattle.opts, seed: app.lastBattle.seed }) }, "↻ Rematch (same seed)"),
+        h("button", { class: "btn primary", title: "Replays the same seed: no XP, no rating", onclick: () => app.lastBattle && app.startBattle({ ...app.lastBattle.opts, seed: app.lastBattle.seed }) }, "↻ Rematch (same seed, unrated)"),
         h("button", { class: "btn", onclick: () => app.startBattle({ ...opts }) }, "New battle"),
         h("button", { class: "btn", onclick: () => {
           app.closeBattle();
@@ -86,7 +86,11 @@ export function renderArena(app: App): HTMLElement {
         }))
         : null,
       h("p", { class: "muted" }, { rival: "An AI trainer with a balanced team at your level.", profile: "Another profile's team (you vs me).", wild: "A swarm of wild Genemon.", mirror: "Your own team against itself." }[opts.opponent])),
-    h("button", { class: "btn primary big", "data-action": "start-battle", onclick: () => app.startBattle({ ...opts }) }, "⚔ Start instant battle"),
+    section("Ranked",
+      h("p", { class: "muted" }, "Rated battles move your condition-aware MMR. The ladder draws the arena; your real hour and today's weather apply. Each seed pays XP and rating once."),
+      h("div", { class: "row" },
+        h("button", { class: "btn primary big", "data-action": "ranked-battle", onclick: () => app.startRanked(opts.opponent === "profile" ? "profile" : "rival", opts.opponent === "profile" ? (opts.opponentProfile ?? others[0]?.id) : undefined) }, "♛ Ranked battle"))),
+    h("button", { class: "btn big", "data-action": "start-battle", title: "Practice: you pick the conditions, nothing is rated", onclick: () => app.startBattle({ ...opts }) }, "⚔ Practice battle (unrated)"),
   );
   return root;
 }

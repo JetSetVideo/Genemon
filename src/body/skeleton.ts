@@ -387,7 +387,37 @@ export function buildSkeleton(ph: Phenotype): Skeleton {
   if (!Number.isFinite(minY)) minY = 0;
   sk.rootHeight = -minY;
   sk.joints[0].offset = [0, sk.rootHeight, 0];
+  balancePosture(sk);
   return sk;
+}
+
+/**
+ * Posture: a resting animal stands with its centre of mass over its soles. When the rest pose leaves
+ * the COM outside (or within 2 % of the height of the edge of) the support polygon, slide every leg
+ * (the root joint of each chain that ends in a ground contact) along the body axis until the soles sit
+ * under the COM. Measured before this pass: biped feet 1.5-5.5 cm in front of the COM, avian feet up to
+ * 7 cm behind it. At rest every joint frame is the identity, so offset z IS creature z; the legs carry
+ * mass (the COM follows them a little), hence the few iterations. Spines are never moved.
+ */
+function balancePosture(sk: Skeleton): void {
+  const chainRoot = (i: number) => {
+    let k = i;
+    while (sk.joints[k].parent >= 0 && sk.joints[sk.joints[k].parent].chain === sk.joints[i].chain) k = sk.joints[k].parent;
+    return k;
+  };
+  for (let it = 0; it < 4; it++) {
+    const fk = forwardKinematics(sk, {});
+    if (balanceOf(sk, fk).margin > 0.02 * sk.height) return;
+    const com = centerOfMass(sk, fk);
+    const feet = sk.joints.flatMap((j, i) => (j.contact && fk.end[i].y - j.r1 <= 0.08 * sk.height + 0.02 ? [i] : []));
+    const roots = new Set(feet.map(chainRoot).filter((k) => k > 0 && sk.joints[k].chain !== sk.joints[0].chain));
+    if (feet.length === 0 || roots.size === 0) return;
+    const dz = com.z - feet.reduce((s, i) => s + fk.end[i].z, 0) / feet.length;
+    for (const k of roots) {
+      const o = sk.joints[k].offset;
+      sk.joints[k].offset = [o[0], o[1], o[2] + dz];
+    }
+  }
 }
 
 // ------------------------------------------------------------------ constraints
@@ -521,29 +551,35 @@ export interface BalanceState {
 export function balanceOf(sk: Skeleton, fk: FK, groundY = 0): BalanceState {
   const com = centerOfMass(sk, fk);
   const tol = 0.08 * sk.height + 0.02;
+  // Each ground contact is a SOLE, not a point: a disc of radius 1.6x the end-joint radius (at least
+  // 4 % of the height) sampled at 8 points. Point feet made a 2-point hull for every biped and avian,
+  // which can never contain the centre of mass: every standing biped scored as falling.
   const pts: [number, number][] = [];
+  let contacts = 0;
   sk.joints.forEach((j, i) => {
     if (!j.contact) return;
     const e = fk.end[i];
-    if (e.y - j.r1 <= groundY + tol) pts.push([e.x, e.z]);
+    if (e.y - j.r1 > groundY + tol) return;
+    contacts++;
+    const rf = Math.max(1.6 * j.r1, 0.04 * sk.height);
+    for (let k = 0; k < 8; k++) {
+      const a = (k / 8) * Math.PI * 2;
+      pts.push([e.x + rf * Math.cos(a), e.z + rf * Math.sin(a)]);
+    }
   });
   const c: [number, number] = [com.x, com.z];
   let margin: number;
-  if (pts.length === 0) margin = -sk.height;
-  else if (pts.length === 1) margin = -Math.hypot(c[0] - pts[0][0], c[1] - pts[0][1]);
+  if (contacts === 0) margin = -sk.height;
   else {
     const h = hull2(pts);
-    if (h.length < 3) margin = -segDist(c, h[0], h[h.length - 1]);
-    else {
-      let inside = true, dmin = Infinity;
-      for (let i = 0; i < h.length; i++) {
-        const a = h[i], b = h[(i + 1) % h.length];
-        const cr = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
-        if (cr < 0) inside = false;
-        dmin = Math.min(dmin, segDist(c, a, b));
-      }
-      margin = inside ? dmin : -dmin;
+    let inside = true, dmin = Infinity;
+    for (let i = 0; i < h.length; i++) {
+      const a = h[i], b = h[(i + 1) % h.length];
+      const cr = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+      if (cr < 0) inside = false;
+      dmin = Math.min(dmin, segDist(c, a, b));
     }
+    margin = inside ? dmin : -dmin;
   }
-  return { com, contacts: pts.length, margin, stability: margin / Math.max(0.05, sk.height) };
+  return { com, contacts, margin, stability: margin / Math.max(0.05, sk.height) };
 }

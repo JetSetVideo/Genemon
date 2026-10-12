@@ -108,10 +108,16 @@ Deno.test("skeleton: every body kind stands on the ground with finite joints", (
         if (j.contact) minY = Math.min(minY, fk.end[i].y - j.r1, fk.pos[i].y - j.r0);
       });
       assertAlmostEquals(minY, 0, 1e-6, `${kind} seat`);
+      // [SPEC K2] Every body kind stands statically stable at rest (soles are discs, not points;
+      // this test used to skip bipeds, avians and serpents - it encoded the point-foot bug) ...
       const bal = balanceOf(sk, fk);
-      if (kind === "quadruped" || kind === "hexapod" || kind === "blob") {
-        assert(bal.margin > 0, `${kind} statically unstable at rest: margin ${bal.margin}`);
-      }
+      assert(bal.margin > 0, `${kind} statically unstable at rest: margin ${bal.margin}`);
+      // ... and the metric can fail: shove everything but the contact joints one body height forward.
+      // (Only meaningful when most of the mass is ABOVE the soles; a serpent's body IS its support.)
+      const shove = (ps: typeof fk.pos) => ps.map((p, i) => (sk.joints[i].contact ? p : p.clone().setX(p.x + sk.height)));
+      const tipped = balanceOf(sk, { ...fk, pos: shove(fk.pos), end: shove(fk.end) });
+      const aboveShare = sk.joints.reduce((s, j) => s + (j.contact ? 0 : j.mass), 0) / sk.totalMass;
+      if (aboveShare >= 0.5) assert(tipped.margin < 0, `${kind}: centre of mass past the soles still reads stable (${tipped.margin})`);
     }
   }
 });

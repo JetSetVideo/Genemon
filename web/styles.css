@@ -49,11 +49,15 @@ button, select, input { font: inherit; color: inherit; }
 #app {
   display: grid;
   height: 100dvh;
-  grid-template-columns: var(--nav-w) 1fr var(--panel-w);
-  grid-template-rows: var(--top-h) 1fr;
+  /* minmax(0, 1fr), not 1fr (= minmax(auto, 1fr)): the top bar's chips must not widen the column. */
+  grid-template-columns: var(--nav-w) minmax(0, 1fr) var(--panel-w);
+  grid-template-rows: var(--top-h) minmax(0, 1fr);
   grid-template-areas: "top top top" "nav view panel";
 }
-#topbar { grid-area: top; display: flex; align-items: center; gap: 10px; padding: 0 14px; border-bottom: 1px solid var(--line); background: var(--bg-2); }
+#topbar { grid-area: top; display: flex; align-items: center; gap: 10px; padding: 0 14px; border-bottom: 1px solid var(--line); background: var(--bg-2); min-width: 0; }
+#topbar > * { min-width: 0; }
+#context-chip { display: block; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; }
+.profile-chip { flex: 0 0 auto; }
 .brand { display: flex; align-items: center; gap: 8px; background: none; border: 0; cursor: pointer; font-weight: 800; font-size: 18px; letter-spacing: 0.5px; }
 .logo { color: var(--accent-2); font-size: 22px; }
 .chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg-3); color: var(--text-2); font-size: 12px; white-space: nowrap; }
@@ -136,18 +140,21 @@ canvas.chart { width: 100%; height: 160px; display: block; }
 .hud-teams { display: flex; justify-content: space-between; gap: 10px; }
 .hud-team { display: flex; flex-direction: column; gap: 4px; width: min(30%, 250px); }
 .hud-team.right { align-items: flex-end; }
-.fcard { pointer-events: auto; width: 100%; padding: 4px 6px; border-radius: 9px; background: var(--hud); backdrop-filter: blur(6px); border: 1px solid var(--line); font-size: 11px; }
+.hud-head { font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--side, var(--text)); padding: 2px 6px; border-radius: 6px; background: var(--hud); border-bottom: 2px solid var(--side, var(--line)); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Cards never swallow orbit drags; the side colour runs down their edge. */
+.fcard { pointer-events: none; width: 100%; padding: 4px 6px; border-radius: 9px; background: var(--hud); backdrop-filter: blur(6px); border: 1px solid var(--line); border-left: 3px solid var(--side, var(--line)); font-size: 12px; }
+.hud-team.right .fcard { border-left: 1px solid var(--line); border-right: 3px solid var(--side, var(--line)); }
 .fcard.ko { opacity: 0.4; }
 .fcard .top { display: flex; align-items: center; gap: 5px; min-width: 0; }
 .fcard .nm { font-weight: 700; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.fcard .ph { font-size: 10px; font-weight: 800; padding: 1px 5px; border-radius: 6px; background: var(--bg-3); max-width: 46%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fcard .ph { font-size: 11px; font-weight: 800; padding: 1px 5px; border-radius: 6px; background: var(--bg-3); max-width: 46%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fcard .ph:empty { display: none; }
 .fcard .ph.charge { background: var(--warn); color: #222; }
 .fcard .ph.active { background: var(--bad); color: #fff; }
 .fcard .ph.rest { background: var(--line); }
 .fcard .bars { display: grid; gap: 2px; margin-top: 3px; }
 .fcard .bar { height: 5px; }
-.fcard .st { font-size: 10px; color: var(--text-3); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fcard .st { font-size: 11px; color: var(--text-2); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .fcard .st:empty { display: none; }
 .hud-bottom { display: flex; justify-content: space-between; align-items: flex-end; gap: 10px; }
 .hud-feed { max-width: 360px; display: flex; flex-direction: column; gap: 2px; }
@@ -160,27 +167,56 @@ canvas.chart { width: 100%; height: 160px; display: block; }
 #tooltip { position: absolute; padding: 6px 9px; border-radius: 8px; background: var(--hud); border: 1px solid var(--line); font-size: 12px; pointer-events: none; transform: translate(12px, 12px); }
 #toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); padding: 10px 16px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3); z-index: 50; }
 @keyframes pop { from { transform: translateY(6px); opacity: 0; } to { transform: none; opacity: 1; } }
+/* The phone "More" sheet is a normal part of the rail on wider screens. */
+.nav-sheet { display: contents; }
+.nav-more { display: none; }
+/* Keyboard vs touch wording. */
+.touch-only { display: none; }
+@media (pointer: coarse) {
+  .kbd-only { display: none; }
+  .touch-only { display: inline; }
+}
 
 /* Tablet */
 @media (max-width: 1180px) {
   :root { --panel-w: 370px; --nav-w: 72px; }
   .nav-btn .lbl { font-size: 10px; }
 }
-/* Mobile: 3D view on top, panel below, nav as a bottom bar. */
+/* Portrait tablets: keep the rail, stack the 3D view (half the height) above the panel. */
+@media (orientation: portrait) and (min-width: 761px) and (max-width: 1180px) {
+  #app {
+    grid-template-columns: var(--nav-w) minmax(0, 1fr);
+    grid-template-rows: var(--top-h) 50dvh minmax(0, 1fr);
+    grid-template-areas: "top top" "nav view" "nav panel";
+  }
+  #panel { border-left: 0; border-top: 1px solid var(--line); }
+  .hud-team { width: min(34%, 280px); }
+}
+/* Mobile: 3D view on top, panel below, nav as a bottom bar (4 tabs + More). */
 @media (max-width: 760px) {
   :root { --top-h: 48px; }
   #app {
-    grid-template-columns: 1fr;
-    grid-template-rows: var(--top-h) 44dvh 1fr 62px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: var(--top-h) 44dvh minmax(0, 1fr) 62px;
     grid-template-areas: "top" "view" "panel" "nav";
   }
-  #nav { flex-direction: row; justify-content: space-around; border-right: 0; border-top: 1px solid var(--line); padding: 4px; overflow-x: auto; }
-  .nav-btn { padding: 5px 6px; min-width: 52px; }
+  #topbar { padding: 0 8px; gap: 6px; }
+  #context-chip { max-width: 42vw; }
+  #nav { position: relative; flex-direction: row; justify-content: space-around; border-right: 0; border-top: 1px solid var(--line); padding: 4px; overflow: visible; }
+  .nav-btn { padding: 5px 6px; min-width: 0; flex: 1 1 0; }
   .nav-btn.active { box-shadow: inset 0 3px 0 var(--tab, var(--accent)); }
+  .nav-more { display: flex; }
+  .nav-sheet { display: none; position: absolute; left: 0; right: 0; bottom: 100%; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; padding: 6px; background: var(--bg-2); border-top: 1px solid var(--line); box-shadow: 0 -10px 28px rgba(0, 0, 0, 0.35); z-index: 20; }
+  #nav.open .nav-sheet { display: grid; }
   #panel { border-left: 0; padding: 10px; }
   .brand-name, #fps { display: none; }
-  .hud-team { width: 48%; }
-  .fcard { padding: 4px 6px; font-size: 11px; }
+  /* Battle HUD on phones: two rows of HP pills, at most ~20 % of the 3D height. */
+  .hud-teams { flex-direction: column; gap: 3px; }
+  .hud-team, .hud-team.right { width: 100%; flex-direction: row; flex-wrap: wrap; align-items: stretch; gap: 3px; }
+  .hud-head { align-self: center; padding: 1px 5px; font-size: 10px; }
+  .fcard { flex: 1 1 26%; width: auto; min-width: 0; padding: 2px 6px; font-size: 11px; }
+  .fcard .st, .fcard .bar.en, .fcard .ph, .fcard .el { display: none; }
+  .fcard .bars { margin-top: 2px; }
   .hud-feed { display: none; }
   .cards { grid-template-columns: repeat(2, 1fr); }
 }

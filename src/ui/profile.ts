@@ -35,6 +35,8 @@ export interface BattleRecordLite {
   reactions: number;
   mvp: string;
   mmrDelta: number;
+  /** ranked (rated), practice (picked conditions), replay (seed already rewarded), forfeit (abandoned ranked). */
+  kind?: "ranked" | "practice" | "replay" | "forfeit";
 }
 
 export interface Profile {
@@ -54,6 +56,8 @@ export interface Profile {
   achievements: string[];
   home: { lat: number; lon: number } | null;
   friends: string[];
+  /** Battle seeds that already paid XP, W/L and rating (most recent first, capped): a rematch pays nothing twice. */
+  rewardedSeeds?: number[];
 }
 
 export const DEFAULT_SETTINGS: Settings = {

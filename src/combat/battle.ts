@@ -16,6 +16,7 @@ import { GROUNDS, type GroundId } from "../data/grounds.ts";
 import { type WeatherId, WEATHERS } from "../data/weather.ts";
 import { type Genemon, phenotypeOf } from "../genome/genemon.ts";
 import type { Emotions, Phenotype, Stats } from "../genome/phenotype.ts";
+import { EVASION_CAP } from "../genome/phenotype.ts";
 import { type Arena, type ArenaSpec, generateArena } from "../world/arena.ts";
 import { applyImpulse, type Body, makeBody, stepPhysics } from "../world/physics.ts";
 import { isDamaging, type MetaUsage, type Move, MOVE_BY_ID, moveCost, type StatusId } from "./moves.ts";
@@ -69,6 +70,10 @@ export interface Fighter {
   lastHitAt: number;
   /** Strain from joint constraints reported by the renderer/animator (feeds balance). */
   strain: number;
+  /** Heals cast this battle (each restores HEAL_DECAY x the previous one). */
+  heals: number;
+  /** A flyer committing to a melee dive stays low and hittable by ground melee until this time. */
+  swoopUntil: number;
 }
 
 export interface Projectile {
@@ -151,7 +156,7 @@ export interface BattleSetup {
 
 export interface BattleResult {
   winner: 0 | 1 | 2;
-  reason: "ko" | "timeout";
+  reason: "ko" | "timeout" | "forfeit";
   duration: number;
   hpFrac: [number, number];
   mvp: string;
@@ -208,9 +213,11 @@ const REACTION_ZONE: Partial<Record<ReactionId, { frac: number; status: StatusId
  * actions per fighter. Tuned for a ~25 s median battle; measured by tools/balance.ts (corpus
  * duration) and tools/scenarios.ts (SC-06).
  */
-export const PACE = 0.6;
+export const PACE = 0.5;
 /** Extra distance a melee strike covers on its active phase (the lunge), metres. */
 export const MELEE_LUNGE = 0.9;
+/** Every heal a fighter casts in one battle restores HEAL_DECAY x the previous one (0.3, 0.18, 0.11 ...). */
+export const HEAL_DECAY = 0.6;
 
 /** Statuses that hurt their bearer (tenacity applies to these only). */
 const HARMFUL = new Set<StatusId>(["burn", "wet", "frozen", "paralyzed", "poisoned", "slowed", "blinded", "feared", "confused", "staggered", "softened"]);
@@ -237,7 +244,9 @@ export class Battle {
   readonly projectiles: Projectile[] = [];
   readonly zones: Zone[] = [];
   readonly events: BattleEvent[] = [];
-  readonly synergies: [Synergy[], Synergy[]];
+  /** Active synergies per team: formed at the start, LOST when their enablers are knocked out (X4). */
+  synergies: [Synergy[], Synergy[]];
+  private readonly teams: [Team, Team];
   weather: WeatherId;
   weatherTimer = 0;
   t = 0;
@@ -261,9 +270,14 @@ export class Battle {
     this.weather = setup.arena.weather;
     this.rng = new Rng(hashSeed(setup.seed, "battle"));
     this.synergies = [synergies(setup.teams[0]), synergies(setup.teams[1])];
+    this.teams = [setup.teams[0], setup.teams[1]];
     const R = this.arena.radius;
     setup.teams.forEach((team, ti) => {
       const n = team.members.length;
+      // Team ORDER is initiative (first-action stagger below) AND formation: the leading members
+      // (all of a duo, half of a bigger team rounded up) hold the front row; the rest stand 2.5 m
+      // behind them, so the lead takes the first contact and the back row shoots over it.
+      const front = n <= 2 ? n : Math.ceil(n / 2);
       team.members.forEach((g, i) => {
         const ph = phenotypeOf(g);
         const stats: Stats = { ...ph.stats };
@@ -272,7 +286,8 @@ export class Battle {
         }
         // Teams start ~11 m apart (not across the whole field): fights engage sooner and the camera
         // can frame them closer.
-        const x = (ti === 0 ? -1 : 1) * R * 0.3, z = (i - (n - 1) / 2) * Math.max(2.6, 1.4 + ph.heightM);
+        const row = i < front ? 0 : 1, inRow = row === 0 ? front : n - front, k = row === 0 ? i : i - front;
+        const x = (ti === 0 ? -1 : 1) * (R * 0.3 + row * 2.5), z = (k - (inRow - 1) / 2) * Math.max(2.6, 1.4 + ph.heightM);
         const body = makeBody(g.id, {
           mass: Math.max(0.5, ph.massKg),
           radius: bodyRadius(ph),
@@ -321,6 +336,8 @@ export class Battle {
           damageTakenBy: {},
           lastHitAt: -9,
           strain: 0,
+          heals: 0,
+          swoopUntil: -9,
         });
       });
     });
@@ -411,7 +428,7 @@ export class Battle {
     let k = 1;
     for (const s of this.synergies[f.team]) {
       if (s.damageMult) k *= s.damageMult;
-      if (s.element === el && s.elementMult) k *= s.elementMult;
+      if ((s.element === el || s.element2 === el) && s.elementMult) k *= s.elementMult;
     }
     return k;
   }
@@ -436,7 +453,8 @@ export class Battle {
   private canReach(f: Fighter, t: Fighter, m: Move): boolean {
     if (t.status.has("burrowed") && !m.tags.includes("ground")) return false;
     if (t.body.mode === "fly" && m.tags.includes("ground")) return false;
-    if (t.body.mode === "fly" && m.shape === "melee" && f.body.mode !== "fly") {
+    // A flyer is out of a ground brawler's reach unless it is diving to strike (X7).
+    if (t.body.mode === "fly" && m.shape === "melee" && f.body.mode !== "fly" && this.t >= t.swoopUntil) {
       const alt = t.body.pos.y - f.body.pos.y;
       if (alt > f.stats.reach + f.ph.heightM) return false;
     }
@@ -459,10 +477,12 @@ export class Battle {
     if (f.status.has("blinded")) p *= 0.65;
     if (f.status.has("focused")) p *= 1.05;
     for (const z of this.zones) if (z.accuracyMult < 1 && distXZ(z.pos, f.body.pos) < z.radius) p *= z.accuracyMult;
-    let ev = t.stats.evasion * (t.status.has("evasive") ? 2 : 1) + (t.status.has("evasive") ? 0.1 : 0);
+    // Evasion is MULTIPLICATIVE and capped: a dodge removes a share of the hits that would land,
+    // never more than EVASION_CAP of them (subtractive evasion made 82 % dodge fortresses, X5).
+    let ev = t.stats.evasion * (t.status.has("evasive") ? 1.6 : 1) + (t.status.has("evasive") ? 0.06 : 0);
     if (t.phase === "rest") ev *= 0.5;
     if (t.status.has("frozen") || t.status.has("staggered")) ev = 0;
-    return clamp(p - ev, 0.05, 0.99);
+    return clamp(p * (1 - Math.min(EVASION_CAP, ev)), 0.05, 0.99);
   }
 
   private decide(f: Fighter): void {
@@ -506,7 +526,12 @@ export class Battle {
               u *= Math.max(0.3, 1 - 0.25 * allies);
             }
           }
-          if (m.element === "electric" && this.inWater(e)) u *= 1.25;
+          if (m.element === "electric" && (this.inWater(e) || e.status.has("wet"))) {
+            // The current also reaches wet bodies near the target: more enemies is better, allies hurt.
+            const wetNear = (mine: boolean) =>
+              this.fighters.filter((o) => o !== e && o !== f && !o.ko && (o.team === f.team) === mine && distXZ(o.body.pos, e.body.pos) <= 4.5 && (this.inWater(o) || o.status.has("wet"))).length;
+            u *= (1.25 + 0.2 * Math.min(2, wetNear(false))) * Math.max(0.2, 1 - 0.4 * wetNear(true));
+          }
           if (m.shape === "melee") u *= 1 + 0.35 * (1 - far) + 0.25 * temper - 0.4 * fear;
           else u *= 1 + 0.35 * far + 0.2 * fear;
           u *= 1 + 0.25 * temper * (m.power / 70);
@@ -519,16 +544,30 @@ export class Battle {
         const sx = (s: StatusId) => f.status.has(s);
         switch (m.shape) {
           case "heal":
-            u = hpF < 0.6 ? (1 - hpF) * (1 - hpF) * 3.2 : 0;
+            // Each heal in a fight is worth less than the last (HEAL_DECAY, X2): no infinite Rest loop.
+            u = hpF < 0.6 ? (1 - hpF) * (1 - hpF) * 3.2 * Math.pow(HEAL_DECAY, f.heals) : 0;
             break;
           case "buff": {
             const st = m.effects.find((e) => e.status)?.status;
             u = st && !sx(st) ? 0.55 + 0.3 * wise : 0;
             break;
           }
-          case "fly":
-            u = sx("airborne") ? 0 : 0.5 + 0.6 * (enemies.some((e) => e.moves.some((mm) => mm.tags.includes("ground") || mm.shape === "melee")) ? 1 : 0);
+          case "fly": {
+            // Flight dodges ground moves and (unless diving) ground melee, and costs energy every
+            // second: worth the SHARE of the enemies' damaging options it would dodge, relative to
+            // the best attack. Against a ranged-only team it is pure cost, so the AI stays down.
+            if (sx("airborne")) break;
+            let dodged = 0, total = 0;
+            for (const e of enemies) {
+              for (const mm of e.moves) {
+                if (!isDamaging(mm)) continue;
+                total++;
+                if (mm.tags.includes("ground") || mm.shape === "melee") dodged++;
+              }
+            }
+            if (dodged > 0) relative.push({ m, t: enemies[0].idx, k: 1.6 * (dodged / total), cost });
             break;
+          }
           case "phase":
             u = sx("liquid") ? 0 : hpF < 0.55 ? 0.9 : 0.15;
             break;
@@ -613,6 +652,9 @@ export class Battle {
     f.phaseT = 0;
     const speed = f.stats.rate * (f.status.has("hasted") ? 1.33 : 1) * (f.status.has("slowed") ? 0.87 : 1) * (f.status.has("paralyzed") ? 0.7 : 1);
     f.phaseDur = m.charge / speed;
+    // A flyer's melee is a DIVE: it comes down for the whole move plus a recovery beat, and ground
+    // brawlers can hit it back meanwhile (X7: no free melee from out of reach).
+    if (f.body.mode === "fly" && m.shape === "melee") f.swoopUntil = this.t + (m.charge + m.active + m.rest) / speed + 0.8;
     f.tally.casts++;
     this.moveUses[m.id] = (this.moveUses[m.id] ?? 0) + 1;
     f.elementsUsed[m.element] = (f.elementsUsed[m.element] ?? 0) + 1;
@@ -745,7 +787,8 @@ export class Battle {
       if (e.kind === "status" && e.status) this.addStatus(f, e.status, e.duration ?? 3, f);
       if (e.kind === "heal") {
         const before = f.hp;
-        f.hp = Math.min(f.maxHp, f.hp + f.maxHp * (e.value ?? 0) * PACE);
+        f.hp = Math.min(f.maxHp, f.hp + f.maxHp * (e.value ?? 0) * PACE * Math.pow(HEAL_DECAY, f.heals));
+        f.heals++;
         this.emit({ type: "status", a: f.idx, label: "heal", value: f.hp - before, pos: f.body.pos });
       }
       if (e.kind === "weather" && e.weather) this.setWeather(e.weather, e.duration ?? 14, f);
@@ -965,23 +1008,57 @@ export class Battle {
         if (mag > 2.5) this.emit({ type: "physics", a: t.idx, label: e.kind, value: mag, pos: { ...t.body.pos } });
       }
     }
-    // Electric conduction chains through water and wet bodies - allies included.
+    // Electric conduction chains through water and wet bodies - allies included (X3 fixed): each
+    // bystander takes the RAW strike (no crit, no attacker type bonus carried over) re-weighted by
+    // ITS OWN type and defence, at the weaker of the two conductivities, to at most 2 bystanders
+    // (nearest first, falloff 1 / 0.6).
     if (m.element === "electric" && (this.inWater(t) || t.status.has("wet")) && source !== "conduction") {
-      let chained = 0;
-      for (const o of this.fighters) {
-        if (o === t || o === f || o.ko) continue;
-        if (distXZ(o.body.pos, t.body.pos) > 4.5 || !(this.inWater(o) || o.status.has("wet"))) continue;
-        const cd = dmg * 0.45 * this.conduction(o) / Math.max(0.6, this.conduction(t));
+      const raw = dmg / (typeK * defF * cond * liquidK * frozenK * (crit ? 1.6 : 1));
+      const near = this.fighters
+        .filter((o) => o !== t && o !== f && !o.ko && distXZ(o.body.pos, t.body.pos) <= 4.5 && (this.inWater(o) || o.status.has("wet")))
+        .sort((a, b) => distXZ(a.body.pos, t.body.pos) - distXZ(b.body.pos, t.body.pos))
+        .slice(0, 2);
+      near.forEach((o, i) => {
+        const oDef = 100 / (100 + o.stats.def * (o.status.has("shielded") ? 1.6 : 1) * (o.status.has("softened") ? 0.75 : 1));
+        const cd = raw * 0.45 * Math.min(this.conduction(o), cond) * typeMultiplier("electric", o.types) * oDef * (i === 0 ? 1 : 0.6);
         o.hp = Math.max(0, o.hp - cd);
         o.tally.taken += cd;
         f.tally.dealt += o.team !== f.team ? cd : 0;
-        chained++;
-        this.emit({ type: "hit", a: f.idx, b: o.idx, move: m.id, element: "electric", value: cd, pos: { ...o.body.pos }, label: "conduction" });
+        this.emit({ type: "hit", a: f.idx, b: o.idx, move: m.id, element: "electric", value: cd, pos: { ...o.body.pos }, label: o.team === f.team ? "conduction (ally)" : "conduction" });
+        this.log("battle.conduction", f.id, "current chained through water", t.id, o.id, o.body.pos, {
+          move: m.id,
+          ally: o.team === f.team,
+          rank: i,
+          conduction: r3(Math.min(this.conduction(o), cond)),
+        }, { damage: r3(cd), hp: r3(o.hp) });
         if (o.hp <= 0) this.knockOut(o, f);
-      }
-      if (chained > 0) this.react(f, "electric", "water", t.body.pos, `current chained to ${chained} more`);
+      });
+      if (near.length > 0) this.react(f, "electric", "water", t.body.pos, `current chained to ${near.length} more`);
     }
     if (t.hp <= 0) this.knockOut(t, f);
+  }
+
+  /**
+   * Synergies live with their enablers (X4): when a fighter is knocked out, recompute its team's
+   * synergies from the survivors and take back the stat multipliers of every synergy that no longer
+   * holds. A team never GAINS a synergy by losing members.
+   */
+  private dropSynergies(t: Fighter): void {
+    const before = this.synergies[t.team];
+    if (before.length === 0) return;
+    const alive = this.fighters.filter((o) => o.team === t.team && !o.ko);
+    const after = alive.length ? synergies({ ...this.teams[t.team], members: alive.map((o) => o.genemon) }) : [];
+    const keep = before.filter((s) => after.some((a) => a.id === s.id && a.element === s.element));
+    const lost = before.filter((s) => !keep.includes(s));
+    if (lost.length === 0) return;
+    for (const s of lost) {
+      for (const o of alive) for (const [k, v] of Object.entries(s.statMult ?? {}) as [keyof Stats, number][]) o.stats[k] /= v;
+    }
+    this.synergies[t.team] = keep;
+    this.log("battle.synergyLost", t.id, "an enabler was knocked out", t.id, this.teams[t.team].owner, t.body.pos, {
+      lost: lost.map((s) => s.id).join(","),
+      survivors: alive.length,
+    }, { remaining: keep.map((s) => s.id).join(",") || "none" });
   }
 
   private knockOut(t: Fighter, by: Fighter | null): void {
@@ -990,6 +1067,7 @@ export class Battle {
     t.koAt = this.t;
     t.phase = "idle";
     t.move = null;
+    this.dropSynergies(t);
     t.body.mode = "ground";
     t.body.intent = { x: 0, z: 0, speed: 0 };
     if (by && by.team !== t.team) by.tally.kos++;
@@ -1051,6 +1129,8 @@ export class Battle {
         f.status.delete("airborne");
         f.body.mode = "ground";
       }
+      // Cruise altitude, or skimming the ground while diving to strike.
+      if (f.body.mode === "fly") f.body.flyAlt = this.t < f.swoopUntil ? Math.max(0.35, 0.3 * f.ph.heightM) : 1.8 + f.ph.heightM * 0.9;
       for (const k of ["anger", "fear", "joy", "surprise", "sadness"] as const) {
         f.emotions[k] += (f.ph.psyche.emotions[k] - f.emotions[k]) * dt * 0.08;
       }
@@ -1308,8 +1388,9 @@ export class Battle {
       let hp = 0, max = 0;
       for (const x of this.fighters) {
         if (x.team !== team) continue;
-        hp += x.hp * x.ph.slots;
-        max += x.maxHp * x.ph.slots;
+        // HP already scales with the size budget: weighting by slots again double-counted big bodies (X8).
+        hp += x.hp;
+        max += x.maxHp;
       }
       return max > 0 ? hp / max : 0;
     };

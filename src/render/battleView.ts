@@ -15,6 +15,19 @@ import { BattleCamera, type CameraMode } from "./battleCamera.ts";
 import { CreatureView } from "./creature.ts";
 import { FxDirector } from "./fx.ts";
 import type { Stage, View } from "./stage.ts";
+import { textSprite } from "./textures.ts";
+
+/** Side colours: team 0 (you) sky blue, team 1 (rival) orange - shared by the 3D markers and the HUD. */
+export const SIDE_COLORS = ["#38bdf8", "#fb923c"] as const;
+
+interface SideMarker {
+  ring: THREE.Mesh<THREE.RingGeometry, THREE.MeshBasicMaterial>;
+  tag: THREE.Sprite;
+  hpBack: THREE.Sprite;
+  hp: THREE.Sprite;
+}
+/** Screen size of the floating tag and HP pip (sizeAttenuation off: units = height at 1 m depth). */
+const TAG_H = 0.0215, PIP_W = 0.05, PIP_H = 0.0045;
 
 export interface BattleViewOptions {
   shadows: boolean;
@@ -40,6 +53,7 @@ export class BattleView implements View {
   private listeners: ((e: BattleEvent[]) => void)[] = [];
   private strain: number[] = [];
   private stability: number[] = [];
+  private markers: SideMarker[] = [];
 
   constructor(private stage: Stage, readonly battle: Battle, o: BattleViewOptions) {
     this.speed = o.speed;
@@ -58,9 +72,40 @@ export class BattleView implements View {
       this.animators.push(new Animator(sk, f.ph));
       this.strain.push(0);
       this.stability.push(1);
+      this.markers.push(this.makeMarker(f.team, f.name, f.body.radius));
     }
     this.syncCreatures(0, 0);
     this.cam.snap(battle);
+  }
+
+  /**
+   * Who is whose: a ground ring in the side colour (stays on the ground under fliers, reads depth)
+   * and a name tag + HP pip at a constant screen size above the head.
+   */
+  private makeMarker(team: 0 | 1, name: string, radius: number): SideMarker {
+    const color = SIDE_COLORS[team];
+    const w = Math.max(0.07, radius * 0.16);
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(radius * 1.12, radius * 1.12 + w, 48),
+      new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.85, depthWrite: false, side: THREE.DoubleSide }),
+    );
+    ring.rotation.x = -Math.PI / 2;
+    ring.renderOrder = 2;
+    const tag = textSprite(name, color, 26);
+    const tm = tag.material as THREE.SpriteMaterial;
+    tm.sizeAttenuation = false;
+    tag.scale.set((tag.scale.x / tag.scale.y) * TAG_H, TAG_H, 1);
+    tag.center.set(0.5, -0.55);
+    const pip = (c: string, o: number) => {
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({ color: c, transparent: true, opacity: o, depthTest: false, sizeAttenuation: false }));
+      s.renderOrder = 11;
+      return s;
+    };
+    const hpBack = pip("#0b0f14", 0.75), hp = pip(color, 1);
+    hpBack.scale.set(PIP_W, PIP_H, 1);
+    hpBack.center.set(0.5, 0);
+    for (const o of [ring, tag, hpBack, hp]) this.stage.scene.add(o);
+    return { ring, tag, hpBack, hp };
   }
 
   onEvents(fn: (e: BattleEvent[]) => void): void {
@@ -194,6 +239,21 @@ export class BattleView implements View {
       this.strain[i] = out.strain;
       this.stability[i] = out.stability;
       f.strain = out.strain;
+      // Side marker: ring on the ground under the body, tag + HP pip above the head.
+      const mk = this.markers[i];
+      const gy = b.arena.heightAt(body.pos.x, body.pos.z);
+      mk.ring.position.set(body.pos.x, gy + 0.04, body.pos.z);
+      mk.ring.material.opacity = f.ko ? 0.2 : 0.85;
+      const top = body.mode === "burrow" ? gy + 0.3 : body.pos.y + f.ph.heightM * 1.05 + 0.15;
+      const frac = Math.max(0, f.hp / f.maxHp);
+      for (const s of [mk.tag, mk.hpBack, mk.hp]) {
+        s.position.set(body.pos.x, top, body.pos.z);
+        s.visible = !f.ko;
+      }
+      mk.hp.visible = !f.ko && frac > 0;
+      mk.hp.scale.set(PIP_W * Math.max(0.01, frac), PIP_H, 1);
+      // Fill anchored on the left edge of the background bar.
+      mk.hp.center.set(0.5 / Math.max(0.01, frac), 0);
       if (f.phase === "charge" && f.move && Math.random() < 0.6) {
         const h = this.headOf(i);
         const c = new THREE.Color(ELEMENTS[f.move.element].color);
@@ -206,11 +266,25 @@ export class BattleView implements View {
 
   snapshot(): Record<string, unknown> {
     const b = this.battle;
+    // On-screen box per fighter (CSS px inside the 3D view): feet and head projected through the
+    // live camera, width from the body radius. Lets QA assert a minimum readable size.
+    const cam = this.stage.camera, el = this.stage.renderer.domElement;
+    const W = el.clientWidth, H = el.clientHeight;
+    const box = (i: number) => {
+      const f = b.fighters[i];
+      const pts = [0, 1].flatMap((up) =>
+        [-1, 1].map((s) => new THREE.Vector3(f.body.pos.x + s * f.body.radius, f.body.pos.y + up * f.ph.heightM, f.body.pos.z).project(cam))
+      );
+      const xs = pts.map((p) => (p.x * 0.5 + 0.5) * W), ys = pts.map((p) => (-p.y * 0.5 + 0.5) * H);
+      const r = (v: number) => Math.round(v);
+      return { x0: r(Math.min(...xs)), y0: r(Math.min(...ys)), x1: r(Math.max(...xs)), y1: r(Math.max(...ys)), hPx: r(Math.max(...ys) - Math.min(...ys)), inFront: pts.every((p) => p.z < 1) };
+    };
     return {
       t: b.t,
       winner: b.winner,
       weather: b.weather,
       arena: b.arena.spec.kind,
+      viewPx: [W, H],
       camera: { mode: this.cam.mode, ...this.cam.debug, center: this.cam.debug.center.toArray() },
       fighters: b.fighters.map((f, i) => ({
         name: f.name,
@@ -224,6 +298,7 @@ export class BattleView implements View {
         mode: f.body.mode,
         ground: f.body.groundId,
         pos: [f.body.pos.x, f.body.pos.y, f.body.pos.z].map((v) => Math.round(v * 100) / 100),
+        screen: box(i),
         status: [...f.status.keys()],
         strain: Math.round(this.strain[i] * 1000) / 1000,
         stability: Math.round(this.stability[i] * 1000) / 1000,
@@ -236,6 +311,16 @@ export class BattleView implements View {
 
   dispose(): void {
     for (const c of this.creatures) c.dispose();
+    for (const mk of this.markers) {
+      this.stage.scene.remove(mk.ring, mk.tag, mk.hpBack, mk.hp);
+      mk.ring.geometry.dispose();
+      mk.ring.material.dispose();
+      for (const s of [mk.tag, mk.hpBack, mk.hp]) {
+        const m = s.material as THREE.SpriteMaterial;
+        m.map?.dispose();
+        m.dispose();
+      }
+    }
     this.fx.dispose();
     this.arenaView.dispose();
     this.stage.controls.enabled = false;

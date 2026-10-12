@@ -6,7 +6,8 @@ import { renderTeam } from "./team.ts";
 import { renderLab } from "./lab.ts";
 import { renderData } from "./data.ts";
 import { renderSettings } from "./settings.ts";
-import { renderLadder, renderMarket, renderWorld } from "./later.ts";
+import { renderMarket, renderWorld } from "./later.ts";
+import { renderLadder } from "./ladder.ts";
 
 export interface ScreenDef {
   id: string;

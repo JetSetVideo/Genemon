@@ -12,7 +12,9 @@ import { ELEMENTS } from "../data/elements.ts";
 import { WEATHERS, type WeatherId } from "../data/weather.ts";
 import { createGenemon, type Genemon, phenotypeOf } from "../genome/genemon.ts";
 import { ARENA_INFO, type ArenaKind } from "../world/arena.ts";
-import { BattleView } from "../render/battleView.ts";
+import { BattleView, SIDE_COLORS } from "../render/battleView.ts";
+import { isRated, rankedConditions } from "../ladder/ranked.ts";
+import { getLadder, recordBattle } from "./ladderStore.ts";
 import type { CameraMode } from "../render/battleCamera.ts";
 import { GenospaceView } from "../render/genospaceView.ts";
 import { LabView } from "../render/labView.ts";
@@ -29,6 +31,8 @@ export interface BattleOptions {
   opponent: "rival" | "profile" | "mirror" | "wild";
   opponentProfile?: string;
   seed?: number;
+  /** Rated battle: conditions drawn by the ladder (App.startRanked), never picked. */
+  ranked?: boolean;
 }
 
 export class App {
@@ -87,9 +91,27 @@ export class App {
 
   private buildNav(): void {
     const nav = clear($("#nav"));
+    // Phones show 4 primary tabs + More (a sheet with the rest): nine 52-px tabs need 508 px and
+    // cannot fit a 390-px phone. On wider screens the sheet is `display: contents` (a normal rail).
+    const PRIMARY = new Set(["home", "arena", "team", "lab"]);
+    const sheet = h("div", { class: "nav-sheet" });
     for (const s of SCREENS) {
-      nav.append(h("button", { class: "nav-btn", "data-nav": s.id, title: s.hint, vars: { tab: s.color }, onclick: () => this.go(s.id) }, h("span", { class: "ico" }, s.icon), h("span", { class: "lbl" }, s.label)));
+      const b = h("button", {
+        class: "nav-btn",
+        "data-nav": s.id,
+        title: s.hint,
+        vars: { tab: s.color },
+        onclick: () => {
+          nav.classList.remove("open");
+          this.go(s.id);
+        },
+      }, h("span", { class: "ico" }, s.icon), h("span", { class: "lbl" }, s.label));
+      (PRIMARY.has(s.id) ? nav : sheet).append(b);
     }
+    nav.append(
+      sheet,
+      h("button", { class: "nav-btn nav-more", title: "World, Market, Ladder, Data, Settings", onclick: () => nav.classList.toggle("open") }, h("span", { class: "ico" }, "⋯"), h("span", { class: "lbl" }, "More")),
+    );
   }
 
   tickChrome(): void {
@@ -297,8 +319,8 @@ export class App {
     for (const e of ev) {
       let text = "";
       let color = hex(ELEMENTS[e.element ?? "neutral"].color);
-      if (e.type === "hit" && e.label !== "conduction") text = `${name(e.a)} ${MOVE_BY_ID[e.move ?? ""]?.name ?? e.move} → ${name(e.b)} −${Math.round(e.value ?? 0)}${e.crit ? " CRIT!" : ""}`;
-      else if (e.type === "hit") text = `⚡ current chains to ${name(e.b)} −${Math.round(e.value ?? 0)}`;
+      if (e.type === "hit" && !e.label?.startsWith("conduction")) text = `${name(e.a)} ${MOVE_BY_ID[e.move ?? ""]?.name ?? e.move} → ${name(e.b)} −${Math.round(e.value ?? 0)}${e.crit ? " CRIT!" : ""}`;
+      else if (e.type === "hit") text = `⚡ current chains to ${name(e.b)} −${Math.round(e.value ?? 0)}${e.label === "conduction (ally)" ? " (friendly fire)" : ""}`;
       else if (e.type === "ko") text = `💥 ${name(e.b)} is knocked out${e.a !== undefined ? ` by ${name(e.a)}` : ""}`;
       else if (e.type === "reaction") text = `✦ ${e.label} reaction`;
       else if (e.type === "clash") text = `✦ projectiles clash (${e.label})`;
@@ -311,36 +333,81 @@ export class App {
         this.finishBattle();
         continue;
       }
-      if (e.type === "ko") color = "#ff4d6d";
+      // KO lines by side: losing one of yours is red, knocking out a rival is gold.
+      if (e.type === "ko") color = e.b !== undefined && this.battleView?.battle.fighters[e.b]?.team === 0 ? "#ff4d6d" : "#ffd166";
       if (text) this.feed.push({ text, color, t: performance.now() });
     }
     if (this.feed.length > 4) this.feed.splice(0, this.feed.length - 4);
   }
 
-  private finishBattle(): void {
+  private finishBattle(forfeit = false): void {
     const bv = this.battleView;
     if (!bv || this.lastResult) return;
     const b = bv.battle;
-    const r = b.result();
+    const r: BattleResult = forfeit ? { ...b.result(), winner: 1, reason: "forfeit" } : b.result();
     this.lastResult = r;
     const teams = b.setup.teams;
-    // Only the player's own Genemon learn from this battle (opponents are copies or NPCs).
-    applyBattleResult(r, [teams[0], { ...teams[1], members: [] }]);
-    // Local Elo until the condition-aware ladder (src/ladder/mmr.ts) is integrated.
-    const oppRating = this.lastBattle?.opts.opponent === "profile" ? (this.store.get(teams[1].owner)?.mmr ?? 1500) : 1500;
-    const exp = 1 / (1 + Math.pow(10, (oppRating - this.profile.mmr) / 400));
-    const score = r.winner === 2 ? 0.5 : r.winner === 0 ? 1 : 0;
-    const delta = Math.round(24 * (score - exp));
-    this.profile.mmr += delta;
-    const st = this.profile.stats;
-    st.battles++;
-    if (r.winner === 0) st.wins++;
-    else if (r.winner === 1) st.losses++;
-    else st.draws++;
-    this.profile.history.unshift({ when: Date.now(), arena: r.arena, weather: r.weatherStart, hour: Math.round(r.hour), won: r.winner, opponent: teams[1].name, duration: Math.round(r.duration), reactions: Object.values(r.reactions).reduce<number>((s, v) => s + (v ?? 0), 0), mvp: b.fighters.find((f) => f.id === r.mvp)?.name ?? "", mmrDelta: delta });
+    const opts = this.lastBattle?.opts;
+    const seed = b.setup.seed;
+    const paid = (this.profile.rewardedSeeds ??= []);
+    const fresh = !paid.includes(seed);
+    const ranked = !!opts && isRated(opts, seed, paid);
+    // Rate FIRST: the condition-aware ladder reads only pre-match information, and applyBattleResult
+    // below changes the Genemon (xp, records, so phenotypes).
+    let delta = 0;
+    if (ranked) {
+      const rating = recordBattle(this, r, [teams[0], teams[1]], b.setup.arena);
+      if (rating.rated) {
+        const ladder = getLadder(this);
+        delta = Math.round(rating.deltaA);
+        this.profile.mmr = Math.round(ladder.rating(this.profile.id));
+        const opp = opts?.opponent === "profile" ? this.store.get(teams[1].owner) : undefined;
+        if (opp) {
+          opp.mmr = Math.round(ladder.rating(opp.id));
+          this.store.save(opp);
+        }
+      }
+    }
+    // XP and W/L are paid once per seed (X1); an abandoned PRACTICE battle pays and costs nothing.
+    if (fresh && (!forfeit || ranked)) {
+      // Only the player's own Genemon learn from this battle (opponents are copies or NPCs).
+      if (!forfeit) applyBattleResult(r, [teams[0], { ...teams[1], members: [] }]);
+      this.profile.rewardedSeeds = [seed, ...paid].slice(0, 300);
+      const st = this.profile.stats;
+      st.battles++;
+      if (r.winner === 0) st.wins++;
+      else if (r.winner === 1) st.losses++;
+      else st.draws++;
+    }
+    const kind = forfeit ? "forfeit" : ranked ? "ranked" : fresh ? "practice" : "replay";
+    this.profile.history.unshift({ when: Date.now(), arena: r.arena, weather: r.weatherStart, hour: Math.round(r.hour), won: r.winner, opponent: teams[1].name, duration: Math.round(r.duration), reactions: Object.values(r.reactions).reduce<number>((s, v) => s + (v ?? 0), 0), mvp: b.fighters.find((f) => f.id === r.mvp)?.name ?? "", mmrDelta: delta, kind });
     this.profile.history = this.profile.history.slice(0, 60);
+    this.ledger.emit({
+      when: Date.now(),
+      where: { x: 0, y: 0, z: 0, zone: r.arena, space: "arena" },
+      who: this.profile.id,
+      what: "battle.settled",
+      why: `${kind}: ${ranked ? "rated by the condition-aware ladder" : fresh ? "unrated, first play of this seed" : "unrated replay"}`,
+      from: this.profile.id,
+      to: teams[1].owner,
+      entries: { seed, ranked, fresh, forfeit, kind },
+      exits: { mmrDelta: delta, mmr: this.profile.mmr, winner: r.winner },
+    });
     this.save();
     this.render();
+  }
+
+  /** Leave a running battle. A RANKED battle abandoned after it started is a forfeit loss (X1). */
+  abandonBattle(): void {
+    const b = this.battleView?.battle;
+    if (b && b.winner === null && b.t > 0 && this.lastBattle?.opts.ranked) this.finishBattle(true);
+    this.closeBattle();
+  }
+
+  /** A rated battle: the ladder draws the arena and seed; the hour and (when it fits) the weather are real (X6). */
+  startRanked(opponent: "rival" | "profile" = "rival", opponentProfile?: string): void {
+    const d = rankedConditions(this.profile.id, this.profile.stats.battles, Math.floor(Date.now() / 86_400_000), this.hourNow(), this.rw.weather);
+    this.startBattle({ arena: d.arena, weather: d.weather, hour: d.hour, opponent, opponentProfile, seed: d.seed, ranked: true });
   }
 
   // ---------------------------------------------------------------- HUD
@@ -348,12 +415,15 @@ export class App {
     const hud = clear($("#hud"));
     hud.classList.remove("hidden");
     const b = this.battleView!.battle;
-    const side = (t: 0 | 1) => h("div", { class: `hud-team ${t ? "right" : ""}` }, ...b.fighters.filter((f) => f.team === t).map((f) =>
-      h("div", { class: "fcard", "data-f": f.idx },
-        h("div", { class: "top" }, h("span", { class: "el", vars: { el: hex(ELEMENTS[f.types[0]].color) } }, f.types[0]), h("span", { class: "nm" }, `${f.name}`), h("span", { class: "size" }, f.ph.sizeClass), h("span", { class: "ph" }, "")),
-        h("div", { class: "bars" }, h("div", { class: "bar hp" }, h("i", {})), h("div", { class: "bar en" }, h("i", {}))),
-        h("div", { class: "st" }, ""))
-    ));
+    const opp = b.setup.teams[1];
+    const side = (t: 0 | 1) => h("div", { class: `hud-team ${t ? "right" : ""}`, vars: { side: SIDE_COLORS[t] } },
+      h("div", { class: "hud-head" }, t === 0 ? "YOU" : `RIVAL · ${opp.name}`),
+      ...b.fighters.filter((f) => f.team === t).map((f) =>
+        h("div", { class: "fcard", "data-f": f.idx, title: `${f.name} · size ${f.ph.sizeClass} (${f.ph.slots} slot${f.ph.slots > 1 ? "s" : ""}) · ${f.types.join("/")}` },
+          h("div", { class: "top" }, h("span", { class: "el", vars: { el: hex(ELEMENTS[f.types[0]].color) } }, f.types[0]), h("span", { class: "nm" }, `${f.name}`), h("span", { class: "ph" }, "")),
+          h("div", { class: "bars" }, h("div", { class: "bar hp" }, h("i", {})), h("div", { class: "bar en" }, h("i", {}))),
+          h("div", { class: "st" }, ""))
+      ));
     hud.append(h("div", { class: "hud-teams" }, side(0), side(1)), h("div", { class: "hud-bottom" }, h("div", { class: "hud-feed" }), h("div", { class: "hud-meta mono" })));
   }
 

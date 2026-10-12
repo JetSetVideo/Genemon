@@ -275,13 +275,17 @@ export function moveCostBreakdown(m: Move, meta?: MetaUsage): CostBreakdown {
     else if (e.kind === "knockback" || e.kind === "pull") effects += (e.value ?? 0) * 1.4;
     else if (e.kind === "ground") effects += 9;
     else if (e.kind === "weather") effects += 16;
-    else if (e.kind === "heal") effects += (e.value ?? 0) * 40;
+    else if (e.kind === "heal") effects += (e.value ?? 0) * 60;
   }
   if (m.shape === "dig" || m.shape === "fly" || m.shape === "phase") effects += 6;
   const rarity = ELEMENT_RARITY[m.element] ?? 1;
   const nMoves = MOVES.length;
   const share = meta?.share[m.id] ?? 1 / nMoves;
-  const metaMult = meta ? clamp(1 + 0.3 * (share * nMoves - 1) / 4, 0.8, 1.25) : 1;
+  // Meta: r = usage relative to an average move (1 = average). Unused moves get up to -20 %, a move
+  // used 5x the average pays +25 %; piecewise linear so BOTH clamps are reachable (the old formula
+  // bottomed out at 0.925).
+  const r = meta ? share * nMoves : 1;
+  const metaMult = meta ? clamp(r <= 1 ? 0.8 + 0.2 * r : 1 + 0.0625 * (r - 1), 0.8, 1.25) : 1;
   const cost = Math.max(4, Math.round((damage * 0.3 * tempo + effects) * rarity * metaMult));
   return { damage, tempo, effects, rarity, meta: metaMult, cost };
 }

@@ -26,6 +26,8 @@ export interface Synergy {
   statMult?: Partial<Record<keyof Stats, number>>;
   /** Damage multiplier for one element (team-wide). */
   element?: ElementId;
+  /** A second element the same elementMult applies to (Forgeheart: fire AND earth). */
+  element2?: ElementId;
   elementMult?: number;
   /** Multiplier on all damage. */
   damageMult?: number;
@@ -60,18 +62,18 @@ const PAIRS: [ElementId, ElementId, Synergy][] = [
   ["shadow", "void", { id: "abyss", name: "Abyss", why: "Darkness and absence: +25% evasion.", statMult: { evasion: 1.25 } }],
   ["ice", "water", { id: "glacier", name: "Glacier", why: "Water ready to freeze: ice status chances x1.5.", element: "ice", statusMult: 1.5 }],
   ["poison", "plant", { id: "rot", name: "Rot", why: "Poisoned growth: +10% poison damage.", element: "poison", elementMult: 1.1 }],
-  ["fire", "earth", { id: "forgeheart", name: "Forgeheart", why: "Magma core: +8% fire and earth damage.", element: "fire", elementMult: 1.08 }],
+  ["fire", "earth", { id: "forgeheart", name: "Forgeheart", why: "Magma core: +8% fire and earth damage.", element: "fire", element2: "earth", elementMult: 1.08 }],
 ];
 
 export function synergies(t: Team): Synergy[] {
   const out: Synergy[] = [];
   const phs = t.members.map((g) => phenotypeOf(g));
-  const els = new Set<ElementId>();
-  for (const ph of phs) {
-    els.add(ph.elements.primary);
-    if (ph.elements.secondary) els.add(ph.elements.secondary);
+  // A pair synergy needs two DIFFERENT members: one dual-type creature cannot enable a pair alone (X4).
+  const holders = (e: ElementId) => phs.flatMap((p, i) => (p.elements.primary === e || p.elements.secondary === e ? [i] : []));
+  for (const [a, b, s] of PAIRS) {
+    const A = holders(a), B = holders(b);
+    if (A.some((i) => B.some((j) => j !== i))) out.push(s);
   }
-  for (const [a, b, s] of PAIRS) if (els.has(a) && els.has(b)) out.push(s);
   if (phs.length >= 3 && phs.filter((p) => p.axes.sociality > 0.25).length >= 3) {
     out.push({ id: "pack", name: "Pack", why: "Three social Genemon fight as one: +6% attack.", statMult: { atk: 1.06 } });
   }
@@ -87,10 +89,18 @@ export function synergies(t: Team): Synergy[] {
   }
   const primaries = new Set(phs.map((p) => p.elements.primary));
   if (primaries.size >= 4) out.push({ id: "prism", name: "Prism", why: "Four elements cover each other: +3% damage.", damageMult: 1.03 });
-  if (phs.length >= 2 && primaries.size === 1) {
-    const e = [...primaries][0];
-    out.push({ id: "resonance", name: "Resonance", why: `All ${e}: +10% ${e} damage.`, element: e, elementMult: 1.1 });
+  // Resonance: two or more members share a primary element (the most common one wins; ties go to
+  // the earlier member) - as documented in GAMEPLAY.md; it used to require EVERY member.
+  const count = new Map<ElementId, number>();
+  for (const p of phs) count.set(p.elements.primary, (count.get(p.elements.primary) ?? 0) + 1);
+  let best: ElementId | null = null, bestN = 1;
+  for (const [e, n] of count) {
+    if (n > bestN) {
+      best = e;
+      bestN = n;
+    }
   }
+  if (best) out.push({ id: "resonance", name: "Resonance", why: `${bestN} ${best} primaries: +10% ${best} damage.`, element: best, elementMult: 1.1 });
   return out;
 }
 

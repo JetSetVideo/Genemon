@@ -24,7 +24,7 @@ export const SLOT_COST: Record<SizeClass, number> = { XS: 1, S: 1, M: 2, L: 3, X
  * equal slots within 35-65%, measured by tools/balance.ts); big bodies get slightly less than 1.0
  * per slot because they also hit harder in contact, cleave in melee and shrug off knockback.
  */
-export const POWER_BUDGET: Record<SizeClass, number> = { XS: 0.85, S: 1, M: 2, L: 2.9, XL: 4.1 };
+export const POWER_BUDGET: Record<SizeClass, number> = { XS: 0.85, S: 1, M: 2, L: 2.9, XL: 3.9 };
 export const MASS_THRESHOLDS: Record<Exclude<SizeClass, "XL">, number> = { XS: 6, S: 45, M: 260, L: 1100 };
 
 export interface Stats {
@@ -252,14 +252,22 @@ function sizeClassOf(mass: number): SizeClass {
 
 /** Reference energy regeneration (per second) at which regen is neutral in the power index. */
 export const REGEN_REF = 11;
+/** Hard cap on total evasion (base x statuses x synergies): a dodge never removes more than 35 % of hits. */
+export const EVASION_CAP = 0.35;
 
 /**
- * Raw combat power of a stat block: sqrt(effective HP x effective attack rate), where the attack
- * rate includes energy throughput (regen / REGEN_REF): a creature that can afford fewer moves is
- * compensated with more HP and attack instead of being silently weaker [SPEC B1].
+ * Raw combat power of a stat block: sqrt(effective HP x expected damage rate) [SPEC B1].
+ * Effective HP counts defence exactly as the battle does (100 / (100 + def)) and evasion
+ * (1 / (1 - evasion)); the damage rate counts energy throughput (regen / REGEN_REF), accuracy and
+ * expected crit (+60 % per crit). Every stat that wins fights is paid for out of the same budget:
+ * a creature that dodges, crits or regenerates more gets less raw HP and attack.
  */
-export function powerIndex(s: Pick<Stats, "hp" | "def" | "atk" | "rate" | "regen">): number {
-  return Math.sqrt(s.hp * (1 + s.def / 120) * s.atk * s.rate * (s.regen / REGEN_REF));
+export function powerIndex(s: Pick<Stats, "hp" | "def" | "atk" | "rate" | "regen" | "evasion" | "accuracy" | "crit">): number {
+  // Evasion only dodges direct hits (hitChance is rolled in Battle.hit); damage over time,
+  // conduction and hazards ignore it, so it is priced on ~80 % of incoming damage (estimate).
+  const ehp = s.hp * (1 + s.def / 100) / (1 - 0.8 * Math.min(EVASION_CAP, s.evasion));
+  const dps = s.atk * s.rate * (s.regen / REGEN_REF) * s.accuracy * (1 + 0.6 * s.crit);
+  return Math.sqrt(ehp * dps);
 }
 
 export function express(g: Genome, c: Conditions): Phenotype {
