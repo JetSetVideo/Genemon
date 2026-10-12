@@ -15,6 +15,7 @@ import { ARENA_INFO, type ArenaKind } from "../world/arena.ts";
 import { BattleView, SIDE_COLORS } from "../render/battleView.ts";
 import { isRated, rankedConditions } from "../ladder/ranked.ts";
 import { getLadder, recordBattle } from "./ladderStore.ts";
+import { getProgress, resetProgress } from "./progressStore.ts";
 import type { CameraMode } from "../render/battleCamera.ts";
 import { GenospaceView } from "../render/genospaceView.ts";
 import { LabView } from "../render/labView.ts";
@@ -73,6 +74,8 @@ export class App {
       exits: { maxTexture: this.stage.gpuInfo().maxTexture },
     });
     this.buildNav();
+    // Achievements and quests follow every ledger row from now on (src/ui/progressStore.ts).
+    getProgress(this);
     $("#btn-theme").addEventListener("click", () => this.updateSettings({ theme: this.profile.settings.theme === "dark" ? "light" : "dark" }));
     for (const el of document.querySelectorAll<HTMLElement>("[data-screen]")) el.addEventListener("click", () => this.go(el.dataset.screen!));
     document.addEventListener("keydown", (e) => this.key(e));
@@ -110,7 +113,7 @@ export class App {
     }
     nav.append(
       sheet,
-      h("button", { class: "nav-btn nav-more", title: "World, Market, Ladder, Data, Settings", onclick: () => nav.classList.toggle("open") }, h("span", { class: "ico" }, "⋯"), h("span", { class: "lbl" }, "More")),
+      h("button", { class: "nav-btn nav-more", title: "World, Market, Ladder, Feats, Data, Settings", onclick: () => nav.classList.toggle("open") }, h("span", { class: "ico" }, "⋯"), h("span", { class: "lbl" }, "More")),
     );
   }
 
@@ -147,9 +150,11 @@ export class App {
   switchProfile(id: string): void {
     const p = this.store.switchTo(id);
     if (!p) return;
+    resetProgress();
     this.profile = p;
     this.selected = null;
     this.applyTheme();
+    getProgress(this);
     this.log("ui.profile.switch", "user switched profile", id, p.name);
     this.go("home");
   }
@@ -451,6 +456,9 @@ export class App {
     if (now - this.hudTimer < 90 || !this.battleView) return;
     this.hudTimer = now;
     const b = this.battleView.battle;
+    // Tell the camera how much of the frame the top HUD cards cover, so it frames fighters below them.
+    const vp = $("#viewport").getBoundingClientRect(), teams = document.querySelector<HTMLElement>("#hud .hud-teams");
+    if (teams && vp.height > 0) this.battleView.setHudTop((teams.getBoundingClientRect().bottom - vp.top) / vp.height);
     for (const f of b.fighters) {
       const card = document.querySelector<HTMLElement>(`.fcard[data-f="${f.idx}"]`);
       if (!card) continue;

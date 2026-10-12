@@ -65,9 +65,33 @@ async function shot(page: Page, file: string, title: string): Promise<void> {
   await page.screenshot({ path: `${OUT}/${file}` });
   const vp = page.viewportSize();
   const snapshot = await page.evaluate(() => (globalThis as any).__GENEMON__.snapshot());
-  const ov = await page.evaluate(() => document.documentElement.scrollWidth - globalThis.innerWidth);
-  if (ov > 1) overflow.push(`${file}: ${ov}px`);
-  shots.push({ file, title, viewport: `${vp?.width}x${vp?.height}`, snapshot });
+  // Overflow = any app region whose right edge passes the VISUAL viewport, or a panel that scrolls
+  // sideways. (scrollWidth vs innerWidth was blind under mobile emulation: innerWidth widens with
+  // the content, so it reported 0 while the phone layout was ~500 px wide.)
+  const ov = await page.evaluate(() => {
+    const vw = globalThis.visualViewport?.width ?? document.documentElement.clientWidth;
+    const out: string[] = [];
+    for (const id of ["topbar", "viewport", "panel", "nav"]) {
+      const el = document.getElementById(id);
+      if (!el) continue;
+      const r = el.getBoundingClientRect();
+      if (r.right > vw + 1) out.push(`#${id} right ${Math.round(r.right)} > ${Math.round(vw)}`);
+    }
+    const p = document.getElementById("panel");
+    if (p && p.scrollWidth > p.clientWidth + 1) out.push(`#panel scrolls sideways (${p.scrollWidth} > ${p.clientWidth})`);
+    return out;
+  });
+  if (ov.length) overflow.push(`${file}: ${ov.join("; ")}`);
+  // HUD rectangles (CSS px, relative to the 3D view) to cross-check against fighter boxes.
+  const hud = await page.evaluate(() => {
+    const v = document.getElementById("viewport")?.getBoundingClientRect();
+    if (!v) return [];
+    return [...document.querySelectorAll<HTMLElement>("#hud .hud-team, #hud .hud-feed, #view-tools")].filter((e) => e.offsetParent !== null).map((e) => {
+      const r = e.getBoundingClientRect();
+      return { cls: e.className || e.id, x0: Math.round(r.left - v.left), y0: Math.round(r.top - v.top), x1: Math.round(r.right - v.left), y1: Math.round(r.bottom - v.top) };
+    });
+  });
+  shots.push({ file, title, viewport: `${vp?.width}x${vp?.height}`, snapshot: { ...snapshot, hudRects: hud } });
   console.log(`  -> ${file}`);
 }
 
@@ -149,6 +173,22 @@ await shot(page, "08-settings-light.png", "Settings in the light theme");
 await go(page, "lab");
 await shot(page, "09-lab-light.png", "Lab in the light theme");
 await page.evaluate(() => (globalThis as any).__GENEMON__.app.updateSettings({ theme: "dark" }));
+
+// ------------------------------------------------------------------ every registered screen
+// Roster-driven: the ids come from the nav, which is generated from SCREENS (src/ui/screens/
+// registry.ts), so a newly registered screen is captured without editing this list.
+const SHOT_ALREADY = new Set(["home", "lab", "team", "data", "arena", "settings"]);
+const roster: string[] = await page.evaluate(() => [...document.querySelectorAll<HTMLElement>("#nav [data-nav]")].map((b) => b.dataset.nav!));
+let rosterShots = 0;
+for (const id of roster) {
+  if (SHOT_ALREADY.has(id)) continue;
+  await go(page, id);
+  await page.waitForTimeout(id === "world" ? 1500 : 700);
+  await shot(page, `screen-${id}.png`, `Screen "${id}" (roster-driven: every screen in the registry is captured)`);
+  rosterShots++;
+}
+console.log(`Screens: ${roster.length} registered, ${SHOT_ALREADY.size} in the fixed set, ${rosterShots} roster shots`);
+if (rosterShots + [...SHOT_ALREADY].filter((s) => roster.includes(s)).length !== roster.length) throw new Error("a registered screen was not captured");
 
 // ------------------------------------------------------------------ creature gallery + phase strip
 console.log("Creature gallery");
@@ -252,6 +292,15 @@ for (const [w, hgt, mobile, label] of [[820, 1180, true, "tablet"], [390, 844, t
     app.go("lab");
   });
   await shot(p, `${label}-lab.png`, `${label}: lab`);
+  if (label === "mobile") {
+    // The phone nav: 4 tabs + More; the sheet must open above the bar and fit the screen.
+    await p.evaluate(() => document.querySelector<HTMLElement>("#nav .nav-more")?.click());
+    await p.waitForTimeout(250);
+    await shot(p, "mobile-more.png", "mobile: the More sheet (World, Market, Ladder, Feats, Data, Settings)");
+    await p.evaluate(() => (globalThis as any).__GENEMON__.app.go("world"));
+    await p.waitForTimeout(1500);
+    await shot(p, "mobile-world.png", "mobile: World map (places around home, physical vs virtual)");
+  }
   await p.context().close();
 }
 
@@ -281,6 +330,20 @@ await sheet("sheet-devices.png", ["tablet-home.png", "tablet-battle.png", "table
 await browser.close();
 await server.shutdown();
 
+// Readability per battle shot: the smallest living fighter on screen (px tall) and any fighter box
+// overlapping a HUD rectangle. Design floor (round-1 designer review): >= 48 px at 1440x900.
+type Box = { x0: number; y0: number; x1: number; y1: number };
+const sizeRows: string[] = [];
+for (const s of shots) {
+  const snap = s.snapshot as { view?: { fighters?: { name: string; hp: number; screen?: Box & { hPx: number; inFront: boolean } }[] }; hudRects?: (Box & { cls: string })[] };
+  const fs = (snap.view?.fighters ?? []).filter((f) => f.hp > 0 && f.screen?.inFront);
+  if (!fs.length) continue;
+  const min = fs.reduce((a, f) => (f.screen!.hPx < a.screen!.hPx ? f : a));
+  const hit = (a: Box, b: Box) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
+  const overlaps = fs.filter((f) => (snap.hudRects ?? []).some((r) => hit(f.screen!, r))).map((f) => f.name);
+  sizeRows.push(`| ${s.file} | ${s.viewport} | ${min.screen!.hPx} px (${min.name}) | ${overlaps.length ? overlaps.join(", ") : "-"} |`);
+}
+
 const report = [
   `# QA capture - round ${ROUND}`,
   "",
@@ -296,6 +359,12 @@ const report = [
   "| file | what it shows |",
   "|---|---|",
   ...shots.map((s) => `| ${s.file} | ${s.title} (${s.viewport}) |`),
+  "",
+  "## Readability: smallest living fighter and HUD overlap (battle shots)",
+  "",
+  "| file | viewport | smallest fighter on screen | fighters under a HUD box |",
+  "|---|---|---|---|",
+  ...sizeRows,
   "",
 ];
 await Deno.writeTextFile(`${OUT}/REPORT.md`, report.join("\n"));

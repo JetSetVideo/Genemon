@@ -272,10 +272,17 @@ export class Battle {
     this.synergies = [synergies(setup.teams[0]), synergies(setup.teams[1])];
     this.teams = [setup.teams[0], setup.teams[1]];
     const R = this.arena.radius;
+    // Formation scale: the start line, rows and lanes follow the fighters' size. Two 30-cm Genemon
+    // do not open a fight 11 m apart (37 body heights; QA round 2 measured 21-46 px fighters at
+    // 1440x900): small fights start compact so the camera frames them at a readable size, big
+    // fights keep the full ~11 m (R x 0.3 each side).
+    const heights = setup.teams.flatMap((t) => t.members.map((g) => phenotypeOf(g).heightM));
+    const meanH = heights.reduce((s, x) => s + x, 0) / Math.max(1, heights.length);
+    const halfGap = clamp(2 + 3.5 * meanH, 2.5, R * 0.3), rowGap = clamp(1 + 1.5 * meanH, 1.5, 2.5);
     setup.teams.forEach((team, ti) => {
       const n = team.members.length;
       // Team ORDER is initiative (first-action stagger below) AND formation: the leading members
-      // (all of a duo, half of a bigger team rounded up) hold the front row; the rest stand 2.5 m
+      // (all of a duo, half of a bigger team rounded up) hold the front row; the rest stand a row
       // behind them, so the lead takes the first contact and the back row shoots over it.
       const front = n <= 2 ? n : Math.ceil(n / 2);
       team.members.forEach((g, i) => {
@@ -284,10 +291,8 @@ export class Battle {
         for (const s of this.synergies[ti]) {
           for (const [k, v] of Object.entries(s.statMult ?? {}) as [keyof Stats, number][]) stats[k] *= v;
         }
-        // Teams start ~11 m apart (not across the whole field): fights engage sooner and the camera
-        // can frame them closer.
         const row = i < front ? 0 : 1, inRow = row === 0 ? front : n - front, k = row === 0 ? i : i - front;
-        const x = (ti === 0 ? -1 : 1) * (R * 0.3 + row * 2.5), z = (k - (inRow - 1) / 2) * Math.max(2.6, 1.4 + ph.heightM);
+        const x = (ti === 0 ? -1 : 1) * (halfGap + row * rowGap), z = (k - (inRow - 1) / 2) * Math.max(1.3, 0.9 + 1.4 * ph.heightM);
         const body = makeBody(g.id, {
           mass: Math.max(0.5, ph.massKg),
           radius: bodyRadius(ph),

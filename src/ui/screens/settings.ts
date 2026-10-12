@@ -1,6 +1,7 @@
 import type { App } from "../app.ts";
 import type { CameraMode } from "../../render/battleCamera.ts";
 import { h, section, select, toast } from "../dom.ts";
+import { forgetProgress } from "../progressStore.ts";
 
 let newName = "";
 
@@ -37,6 +38,7 @@ export function renderSettings(app: App): HTMLElement {
         p.id !== app.profile.id ? h("button", { class: "btn small", onclick: () => app.switchProfile(p.id) }, "Switch") : null,
         p.id !== app.profile.id ? h("button", { class: "btn small", onclick: () => {
           app.store.remove(p.id);
+          forgetProgress(localStorage, p.id);
           app.render();
         } }, "Delete") : null)),
       h("div", { class: "row" },

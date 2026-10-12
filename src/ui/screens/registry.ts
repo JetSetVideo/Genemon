@@ -4,10 +4,12 @@ import { renderHome } from "./home.ts";
 import { renderArena } from "./arena.ts";
 import { renderTeam } from "./team.ts";
 import { renderLab } from "./lab.ts";
+import { mountWorld, renderWorld } from "./world.ts";
+import { renderMarket } from "./market.ts";
+import { renderLadder } from "./ladder.ts";
+import { renderAchievements } from "./quests.ts";
 import { renderData } from "./data.ts";
 import { renderSettings } from "./settings.ts";
-import { renderMarket, renderWorld } from "./later.ts";
-import { renderLadder } from "./ladder.ts";
 
 export interface ScreenDef {
   id: string;
@@ -23,13 +25,14 @@ export interface ScreenDef {
 }
 
 export const SCREENS: readonly ScreenDef[] = [
-  { id: "home", label: "Home", icon: "⌂", color: "#4cc9f0", hint: "Your day, your Genemon, quick actions", view: "lab", render: renderHome },
-  { id: "arena", label: "Arena", icon: "⚔", color: "#ff6b35", hint: "Instant battles in 3D arenas", view: "lab", render: renderArena },
+  { id: "home", label: "Home", icon: "⌂", color: "#4cc9f0", hint: "Your day, your quests, your Genemon, quick actions", view: "lab", render: renderHome },
+  { id: "arena", label: "Arena", icon: "⚔", color: "#ff6b35", hint: "Ranked and practice battles in 3D arenas", view: "lab", render: renderArena },
   { id: "team", label: "Team", icon: "❖", color: "#ffd166", hint: "6 slots: big Genemon cost more; synergies; attack order", view: "lab", render: renderTeam },
   { id: "lab", label: "Lab", icon: "⚗", color: "#3ddc84", hint: "Inspect, feed, grow, breed, mutate, morph, fuse", view: "lab", render: renderLab },
-  { id: "world", label: "World", icon: "◎", color: "#9b5de5", hint: "Map, places, territories (physical vs virtual)", view: "keep", render: renderWorld },
-  { id: "market", label: "Market", icon: "⚖", color: "#f15bb5", hint: "Auction house: timers, promotions, sellers", view: "keep", render: renderMarket },
+  { id: "world", label: "World", icon: "◎", color: "#9b5de5", hint: "Map around your home: discover, claim, shop, train, catch (in person vs virtual)", mount: mountWorld, render: renderWorld },
+  { id: "market", label: "Market", icon: "⚖", color: "#f15bb5", hint: "Auction house: timers, bids, buyouts, promotions; company, NPC and player sellers", view: "keep", render: renderMarket },
   { id: "ladder", label: "Ladder", icon: "♛", color: "#00bbf9", hint: "Condition-aware MMR and match conditions", view: "keep", render: renderLadder },
+  { id: "achievements", label: "Feats", icon: "★", color: "#e9b949", hint: "Achievements by category, locked and unlocked, with progress", view: "keep", render: renderAchievements },
   { id: "data", label: "Data", icon: "∿", color: "#00f5d4", hint: "Ledger, graphs, genospace, hardware & session", view: "genospace", render: renderData },
   { id: "settings", label: "Settings", icon: "⚙", color: "#a7b3c6", hint: "Theme, quality, camera, profiles", view: "keep", render: renderSettings },
 ];

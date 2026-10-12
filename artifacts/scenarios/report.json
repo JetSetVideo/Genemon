@@ -12,7 +12,7 @@
     "id": "SC-02",
     "title": "Fire vs water attacks create smoke",
     "metric": "battles with >= 1 smoke cloud",
-    "value": "120/120 (1891 clouds, 11 mid-air clashes)",
+    "value": "120/120 (1898 clouds, 10 mid-air clashes)",
     "expect": ">= 80% of battles",
     "pass": true,
     "note": "smoke = fire meets water: projectile clash, fire on a wet target, or fire on water ground"
@@ -21,7 +21,7 @@
     "id": "SC-03",
     "title": "Electric connects on water, less on muddy water, least on stone",
     "metric": "mean electric damage per hit",
-    "value": "water 139.2 > muddyWater 110.0 > stone 50.2",
+    "value": "water 138.2 > muddyWater 110.3 > stone 49.9",
     "expect": "water > muddyWater > stone",
     "pass": true,
     "note": "conductivity water 1.6 (x1.3 wet), muddy water 1.25, stone 0.7"
@@ -48,9 +48,9 @@
     "id": "SC-06",
     "title": "Random teams: side 0 vs side 1 parity",
     "metric": "side-0 win rate (decisive)",
-    "value": "54.2% [45-63] n=120 draws=0",
+    "value": "53.3% [44-62] n=120 draws=0",
     "expect": "CI contains 50%",
     "pass": true,
-    "note": "duration p10 15.5s, median 23.5s, p90 38.7s"
+    "note": "duration p10 14.5s, median 23.7s, p90 37.9s"
   }
 ]

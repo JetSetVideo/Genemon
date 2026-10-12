@@ -16,6 +16,7 @@ import { CreatureView } from "./creature.ts";
 import { FxDirector } from "./fx.ts";
 import type { Stage, View } from "./stage.ts";
 import { textSprite } from "./textures.ts";
+import { displayScale } from "./display.ts";
 
 /** Side colours: team 0 (you) sky blue, team 1 (rival) orange - shared by the 3D markers and the HUD. */
 export const SIDE_COLORS = ["#38bdf8", "#fb923c"] as const;
@@ -54,6 +55,8 @@ export class BattleView implements View {
   private strain: number[] = [];
   private stability: number[] = [];
   private markers: SideMarker[] = [];
+  /** Display scale per fighter (small bodies drawn larger; physics untouched). */
+  private ds: number[] = [];
 
   constructor(private stage: Stage, readonly battle: Battle, o: BattleViewOptions) {
     this.speed = o.speed;
@@ -67,12 +70,15 @@ export class BattleView implements View {
     for (const f of battle.fighters) {
       const sk = buildSkeleton(f.ph);
       const cv = new CreatureView(f.ph, sk, hashSeed(f.genemon.genome.id, "skin"), { quality: o.quality, shadows: o.shadows });
+      const ds = displayScale(f.ph.heightM);
+      cv.root.scale.setScalar(ds);
+      this.ds.push(ds);
       stage.scene.add(cv.root);
       this.creatures.push(cv);
       this.animators.push(new Animator(sk, f.ph));
       this.strain.push(0);
       this.stability.push(1);
-      this.markers.push(this.makeMarker(f.team, f.name, f.body.radius));
+      this.markers.push(this.makeMarker(f.team, f.name, f.body.radius * ds));
     }
     this.syncCreatures(0, 0);
     this.cam.snap(battle);
@@ -118,9 +124,14 @@ export class BattleView implements View {
     if (m === "orbit") this.stage.controls.target.copy(this.cam.debug.center);
   }
 
+  /** The UI reports how much of the frame its HUD cards cover at the top (fraction of the height). */
+  setHudTop(frac: number): void {
+    this.cam.safeTop = Math.max(0, Math.min(0.8, frac)) * 2;
+  }
+
   private headOf = (idx: number): THREE.Vector3 => {
     const f = this.battle.fighters[idx];
-    return new THREE.Vector3(f.body.pos.x, f.body.pos.y + f.ph.heightM * 0.7, f.body.pos.z);
+    return new THREE.Vector3(f.body.pos.x, f.body.pos.y + f.ph.heightM * this.ds[idx] * 0.7, f.body.pos.z);
   };
 
   update(dt: number, t: number): void {
@@ -244,7 +255,7 @@ export class BattleView implements View {
       const gy = b.arena.heightAt(body.pos.x, body.pos.z);
       mk.ring.position.set(body.pos.x, gy + 0.04, body.pos.z);
       mk.ring.material.opacity = f.ko ? 0.2 : 0.85;
-      const top = body.mode === "burrow" ? gy + 0.3 : body.pos.y + f.ph.heightM * 1.05 + 0.15;
+      const top = body.mode === "burrow" ? gy + 0.3 : body.pos.y + f.ph.heightM * this.ds[i] * 1.05 + 0.15;
       const frac = Math.max(0, f.hp / f.maxHp);
       for (const s of [mk.tag, mk.hpBack, mk.hp]) {
         s.position.set(body.pos.x, top, body.pos.z);
@@ -273,7 +284,7 @@ export class BattleView implements View {
     const box = (i: number) => {
       const f = b.fighters[i];
       const pts = [0, 1].flatMap((up) =>
-        [-1, 1].map((s) => new THREE.Vector3(f.body.pos.x + s * f.body.radius, f.body.pos.y + up * f.ph.heightM, f.body.pos.z).project(cam))
+        [-1, 1].map((s) => new THREE.Vector3(f.body.pos.x + s * f.body.radius * this.ds[i], f.body.pos.y + up * f.ph.heightM * this.ds[i], f.body.pos.z).project(cam))
       );
       const xs = pts.map((p) => (p.x * 0.5 + 0.5) * W), ys = pts.map((p) => (-p.y * 0.5 + 0.5) * H);
       const r = (v: number) => Math.round(v);

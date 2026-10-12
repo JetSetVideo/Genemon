@@ -13,7 +13,7 @@ export function renderArena(app: App): HTMLElement {
     const b = bv.battle;
     root.append(
       h("h1", {}, "Battle in progress"),
-      h("p", {}, `${ARENA_INFO[b.arena.spec.kind].name} · ${b.weatherDef.name} · ${Math.floor(b.setup.arena.hour)}h. ${b.weatherDef.note}`),
+      h("p", {}, `${ARENA_INFO[b.arena.spec.kind].name} · started in ${WEATHERS[b.setup.arena.weather].name} · ${Math.floor(b.setup.arena.hour)}h (live weather: bottom of the 3D view). ${WEATHERS[b.setup.arena.weather].note}`),
       section("Controls",
         h("p", { class: "muted" }, "Camera buttons are on the right edge of the 3D view ", h("span", { class: "kbd-only" }, "(keys 1-6). Space pauses."), h("span", { class: "touch-only" }, "(tap them). ⏯ pauses.")),
         h("div", { class: "row" }, ...[0.5, 1, 2, 3].map((s) => h("button", { class: `btn small ${app.profile.settings.speed === s ? "on" : ""}`, onclick: () => app.updateSettings({ speed: s }) }, `${s}×`)),

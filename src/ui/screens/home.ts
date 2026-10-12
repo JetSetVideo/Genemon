@@ -6,6 +6,7 @@ import { teamSummary } from "../../combat/team.ts";
 import { teamOf } from "../profile.ts";
 import { fmt, h, hex, section } from "../dom.ts";
 import { elChip, genemonCard } from "../widgets.ts";
+import { renderQuestPanel } from "./quests.ts";
 
 export function renderHome(app: App): HTMLElement {
   const p = app.profile;
@@ -21,6 +22,7 @@ export function renderHome(app: App): HTMLElement {
     h("h1", {}, `Hello ${p.name}`),
     h("p", {}, "Your Genemon evolve with your real life: the time you play, the places you go, the food you buy, the battles you fight."),
     h("button", { class: "btn primary big", "data-action": "instant-battle", title: "A ranked battle right now: the ladder draws the arena; your real hour and weather apply", onclick: () => app.startRanked() }, "⚔ Instant battle"),
+    renderQuestPanel(app),
     section("Right now (real world)",
       h("dl", { class: "kv" },
         h("dt", {}, "Local time"), h("dd", {}, `${rw.now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · ${rw.dayPhase}`),
