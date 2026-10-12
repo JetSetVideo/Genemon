@@ -78,4 +78,5 @@ The battle camera leaves living fighters off-screen in about half of the automat
 the on-screen size floor (48 px) is not met. Both round-3 reviewers scored the build not-ready-to-ship
 (3D/physics 34/100, designer 56/100). Their reports are in `docs/reviews/round-3/`.
 
-For AI coding sessions: read `docs/START-HERE.md` first.
+For coding agents: read `AGENTS.md` first (hard rules, commands, where things live); the long-form state
+and quest order are in `docs/START-HERE.md`.

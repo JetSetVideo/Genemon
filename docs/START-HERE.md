@@ -1,7 +1,8 @@
 # START HERE — orientation for AI coding sessions
 
-> A root `AGENTS.md` was not created: writing agent-instruction files needs the user's explicit
-> approval, and that prompt timed out. If the user approves later, this file can be copied there.
+> The root `AGENTS.md` (short, hard-rules-first) exists and is the file coding agents read first. This
+> document is the long form: current state, quest order, review history and the doc map. Keep both in
+> sync when the state changes.
 
 Genemon is a 3D generative-monster game: Pokémon Stadium-style battles + a Pokémon GO-style world,
 where every monster ("Genemon") is generated from a genome and keeps evolving with the real life of
