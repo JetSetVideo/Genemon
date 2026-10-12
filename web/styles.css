@@ -33,7 +33,7 @@
   --line: #d6dde8;
   --text: #121826;
   --text-2: #3d4a5f;
-  --text-3: #6b778c;
+  --text-3: #5b6678;
   --card: rgba(255, 255, 255, 0.95);
   --hud: rgba(255, 255, 255, 0.82);
   --accent: #0077b6;
@@ -101,7 +101,9 @@ select, input[type="number"], input[type="text"] { padding: 7px 9px; border-radi
 input[type="range"] { width: 100%; accent-color: var(--accent); }
 label.field { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text-3); }
 
-.el { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; color: #fff; background: var(--el, #888); text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4); }
+/* Element chips: theme text on a tint of the element colour, outlined in the full colour. White text on
+   the raw colour measured 1.1-1.4:1 on Electric, Ice, Air and Light chips (round-1 designer review). */
+.el { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; color: var(--text); background: color-mix(in srgb, var(--el, #888) 32%, var(--bg-2)); border: 1px solid var(--el, #888); }
 .size { display: inline-flex; padding: 2px 6px; border-radius: 6px; font-size: 11px; font-weight: 800; background: var(--bg-3); border: 1px solid var(--line); }
 
 .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }

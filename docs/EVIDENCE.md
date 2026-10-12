@@ -56,6 +56,28 @@ Measured (commands and outputs):
 
 Honest gaps after pass 2:
 
+- **Round-1 review cross-check** (`docs/reviews/round-1/*.md`, received in full after pass 2):
+  - FIXED with measurements:
+    - X1-X8 exploits
+    - biped/avian stability `[SPEC K2]`
+    - phone overflow and portrait tablets (round 4: 0 overflow)
+    - side identification and the HUD
+    - mono-element accent colour: the complementary hue is replaced by an analogous one. Of 262 mono creatures, 0 now have an accent more than 60 deg from the body hue; the old formula put all of them 126-180 deg away.
+    - element-chip contrast: theme text on a tint
+    - light-theme muted text set to #5b6678
+  - FIXED, visual check pending (next capture): eyes now sit on the upper half of the head. The "up" vector was negated: +Z x +X = +Y, then x(-1).
+  - STILL OPEN:
+    - wing membranes fold into level shelves
+    - no visible mouth or jaw
+    - charge pose looks like rest
+    - 06h renders as night; the volcano shows no lava
+    - the 3D scene stays dark in the light theme
+    - the low camera is blocked by props; follow tracks no one
+    - no visuals for conduction, MISS or KO
+    - the lab capture does not call `LabView.frame()`
+    - serpent side view unverified
+  - Disagreement kept: the critic asks for a 30-45 s median; the design keeps ~25 s (measured 22.9 s) for phone sessions.
+
 - Market lots do not say whether the seller is a company, an NPC or a player, and promotions are not shown on the lot; World map labels clip at the frame edge (round-4 vision check).
 - Element balance: water 32 %, air 22 %, fire 65 % (CI about +-11 points at n = 72). Probe
   (`artifacts/tmp/probe-elements.ts`): at equal power, air spends its budget on evasion (0.244 vs

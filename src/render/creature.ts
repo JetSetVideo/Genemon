@@ -196,8 +196,14 @@ export class CreatureView {
     const pupil = new THREE.MeshBasicMaterial({ color: 0x0b0b10 });
     this.eyeMats.push(iris, white);
     const side = new THREE.Vector3(1, 0, 0);
-    const fwd = dir.clone();
-    const up = new THREE.Vector3().crossVectors(fwd, side).normalize().multiplyScalar(-1);
+    const fwd = dir.clone().normalize();
+    // "Up" on the face = world up made orthogonal to the head axis. The old cross product pointed DOWN
+    // for a forward-facing head (+Z x +X = +Y, then negated), which put the eyes in the lower half of
+    // the head, mostly buried (round-1 artist review). A head pointing straight up has no such
+    // component: its face looks forward (+Z) instead.
+    const up = UP.clone().sub(fwd.clone().multiplyScalar(UP.dot(fwd)));
+    if (up.lengthSq() < 1e-4) up.set(0, 0, 1);
+    else up.normalize();
     const positions: THREE.Vector3[] = [];
     for (const s of [-1, 1]) positions.push(fwd.clone().multiplyScalar(len * 0.62).add(side.clone().multiplyScalar(s * r * 0.55)).add(up.clone().multiplyScalar(r * 0.38)));
     if (ph.plan.eyes > 0.88 || rng.chance(ph.plan.eyes > 0.75 ? 0.3 : 0)) positions.push(fwd.clone().multiplyScalar(len * 0.55).add(up.clone().multiplyScalar(r * 0.75)));

@@ -162,8 +162,12 @@ function paletteOf(g: Genome, axes: AxisVector, primary: ElementId, secondary: E
   const light = clamp(0.42 + axes.luminance * 0.16 - Math.max(0, -axes.substance) * 0.15, 0.12, 0.72);
   const sat = clamp((primary === "neutral" ? 0.25 : s0 * 0.85) + axes.mood * 0.08, 0.08, 0.95);
   const base = hslToHex(h0 + hueShift, sat, light);
-  const acc = secondary ? hexToHsl(ELEMENTS[secondary].color) : [h0 + 0.5 + (g.hue[1] - 0.5) * 0.3, sat * 0.8, 0.5];
-  const accent = hslToHex(acc[0], clamp(acc[1], 0.2, 0.95), clamp(light + 0.1 * (g.hue[1] - 0.3), 0.18, 0.75));
+  // Accent: the secondary element's colour; a mono-element creature gets an ANALOGOUS hue with a
+  // lightness contrast instead of the complementary hue (h + 0.5 made every Ice creature ~60 % red,
+  // so its colour no longer told its element: round-1 artist review).
+  const acc = secondary ? hexToHsl(ELEMENTS[secondary].color) : [h0 + hueShift + (g.hue[1] - 0.5) * 0.16, sat * 0.9, 0.5];
+  const accLight = secondary ? light + 0.1 * (g.hue[1] - 0.3) : light > 0.45 ? light - 0.22 : light + 0.22;
+  const accent = hslToHex(acc[0], clamp(acc[1], 0.2, 0.95), clamp(accLight, 0.12, 0.8));
   const belly = hslToHex(h0 + hueShift, sat * 0.45, clamp(light + 0.25, 0.3, 0.9));
   const eye = hslToHex(0.08 + u01(axes.wisdom) * 0.7, 0.75, 0.55);
   const glow = ELEMENTS[secondary && Math.abs(axes.luminance) < 0.2 ? secondary : primary].core;
