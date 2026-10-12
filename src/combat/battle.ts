@@ -168,28 +168,28 @@ export interface BattleResult {
   synergies: [string[], string[]];
 }
 
-const GROUND_ELEMENT: Partial<Record<GroundId, ElementId>> = {
-  water: "water",
-  deepWater: "water",
-  muddyWater: "water",
-  grass: "plant",
-  moss: "plant",
-  lava: "fire",
-  ice: "ice",
-  snow: "ice",
-  metal: "metal",
-  soil: "earth",
-  sand: "earth",
-  mud: "earth",
-  gravel: "earth",
-  stone: "earth",
+/**
+ * Which ground tiles physically react with an attack element that lands on them, and as which
+ * element. Only real pairs: fire burns vegetation and steams water but does NOT turn soil or
+ * stone into magma; water muddies loose ground; ice freezes water; poison taints water and
+ * vegetation; air raises dust from loose dry ground and mist from water; plants bloom on water;
+ * earth fills water with mud. (Electric on water is handled by conduction chains, not here.)
+ */
+const GROUND_REACTS: Partial<Record<ElementId, Partial<Record<GroundId, ElementId>>>> = {
+  fire: { grass: "plant", moss: "plant", water: "water", deepWater: "water", muddyWater: "water", ice: "ice", snow: "ice" },
+  water: { soil: "earth", sand: "earth", gravel: "earth", ash: "earth", lava: "fire" },
+  ice: { water: "water", deepWater: "water", muddyWater: "water" },
+  poison: { water: "water", deepWater: "water", muddyWater: "water", grass: "plant", moss: "plant" },
+  air: { sand: "earth", soil: "earth", gravel: "earth", ash: "earth", water: "water", deepWater: "water" },
+  plant: { water: "water", muddyWater: "water" },
+  earth: { water: "water", deepWater: "water", muddyWater: "water" },
 };
 
 const REACTION_ZONE: Partial<Record<ReactionId, { frac: number; status: StatusId | null; acc: number; regen: number; allies: boolean }>> = {
   smoke: { frac: 0, status: "blinded", acc: 0.65, regen: 0, allies: true },
-  wildfire: { frac: 0.025, status: "burn", acc: 1, regen: 0, allies: true },
-  firestorm: { frac: 0.04, status: "burn", acc: 1, regen: 0, allies: true },
-  magma: { frac: 0.03, status: "slowed", acc: 1, regen: 0, allies: true },
+  wildfire: { frac: 0.018, status: "burn", acc: 1, regen: 0, allies: true },
+  firestorm: { frac: 0.03, status: "burn", acc: 1, regen: 0, allies: true },
+  magma: { frac: 0.022, status: "slowed", acc: 1, regen: 0, allies: true },
   conduction: { frac: 0, status: "paralyzed", acc: 1, regen: 0, allies: true },
   mud: { frac: 0, status: "slowed", acc: 1, regen: 0, allies: true },
   freeze: { frac: 0, status: null, acc: 1, regen: 0, allies: true },
@@ -200,6 +200,20 @@ const REACTION_ZONE: Partial<Record<ReactionId, { frac: number; status: StatusId
   blizzard: { frac: 0.02, status: "slowed", acc: 0.9, regen: 0, allies: true },
   blight: { frac: 0.015, status: null, acc: 1, regen: -1, allies: true },
 };
+
+/**
+ * Battle PACE: every change of HP - direct hits, conduction, damage over time, hazards, zones, heals
+ * and regeneration - is multiplied by PACE, so the whole fight is time-stretched uniformly while
+ * actions (charges, cooldowns, energy) keep their real-time rate. Lower = longer battles with more
+ * actions per fighter. Tuned for a ~25 s median battle; measured by tools/balance.ts (corpus
+ * duration) and tools/scenarios.ts (SC-06).
+ */
+export const PACE = 0.6;
+/** Extra distance a melee strike covers on its active phase (the lunge), metres. */
+export const MELEE_LUNGE = 0.9;
+
+/** Statuses that hurt their bearer (tenacity applies to these only). */
+const HARMFUL = new Set<StatusId>(["burn", "wet", "frozen", "paralyzed", "poisoned", "slowed", "blinded", "feared", "confused", "staggered", "softened"]);
 
 const IMMUNE: Partial<Record<StatusId, ElementId[]>> = {
   burn: ["fire"],
@@ -256,7 +270,9 @@ export class Battle {
         for (const s of this.synergies[ti]) {
           for (const [k, v] of Object.entries(s.statMult ?? {}) as [keyof Stats, number][]) stats[k] *= v;
         }
-        const x = (ti === 0 ? -1 : 1) * R * 0.5, z = (i - (n - 1) / 2) * Math.max(3.2, 1.6 + ph.heightM);
+        // Teams start ~11 m apart (not across the whole field): fights engage sooner and the camera
+        // can frame them closer.
+        const x = (ti === 0 ? -1 : 1) * R * 0.3, z = (i - (n - 1) / 2) * Math.max(2.6, 1.4 + ph.heightM);
         const body = makeBody(g.id, {
           mass: Math.max(0.5, ph.massKg),
           radius: bodyRadius(ph),
@@ -461,6 +477,7 @@ export class Battle {
     const hpF = f.hp / f.maxHp;
     type Opt = { m: Move; t: number; u: number; cost: number };
     const opts: Opt[] = [];
+    const relative: { m: Move; t: number; k: number; cost: number }[] = [];
     f.moves.forEach((m, mi) => {
       const cost = f.costs[mi];
       if (f.energy < cost) return;
@@ -469,6 +486,13 @@ export class Battle {
         for (const e of enemies) {
           if (!this.canReach(f, e, m)) continue;
           const d = distXZ(f.body.pos, e.body.pos);
+          // Melee and burst only resolve at strike time: skip options the fighter cannot close in
+          // during the charge (it approaches first and re-decides) instead of whiffing from afar.
+          if (m.shape === "melee" || m.shape === "burst") {
+            const short = m.shape === "melee" ? d - f.body.radius - e.body.radius - (f.stats.reach + m.range + MELEE_LUNGE) : d - e.body.radius - m.area;
+            const closing = f.stats.spd * (m.charge / Math.max(0.3, f.stats.rate)) * (m.shape === "melee" ? 0.95 : 0.35) * 0.8;
+            if (short > closing) continue;
+          }
           const r = this.reach(f, m);
           const travel = Math.max(0, d - r) / Math.max(0.5, f.stats.spd);
           let u = this.estimate(f, e, m) * this.hitChance(f, e, m) / (cost + 12);
@@ -509,24 +533,48 @@ export class Battle {
             u = sx("liquid") ? 0 : hpF < 0.55 ? 0.9 : 0.15;
             break;
           case "weather": {
-            const w = m.effects.find((e) => e.weather)?.weather;
+            // Valued RELATIVE to the best attack (resolved after the loop): a weather that raises my
+            // team's element multipliers by `net` for D seconds is worth `net` of the attacks the team
+            // makes in that window (~D / 2.5 s each), discounted 0.35 for the risk it is overwritten.
+            const fx = m.effects.find((e) => e.weather);
+            const w = fx?.weather;
             if (w && w !== this.weather) {
               const gain = (team: 0 | 1) =>
                 this.fighters.filter((o) => o.team === team && !o.ko).reduce((s, o) => s + (WEATHERS[w].elementMult[o.types[0]] ?? 1) - (this.weatherDef.elementMult[o.types[0]] ?? 1), 0);
-              u = Math.max(0, gain(f.team) - gain(f.team === 0 ? 1 : 0)) * (0.8 + wise);
+              const net = gain(f.team) - gain(f.team === 0 ? 1 : 0);
+              if (net > 0) relative.push({ m, t: enemies[0].idx, k: net * ((fx?.duration ?? 14) / 2.5) * 0.35 * (0.6 + 0.8 * wise), cost });
             }
             break;
           }
           case "terrain": {
+            // Reshaping the ground: a standing bonus for the user's element (+ self status), and for
+            // frost a direct counter to enemies standing in water. Relative to the best attack too.
             const gnd = m.effects.find((e) => e.ground)?.ground;
-            if (gnd === "ice") u = enemies.filter((e) => this.inWater(e)).length * 0.6 * (0.5 + wise);
-            else u = 0.25 + 0.3 * wise;
+            const tp = enemies[0].body.pos;
+            const already = gnd !== undefined && this.arena.groundIdAt(tp.x, tp.z) === gnd;
+            const selfSt = m.effects.find((e) => e.status && e.self)?.status;
+            const fresh = selfSt !== undefined && !f.status.has(selfSt);
+            const wet = gnd === "ice" ? enemies.filter((e) => this.inWater(e)).length : 0;
+            const k = (already ? 0 : 0.3 + 0.35 * wise) + (fresh ? 0.25 : 0) + 0.6 * wet;
+            if (k > 0) relative.push({ m, t: enemies[0].idx, k, cost });
+            break;
+          }
+          case "burst": {
+            // Status-only bursts (Roar): worth the number of enemies caught, more against the timid.
+            const st = m.effects.find((e) => e.status && !e.self)?.status;
+            if (st && !enemies.some((e) => e.status.has(st))) {
+              const caught = enemies.filter((e) => distXZ(e.body.pos, f.body.pos) < m.area + e.body.radius);
+              u = caught.reduce((s, e) => s + 0.55 * (1.2 - u01(e.ph.axes.conviction)), 0) * (0.7 + 0.5 * wise);
+            }
             break;
           }
         }
         if (u > 0) opts.push({ m, t: enemies[0].idx, u, cost });
       }
     });
+    // Resolve relative options against the best damaging option available right now.
+    const refU = Math.max(0.6, ...opts.filter((o) => isDamaging(o.m)).map((o) => o.u));
+    for (const r of relative) if (r.k > 0) opts.push({ m: r.m, t: r.t, u: r.k * refU, cost: r.cost });
     if (opts.length === 0) {
       f.cooldown = 0.35;
       return;
@@ -579,11 +627,25 @@ export class Battle {
     const head = v3(fp.x, fp.y + f.ph.heightM * 0.6, fp.z);
     switch (m.shape) {
       case "melee": {
-        const d = distXZ(fp, t.body.pos) - t.body.radius;
+        // Contact if the gap between the two body SURFACES is within reach + a lunge.
+        const gap = distXZ(fp, t.body.pos) - f.body.radius - t.body.radius;
         const dirx = t.body.pos.x - fp.x, dirz = t.body.pos.z - fp.z, dl = Math.hypot(dirx, dirz) || 1;
         applyImpulse(f.body, v3((dirx / dl) * f.body.mass * 3, 0, (dirz / dl) * f.body.mass * 3));
-        if (!t.ko && d <= this.reach(f, m) - t.body.radius + 0.6 && this.canReach(f, t, m)) this.hit(f, t, m, 1, "melee", t.body.pos);
-        else this.miss(f, t, m, "out of reach");
+        if (!t.ko && gap <= f.stats.reach + m.range + MELEE_LUNGE && this.canReach(f, t, m)) {
+          this.hit(f, t, m, 1, "melee", t.body.pos);
+          // Cleave: a large body (3+ slots) sweeps every other enemy in its frontal arc and reach.
+          if (f.ph.slots >= 3) {
+            const fwd = Math.atan2(dirx, dirz);
+            for (const o of this.enemiesOf(f)) {
+              if (o === t || !this.canReach(f, o, m)) continue;
+              const og = distXZ(fp, o.body.pos) - f.body.radius - o.body.radius;
+              let da = Math.atan2(o.body.pos.x - fp.x, o.body.pos.z - fp.z) - fwd;
+              while (da > Math.PI) da -= Math.PI * 2;
+              while (da < -Math.PI) da += Math.PI * 2;
+              if (og <= f.stats.reach + m.range + MELEE_LUNGE && Math.abs(da) < Math.PI / 3) this.hit(f, o, m, 0.5, "cleave", o.body.pos);
+            }
+          }
+        } else this.miss(f, t, m, `out of reach (gap ${r3(gap)} m)`);
         break;
       }
       case "projectile": {
@@ -598,7 +660,8 @@ export class Battle {
           pos: { ...head },
           vel: v3((dx / dl) * m.speed, (dy / dl) * m.speed, (dz / dl) * m.speed),
           ttl: (m.range * 1.4) / m.speed,
-          radius: 0.25 + m.power / 400,
+          // Bigger bodies throw bigger projectiles (+0.12 m of hit radius per metre of height).
+          radius: 0.25 + m.power / 400 + 0.12 * f.ph.heightM,
           element: m.element,
           alive: true,
         };
@@ -617,7 +680,7 @@ export class Battle {
           if (along < 0 || along > 1.1) continue;
           const px = head.x + (end.x - head.x) * along, pz = head.z + (end.z - head.z) * along;
           const off = Math.hypot(o.body.pos.x - px, o.body.pos.z - pz);
-          if (off < o.body.radius + 0.5 && along < best) {
+          if (off < o.body.radius + 0.5 + 0.12 * f.ph.heightM && along < best) {
             best = along;
             victim = o;
           }
@@ -682,7 +745,7 @@ export class Battle {
       if (e.kind === "status" && e.status) this.addStatus(f, e.status, e.duration ?? 3, f);
       if (e.kind === "heal") {
         const before = f.hp;
-        f.hp = Math.min(f.maxHp, f.hp + f.maxHp * (e.value ?? 0));
+        f.hp = Math.min(f.maxHp, f.hp + f.maxHp * (e.value ?? 0) * PACE);
         this.emit({ type: "status", a: f.idx, label: "heal", value: f.hp - before, pos: f.body.pos });
       }
       if (e.kind === "weather" && e.weather) this.setWeather(e.weather, e.duration ?? 14, f);
@@ -709,7 +772,7 @@ export class Battle {
   }
 
   private groundImpact(f: Fighter, m: Move, at: V3, r: number): void {
-    const gEl = GROUND_ELEMENT[this.arena.groundIdAt(at.x, at.z)];
+    const gEl = GROUND_REACTS[m.element]?.[this.arena.groundIdAt(at.x, at.z)];
     if (gEl) {
       const rx = reactionBetween(m.element, gEl);
       if (rx && rx.id !== "conduction") this.react(f, m.element, gEl, at, `${m.element} on ${this.arena.groundIdAt(at.x, at.z)}`);
@@ -771,6 +834,9 @@ export class Battle {
 
   private addStatus(t: Fighter, s: StatusId, dur: number, by: Fighter | null): void {
     if (IMMUNE[s]?.some((e) => t.types.includes(e))) return;
+    // Tenacity: big bodies shake off harmful statuses faster (XL x0.63, L x0.71, M x0.83). Without
+    // it, damage-over-time scales with the VICTIM's max HP while a swarm applies it N times as often.
+    if (by !== t && HARMFUL.has(s)) dur /= 1 + 0.2 * (t.ph.slots - 1);
     const had = t.status.has(s);
     t.status.set(s, Math.max(t.status.get(s) ?? 0, dur));
     if (s === "frozen") t.body.mode = "frozen";
@@ -847,7 +913,7 @@ export class Battle {
     critP = clamp(critP, 0, 0.5);
     const crit = f.rng.chance(critP);
     const spread = f.rng.range(0.88, 1.12);
-    const dmg = Math.max(1, m.power * atkF * defF * typeK * stab * wx * gAff * cond * size * prox * emo * team * rhythm * liquidK * frozenK * wetFire * reactK * scale * spread * (crit ? 1.6 : 1));
+    const dmg = Math.max(1, PACE * m.power * atkF * defF * typeK * stab * wx * gAff * cond * size * prox * emo * team * rhythm * liquidK * frozenK * wetFire * reactK * scale * spread * (crit ? 1.6 : 1));
     t.hp = Math.max(0, t.hp - dmg);
     f.tally.dealt += dmg;
     f.tally.hits++;
@@ -958,7 +1024,7 @@ export class Battle {
         if (alive.length) {
           const wts = alive.map((o) => 1 + (o.status.has("wet") ? 1 : 0) + (o.types.includes("metal") ? 1.5 : 0) + (o.body.mode === "fly" ? 1 : 0));
           const v = this.rng.weighted(alive, wts);
-          const dmg = v.maxHp * 0.05 * (v.types.includes("electric") ? 0 : 1) * this.conduction(v);
+          const dmg = PACE * v.maxHp * 0.05 * (v.types.includes("electric") ? 0 : 1) * this.conduction(v);
           v.hp = Math.max(0, v.hp - dmg);
           v.tally.taken += dmg;
           this.emit({ type: "lightning", b: v.idx, value: dmg, pos: { ...v.body.pos }, element: "electric" });
@@ -1015,8 +1081,8 @@ export class Battle {
     if (wetness >= 0.45 && !f.types.includes("fire") && f.body.mode !== "burrow") f.status.set("wet", Math.max(f.status.get("wet") ?? 0, 1));
     if (this.inWater(f) && !f.types.includes("fire")) f.status.set("wet", Math.max(f.status.get("wet") ?? 0, 2));
     let dot = 0;
-    if (f.status.has("burn")) dot += 0.02;
-    if (f.status.has("poisoned")) dot += 0.025;
+    if (f.status.has("burn")) dot += 0.016;
+    if (f.status.has("poisoned")) dot += 0.03;
     if (w === "sandstorm" && !f.types.some((e) => e === "earth" || e === "metal")) dot += 0.008;
     if (w === "acidRain" && f.types.some((e) => e === "metal" || e === "plant")) dot += 0.008;
     if (GROUNDS[f.body.groundId].id === "lava" && f.body.mode === "ground" && !f.types.includes("fire")) dot += 0.05;
@@ -1027,7 +1093,7 @@ export class Battle {
       const enemyZone = z.team === -1 || z.team !== f.team;
       if (z.kind === "field") {
         if (z.team !== f.team && z.move && (!z.move.tags.includes("ground") || f.body.mode !== "fly")) {
-          const dmgPs = z.dps * (100 / (100 + f.stats.def)) * typeMultiplier(z.element, f.types);
+          const dmgPs = PACE * z.dps * (100 / (100 + f.stats.def)) * typeMultiplier(z.element, f.types);
           f.hp -= dmgPs * dt;
           f.tally.taken += dmgPs * dt;
           if (z.owner >= 0) this.fighters[z.owner].tally.dealt += dmgPs * dt;
@@ -1037,12 +1103,14 @@ export class Battle {
       }
       if (z.regen > 0 && z.team === f.team) heal += z.regen;
       if (z.regen < 0) heal = 0;
-      if (enemyZone && z.frac > 0 && !f.types.includes(z.element)) dot += z.frac;
+      // Reaction zones hurt everyone inside, scaled by the type chart (a fire body resists a
+      // wildfire it started, x0.5, but is not immune; a plant body takes x2).
+      if (enemyZone && z.frac > 0) dot += z.frac * typeMultiplier(z.element, f.types);
       if (enemyZone && z.status && this.tick % 10 === 0) this.addStatus(f, z.status, 1, null);
     }
     if (dot > 0 || heal > 0) {
-      f.hp = clamp(f.hp + (heal - dot) * f.maxHp * dt, 0, f.maxHp);
-      if (dot > 0) f.tally.taken += dot * f.maxHp * dt;
+      f.hp = clamp(f.hp + PACE * (heal - dot) * f.maxHp * dt, 0, f.maxHp);
+      if (dot > 0) f.tally.taken += PACE * dot * f.maxHp * dt;
     }
     for (const [s, left] of f.status) {
       const nl = left - dt;
@@ -1146,7 +1214,9 @@ export class Battle {
       iz += ux * 0.5;
     }
     const il = Math.hypot(ix, iz) || 1;
-    const phaseK = f.phase === "charge" ? 0.35 : f.phase === "active" ? 0.6 : f.phase === "rest" ? 0.25 : 1;
+    const isMelee = f.move ? f.move.shape === "melee" || f.move.shape === "dig" : false;
+    // Melee attackers keep closing while they wind up and lunge on the strike; casters plant their feet.
+    const phaseK = f.phase === "charge" ? (isMelee ? 0.95 : 0.35) : f.phase === "active" ? (isMelee ? 1.1 : 0.6) : f.phase === "rest" ? 0.25 : 1;
     const statusK = (f.status.has("slowed") ? 0.6 : 1) * (f.status.has("paralyzed") ? 0.5 : 1) * (f.status.has("hasted") ? 1.35 : 1) * (f.status.has("liquid") ? 0.85 : 1);
     b.intent = { x: ix / il, z: iz / il, speed: clamp(sp * phaseK * statusK, 0, 1.4) };
   }

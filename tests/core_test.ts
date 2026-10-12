@@ -68,6 +68,15 @@ Deno.test("type chart: every element has a strength and a weakness; fire+water r
   assertEquals(reactionBetween("electric", "water")?.id, "conduction");
 });
 
+Deno.test("type chart [SPEC B2]: every element has as many 2x strengths as 2x weaknesses", () => {
+  for (const e of ELEMENT_IDS) {
+    if (e === "neutral") continue;
+    const strengths = ELEMENT_IDS.filter((d) => typeMultiplier(e, [d]) === 2).length;
+    const weaknesses = ELEMENT_IDS.filter((a) => typeMultiplier(a, [e]) === 2).length;
+    assertEquals(strengths, weaknesses, `${e}: ${strengths} strengths vs ${weaknesses} weaknesses`);
+  }
+});
+
 Deno.test("breeding: child alleles come from the parents; fusion/morph/mutate produce valid genomes", () => {
   const a = randomGenome(1), b = randomGenome(2);
   const c = breed(a, b, 3, { mutationRate: 0 });

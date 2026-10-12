@@ -230,7 +230,12 @@ export interface MatchDataset {
   rows: { features: number[]; win: number }[];
 }
 
-const newTallies = (): Tallies => ({ arena: new Map(), weather: new Map(), combo: new Map(), winCondition: new Map() });
+const newTallies = (): Tallies => ({
+  arena: new Map(),
+  weather: new Map(),
+  combo: new Map(),
+  winCondition: new Map(),
+});
 
 const unique = (xs: readonly string[]): string[] => [...new Set(xs)];
 
@@ -239,7 +244,7 @@ const weatherKey = (feature: string, weather: string): string => `${feature}|wea
 
 function addTally(map: Map<string, Tally>, key: string, score: number, expected: number): void {
   let t = map.get(key);
-  if (!t) map.set(key, (t = { wins: 0, losses: 0, draws: 0, expSum: 0 }));
+  if (!t) map.set(key, t = { wins: 0, losses: 0, draws: 0, expSum: 0 });
   if (score === 1) t.wins++;
   else if (score === 0) t.losses++;
   else t.draws++;
@@ -502,7 +507,9 @@ export class Ladder {
     for (const [id, p] of Object.entries(j.players ?? {})) lad.#players.set(id, { ...p });
     for (const [key, w] of Object.entries(j.weights ?? {})) lad.#w.set(key, w);
     lad.#global = talliesFromJSON(j.tallies?.global);
-    for (const [id, t] of Object.entries(j.tallies?.players ?? {})) lad.#perPlayer.set(id, talliesFromJSON(t));
+    for (const [id, t] of Object.entries(j.tallies?.players ?? {})) {
+      lad.#perPlayer.set(id, talliesFromJSON(t));
+    }
     return lad;
   }
 
@@ -510,7 +517,7 @@ export class Ladder {
 
   #player(id: string): PlayerRecord {
     let p = this.#players.get(id);
-    if (!p) this.#players.set(id, (p = { rating: this.base, games: 0, wins: 0, losses: 0, draws: 0 }));
+    if (!p) this.#players.set(id, p = { rating: this.base, games: 0, wins: 0, losses: 0, draws: 0 });
     return p;
   }
 
@@ -554,7 +561,9 @@ export class Ladder {
       const v = ctx.features[i];
       out.push([name, Number.isFinite(v) ? clamp(v, -FEATURE_LIMIT, FEATURE_LIMIT) : 0]);
     }
-    if (this.comboFeature && !seen.has(COMBO_FEATURE)) out.push([COMBO_FEATURE, this.#comboEdge(combosA, combosB)]);
+    if (this.comboFeature && !seen.has(COMBO_FEATURE)) {
+      out.push([COMBO_FEATURE, this.#comboEdge(combosA, combosB)]);
+    }
     return out;
   }
 
@@ -578,7 +587,7 @@ export class Ladder {
 
   #tallies(id: string): Tallies {
     let t = this.#perPlayer.get(id);
-    if (!t) this.#perPlayer.set(id, (t = newTallies()));
+    if (!t) this.#perPlayer.set(id, t = newTallies());
     return t;
   }
 
@@ -625,7 +634,9 @@ export function matchDataset(events: readonly GEvent[], names?: readonly string[
     cols = [...names];
   } else {
     const found = new Set<string>();
-    for (const e of matches) for (const key of Object.keys(e.entries)) if (key.startsWith("x.")) found.add(key.slice(2));
+    for (const e of matches) {
+      for (const key of Object.keys(e.entries)) if (key.startsWith("x.")) found.add(key.slice(2));
+    }
     cols = [RATING_COLUMN, ...canonicalOrder(found)];
   }
   const rows = matches.map((e) => ({

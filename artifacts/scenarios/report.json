@@ -12,7 +12,7 @@
     "id": "SC-02",
     "title": "Fire vs water attacks create smoke",
     "metric": "battles with >= 1 smoke cloud",
-    "value": "120/120 (712 clouds, 34 mid-air clashes)",
+    "value": "120/120 (1676 clouds, 8 mid-air clashes)",
     "expect": ">= 80% of battles",
     "pass": true,
     "note": "smoke = fire meets water: projectile clash, fire on a wet target, or fire on water ground"
@@ -21,7 +21,7 @@
     "id": "SC-03",
     "title": "Electric connects on water, less on muddy water, least on stone",
     "metric": "mean electric damage per hit",
-    "value": "water 280.8 > muddyWater 218.3 > stone 100.5",
+    "value": "water 178.9 > muddyWater 139.1 > stone 64.5",
     "expect": "water > muddyWater > stone",
     "pass": true,
     "note": "conductivity water 1.6 (x1.3 wet), muddy water 1.25, stone 0.7"
@@ -30,7 +30,7 @@
     "id": "SC-04",
     "title": "Flyers dodge ground quakes",
     "metric": "quake hits landed on an airborne target",
-    "value": "0 (quakes cast: 18)",
+    "value": "0 (quakes cast: 14)",
     "expect": "0",
     "pass": true,
     "note": "ground-tagged moves skip targets in fly mode"
@@ -39,7 +39,7 @@
     "id": "SC-05",
     "title": "Diggers need diggable ground",
     "metric": "burrows / failed digs",
-    "value": "soil 89/0, stone 0/0",
+    "value": "soil 115/0, stone 0/0",
     "expect": "soil burrows > 0; stone burrows = 0",
     "pass": true,
     "note": "the AI only picks dig on diggable ground; a dig cast that lands on stone fails"
@@ -48,9 +48,9 @@
     "id": "SC-06",
     "title": "Random teams: side 0 vs side 1 parity",
     "metric": "side-0 win rate (decisive)",
-    "value": "50.8% [42-60] n=120 draws=0",
+    "value": "49.2% [40-58] n=120 draws=0",
     "expect": "CI contains 50%",
     "pass": true,
-    "note": "duration p10 9.4s, median 15.1s, p90 21.8s"
+    "note": "duration p10 12.7s, median 21.1s, p90 34.1s"
   }
 ]

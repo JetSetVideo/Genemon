@@ -10,7 +10,7 @@
  * Frame convention: creature space, +Z forward, +Y up, side +1 = +X. Positive X rotation pitches a
  * forward-pointing bone DOWN (jaw opens, head nods); for a downward bone it swings the end BACK.
  */
-import { Euler, Quaternion, Vector3 } from "three";
+import { Euler, Quaternion, Vector3 } from "../lib/three.ts";
 import type { Phenotype } from "../genome/phenotype.ts";
 
 export type JointRole =
@@ -95,9 +95,9 @@ const ROLE_LIMITS: Record<JointRole, [Range, Range, Range]> = {
   elbow: [[-2.0, 0.05], [0, 0], [0, 0]],
   ankle: [[-0.7, 0.7], [0, 0], [-0.15, 0.15]],
   wrist: [[-0.6, 0.6], [-0.2, 0.2], [-0.3, 0.3]],
-  wingRoot: [[-0.4, 0.4], [-0.5, 0.6], [-1.1, 1.1]],
-  wingMid: [[-0.2, 0.2], [-1.2, 0.2], [-0.9, 0.9]],
-  wingTip: [[-0.1, 0.1], [-0.6, 0.3], [-0.6, 0.6]],
+  wingRoot: [[-0.4, 0.4], [-0.5, 0.75], [-1.1, 1.1]],
+  wingMid: [[-0.2, 0.2], [-0.2, 1.3], [-0.9, 0.9]],
+  wingTip: [[-0.1, 0.1], [-0.3, 0.7], [-0.6, 0.6]],
   pod: [[-0.6, 0.6], [-0.3, 0.3], [-0.6, 0.6]],
   horn: [[0, 0], [0, 0], [0, 0]],
   ear: [[0, 0], [0, 0], [-0.3, 0.3]],
@@ -130,6 +130,12 @@ class Builder {
     const base = ROLE_LIMITS[role];
     const m = FIXED_ROLES.includes(role) ? 1 : this.mobility;
     const limits = base.map(([lo, hi]) => [lo * m, hi * m] as Range) as [Range, Range, Range];
+    // Ranges are authored for the LEFT side (+X). Mirroring across the median plane keeps rotations
+    // about X and negates rotations about Y and Z, so a right-side joint gets [-hi, -lo] on y and z.
+    if (side < 0) {
+      limits[1] = [-limits[1][1], -limits[1][0]];
+      limits[2] = [-limits[2][1], -limits[2][0]];
+    }
     this.index.set(id, this.joints.length);
     this.joints.push({
       id,

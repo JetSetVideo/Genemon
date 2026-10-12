@@ -29,7 +29,9 @@ function finiteValues(values: readonly number[]): number[] {
 
 function assertRect(rows: Matrix, d: number, who: string): void {
   for (let r = 0; r < rows.length; r++) {
-    if (rows[r].length !== d) throw new Error(`${who}: row ${r} has ${rows[r].length} columns, expected ${d}`);
+    if (rows[r].length !== d) {
+      throw new Error(`${who}: row ${r} has ${rows[r].length} columns, expected ${d}`);
+    }
   }
 }
 
@@ -107,7 +109,11 @@ export interface Histogram {
  * (all values equal, or no data) is widened to +-0.5 so the edges stay strictly increasing.
  * Values outside an explicit range are not counted.
  */
-export function histogram(values: readonly number[], bins: number, range?: readonly [number, number]): Histogram {
+export function histogram(
+  values: readonly number[],
+  bins: number,
+  range?: readonly [number, number],
+): Histogram {
   const nb = Math.max(1, Math.floor(Number.isFinite(bins) ? bins : 1));
   const xs = finiteValues(values);
   let lo = range ? range[0] : Infinity;

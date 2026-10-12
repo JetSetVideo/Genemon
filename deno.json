@@ -9,6 +9,7 @@
     "three": "npm:three@0.180.0",
     "three/addons/": "npm:/three@0.180.0/examples/jsm/",
     "@types/three": "npm:@types/three@0.180.0",
+    "@types/three/": "npm:/@types/three@0.180.0/",
     "playwright": "npm:playwright@1.56.1"
   },
   "exclude": ["legacy/", "dist/", "artifacts/"],
@@ -25,6 +26,7 @@
     "scenarios": "deno run --allow-read --allow-write=artifacts tools/scenarios.ts",
     "sim": "deno run --allow-read --allow-write=artifacts tools/sim.ts",
     "balance": "deno run --allow-read --allow-write=artifacts tools/balance.ts",
+    "lists": "deno run --allow-read --allow-write=docs,artifacts --allow-run tools/gen-lists.ts",
     "capture": "deno run -A tools/capture.ts"
   }
 }

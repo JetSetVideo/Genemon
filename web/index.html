@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0d1117" />
+    <title>Genemon</title>
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header id="topbar">
+        <button id="btn-home" class="brand" title="Home" data-screen="home"><span class="logo">◈</span><span class="brand-name">Genemon</span></button>
+        <div id="context-chip" class="chip" title="Real-world context feeding the game"></div>
+        <div class="spacer"></div>
+        <div id="fps" class="chip mono" title="Frames per second / frame time"></div>
+        <button id="btn-theme" class="icon-btn" title="Toggle dark / light theme" aria-label="Toggle theme">◐</button>
+        <button id="btn-profile" class="chip profile-chip" title="Switch profile" data-screen="settings"></button>
+      </header>
+      <nav id="nav" aria-label="Screens"></nav>
+      <main id="viewport">
+        <canvas id="scene"></canvas>
+        <div id="flash"></div>
+        <div id="hud" class="hidden"></div>
+        <div id="view-tools"></div>
+        <div id="tooltip" class="hidden"></div>
+      </main>
+      <aside id="panel" aria-live="polite"></aside>
+    </div>
+    <div id="toast" class="hidden"></div>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>

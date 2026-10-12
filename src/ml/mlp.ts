@@ -177,7 +177,15 @@ export class MLP {
       weights.push(rows);
       biases.push(Array.from(this.#b[l]));
     }
-    return { kind: "genemon.mlp", version: 1, layers: [...this.layers], hidden: this.hidden, output: this.output, weights, biases };
+    return {
+      kind: "genemon.mlp",
+      version: 1,
+      layers: [...this.layers],
+      hidden: this.hidden,
+      output: this.output,
+      weights,
+      biases,
+    };
   }
 
   static fromJSON(j: MLPJSON): MLP {
@@ -207,7 +215,9 @@ export class MLP {
   }
 
   #activations(x: readonly number[]): Float64Array[] {
-    if (x.length !== this.layers[0]) throw new Error(`MLP: expected ${this.layers[0]} inputs, got ${x.length}`);
+    if (x.length !== this.layers[0]) {
+      throw new Error(`MLP: expected ${this.layers[0]} inputs, got ${x.length}`);
+    }
     const acts: Float64Array[] = [Float64Array.from(x)];
     const L = this.#W.length;
     for (let l = 0; l < L; l++) {
@@ -263,13 +273,19 @@ export interface OutcomeModelOptions {
  * (type advantage that only matters in a given weather), which is why it is the benchmark the
  * ladder's own expectation is compared against on the Data screen.
  */
-export function predictOutcomeModel(rows: readonly OutcomeRow[], rng: Rng, opts: OutcomeModelOptions = {}): MLP {
+export function predictOutcomeModel(
+  rows: readonly OutcomeRow[],
+  rng: Rng,
+  opts: OutcomeModelOptions = {},
+): MLP {
   if (rows.length === 0) throw new Error("predictOutcomeModel: no rows");
   const d = rows[0].features.length;
   if (d === 0) throw new Error("predictOutcomeModel: rows have no features");
   const net = new MLP([d, opts.hidden ?? 8, 1], rng.fork("outcome.init"), "tanh", "sigmoid");
   const data: Sample[] = rows.map((r) => {
-    if (r.features.length !== d) throw new Error(`predictOutcomeModel: expected ${d} features, got ${r.features.length}`);
+    if (r.features.length !== d) {
+      throw new Error(`predictOutcomeModel: expected ${d} features, got ${r.features.length}`);
+    }
     return { x: r.features, y: [clamp01(r.win)] };
   });
   net.fit(data, {

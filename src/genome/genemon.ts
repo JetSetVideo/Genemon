@@ -80,6 +80,7 @@ export function learnset(ph: Phenotype, seed: string, size = 4): string[] {
   take((m) => isDamaging(m) && (m.shape === "melee") !== (out[0]?.shape === "melee"));
   if (ph.abilities.fly) take((m) => m.shape === "fly");
   if (ph.abilities.dig) take((m) => m.shape === "dig");
+  if (ph.abilities.phaseShift) take((m) => m.shape === "phase");
   take((m) => isDamaging(m) && (m.element === secondary || m.tier >= 2));
   let utility = out.filter((m) => !isDamaging(m)).length;
   for (const { m } of pool) {

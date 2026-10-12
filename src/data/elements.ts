@@ -36,37 +36,41 @@ export interface Element {
 
 export const ELEMENTS: Record<ElementId, Element> = {
   neutral: { id: "neutral", name: "Neutral", color: 0xb8b2a6, core: 0xffffff, signature: {}, note: "Baseline matter. No strengths, steady." },
-  fire: { id: "fire", name: "Fire", color: 0xff5a1f, core: 0xffd166, signature: { heat: 1, moisture: -0.6, temper: 0.3, luminance: 0.2 }, note: "Burns plants, melts ice and metal; drowned by water into smoke." },
-  water: { id: "water", name: "Water", color: 0x2f8cff, core: 0xbfe6ff, signature: { moisture: 1, form: 0.4, heat: -0.2 }, note: "Extinguishes fire, erodes earth, conducts electricity." },
-  plant: { id: "plant", name: "Plant", color: 0x3fbf4a, core: 0xd9ff7a, signature: { vitality: 1, moisture: 0.4, structure: 0.2, hardness: -0.2 }, note: "Drinks water, binds earth, absorbs light." },
-  earth: { id: "earth", name: "Earth", color: 0xa0703c, core: 0xe8c48a, signature: { hardness: 0.6, weight: 0.6, substance: 0.5, altitude: -0.5, moisture: -0.2 }, note: "Grounds electricity, smothers fire; can be dug." },
-  air: { id: "air", name: "Air", color: 0xa9e4f2, core: 0xffffff, signature: { altitude: 1, weight: -0.8, phase: 0.5, tempo: 0.3 }, note: "Flies, spreads fire and clouds, disperses smoke and poison." },
-  electric: { id: "electric", name: "Electric", color: 0xffe14a, core: 0xffffff, signature: { conductivity: 1, tempo: 0.6, structure: -0.4 }, note: "Conducts through water and metal; grounded by earth." },
-  ice: { id: "ice", name: "Ice", color: 0x9ee7ff, core: 0xffffff, signature: { heat: -1, hardness: 0.4, moisture: 0.3, tempo: -0.3 }, note: "Freezes water into slippery ground; melts under fire." },
-  metal: { id: "metal", name: "Metal", color: 0x9aa3ad, core: 0xe9eef2, signature: { hardness: 0.8, conductivity: 0.6, weight: 0.5, elasticity: -0.4 }, note: "Armoured; conducts; rusts in water, softens in fire." },
+  fire: { id: "fire", name: "Fire", color: 0xff5a1f, core: 0xffd166, signature: { heat: 1, moisture: -0.6, temper: 0.3, luminance: 0.2 }, note: "Burns plants, melts ice; drowned by water into smoke, smothered by earth." },
+  water: { id: "water", name: "Water", color: 0x2f8cff, core: 0xbfe6ff, signature: { moisture: 1, form: 0.4, heat: -0.2 }, note: "Extinguishes fire, erodes earth, mirrors light into hiding shadows; conducts electricity." },
+  plant: { id: "plant", name: "Plant", color: 0x3fbf4a, core: 0xd9ff7a, signature: { vitality: 1, moisture: 0.4, structure: 0.2, hardness: -0.2 }, note: "Drinks water, binds earth, grounds current through its roots." },
+  earth: { id: "earth", name: "Earth", color: 0xa0703c, core: 0xe8c48a, signature: { hardness: 0.6, weight: 0.6, substance: 0.5, altitude: -0.5, moisture: -0.2 }, note: "Smothers fire, grounds electricity, buries metal, fills the void; can be dug." },
+  air: { id: "air", name: "Air", color: 0xa9e4f2, core: 0xffffff, signature: { altitude: 1, weight: -0.8, phase: 0.5, tempo: 0.3 }, note: "Flies, scatters plants and poison clouds, feeds fire." },
+  electric: { id: "electric", name: "Electric", color: 0xffe14a, core: 0xffffff, signature: { conductivity: 1, tempo: 0.6, structure: -0.4 }, note: "Conducts through water, strikes flyers, fries metal; grounded by earth and roots." },
+  ice: { id: "ice", name: "Ice", color: 0x9ee7ff, core: 0xffffff, signature: { heat: -1, hardness: 0.4, moisture: 0.3, tempo: -0.3 }, note: "Freezes the air, cracks the earth, turns water to slippery ground; melts under fire." },
+  metal: { id: "metal", name: "Metal", color: 0x9aa3ad, core: 0xe9eef2, signature: { hardness: 0.8, conductivity: 0.6, weight: 0.5, elasticity: -0.4 }, note: "Armoured; shatters ice, digs earth, fills the void with dense matter; conducts current." },
   poison: { id: "poison", name: "Poison", color: 0x9b4dff, core: 0xe0b8ff, signature: { vitality: -1, moisture: 0.2, structure: -0.3 }, note: "Corrodes life, contaminates water." },
   light: { id: "light", name: "Light", color: 0xfff3b0, core: 0xffffff, signature: { luminance: 1, rhythm: 0.4, conviction: 0.3 }, note: "Banishes shadow and void; reflected by metal." },
-  shadow: { id: "shadow", name: "Shadow", color: 0x4b3a6b, core: 0x9e86ff, signature: { luminance: -1, rhythm: -0.6, curiosity: -0.2 }, note: "Hides, frightens minds; erased by light." },
+  shadow: { id: "shadow", name: "Shadow", color: 0x4b3a6b, core: 0x9e86ff, signature: { luminance: -1, rhythm: -0.6, curiosity: -0.2 }, note: "Hides, frightens minds; revealed by light and by water's reflections." },
   psychic: { id: "psychic", name: "Psychic", color: 0xff6fb5, core: 0xffd1ea, signature: { wisdom: 1, focus: 0.4, conviction: 0.3 }, note: "Mind over matter: bends metal, purges poison." },
-  void: { id: "void", name: "Void", color: 0x1c1b2e, core: 0x7a6cff, signature: { substance: -1, phase: 0.4, luminance: -0.3, structure: -0.4 }, note: "Absence: swallows air and minds; filled by light." },
+  void: { id: "void", name: "Void", color: 0x1c1b2e, core: 0x7a6cff, signature: { substance: -1, phase: 0.4, luminance: -0.3, structure: -0.4 }, note: "Absence: swallows minds, light and current; filled by earth and metal." },
 };
 
-/** attacker -> defender multipliers that differ from 1. */
+/**
+ * attacker -> defender multipliers that differ from 1. Balance rule [SPEC B2]: every element has
+ * exactly as many 2x strengths as 2x weaknesses (fire 2/2, water 3/3, plant 3/3, earth 4/4, air 2/2,
+ * electric 3/3, ice 2/2, metal 3/3, poison 2/2, light 2/2, shadow 2/2, psychic 2/2, void 3/3).
+ */
 const CHART: Partial<Record<ElementId, Partial<Record<ElementId, number>>>> = {
   neutral: { metal: 0.5, earth: 0.5, void: 0.5 },
-  fire: { plant: 2, ice: 2, metal: 2, fire: 0.5, water: 0.5, earth: 0.5 },
-  water: { fire: 2, earth: 2, water: 0.5, plant: 0.5, ice: 0.5 },
-  plant: { water: 2, earth: 2, fire: 0.5, plant: 0.5, air: 0.5, poison: 0.5, metal: 0.5 },
-  earth: { fire: 2, electric: 2, metal: 2, poison: 2, plant: 0.5, air: 0.5 },
-  air: { plant: 2, poison: 2, electric: 0.5, metal: 0.5, earth: 0.5 },
+  fire: { plant: 2, ice: 2, fire: 0.5, water: 0.5, earth: 0.5 },
+  water: { fire: 2, earth: 2, shadow: 2, water: 0.5, plant: 0.5, ice: 0.5 },
+  plant: { water: 2, earth: 2, electric: 2, fire: 0.5, plant: 0.5, air: 0.5, poison: 0.5, metal: 0.5 },
+  earth: { fire: 2, electric: 2, metal: 2, void: 2, plant: 0.5, air: 0.5 },
+  air: { plant: 2, poison: 2, electric: 0.5, metal: 0.5 },
   electric: { water: 2, air: 2, metal: 2, electric: 0.5, plant: 0.5, earth: 0.5 },
-  ice: { plant: 2, air: 2, earth: 2, fire: 0.5, metal: 0.5, ice: 0.5 },
-  metal: { ice: 2, earth: 2, metal: 0.5, fire: 0.5, electric: 0.5 },
-  poison: { plant: 2, water: 2, poison: 0.5, earth: 0.5, metal: 0.25 },
-  light: { shadow: 2, void: 2, light: 0.5, metal: 0.5, plant: 0.5 },
+  ice: { air: 2, earth: 2, fire: 0.5, metal: 0.5, ice: 0.5 },
+  metal: { ice: 2, earth: 2, void: 2, metal: 0.5, fire: 0.5, electric: 0.5 },
+  poison: { plant: 2, water: 2, poison: 0.5, earth: 0.5, metal: 0.5 },
+  light: { shadow: 2, void: 2, light: 0.5, metal: 0.5 },
   shadow: { light: 2, psychic: 2, shadow: 0.5 },
   psychic: { metal: 2, poison: 2, psychic: 0.5, shadow: 0.5 },
-  void: { psychic: 2, air: 2, light: 2, electric: 2, void: 0.5, earth: 0.5 },
+  void: { psychic: 2, light: 2, electric: 2, void: 0.5, earth: 0.5 },
 };
 
 /** Multiplier of an attack element against a (possibly dual-typed) defender. Clamped to [0.25, 4]. */

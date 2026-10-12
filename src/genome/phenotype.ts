@@ -19,8 +19,12 @@ import { hashSeed, Rng } from "../core/rng.ts";
 export const SIZE_CLASSES = ["XS", "S", "M", "L", "XL"] as const;
 export type SizeClass = typeof SIZE_CLASSES[number];
 export const SLOT_COST: Record<SizeClass, number> = { XS: 1, S: 1, M: 2, L: 3, XL: 4 };
-/** Relative combat-power budget per class (big ones are slightly less efficient per slot). */
-export const POWER_BUDGET: Record<SizeClass, number> = { XS: 0.85, S: 1, M: 1.9, L: 2.75, XL: 3.5 };
+/**
+ * Relative combat-power budget per class. Per-slot parity is the target ([SPEC B3]: big vs swarm at
+ * equal slots within 35-65%, measured by tools/balance.ts); big bodies get slightly less than 1.0
+ * per slot because they also hit harder in contact, cleave in melee and shrug off knockback.
+ */
+export const POWER_BUDGET: Record<SizeClass, number> = { XS: 0.85, S: 1, M: 2, L: 2.9, XL: 4.1 };
 export const MASS_THRESHOLDS: Record<Exclude<SizeClass, "XL">, number> = { XS: 6, S: 45, M: 260, L: 1100 };
 
 export interface Stats {
@@ -246,9 +250,16 @@ function sizeClassOf(mass: number): SizeClass {
   return "XL";
 }
 
-/** Raw combat power of a stat block: sqrt(effective HP x effective attack rate). */
-export function powerIndex(s: Pick<Stats, "hp" | "def" | "atk" | "rate">): number {
-  return Math.sqrt(s.hp * (1 + s.def / 120) * s.atk * s.rate);
+/** Reference energy regeneration (per second) at which regen is neutral in the power index. */
+export const REGEN_REF = 11;
+
+/**
+ * Raw combat power of a stat block: sqrt(effective HP x effective attack rate), where the attack
+ * rate includes energy throughput (regen / REGEN_REF): a creature that can afford fewer moves is
+ * compensated with more HP and attack instead of being silently weaker [SPEC B1].
+ */
+export function powerIndex(s: Pick<Stats, "hp" | "def" | "atk" | "rate" | "regen">): number {
+  return Math.sqrt(s.hp * (1 + s.def / 120) * s.atk * s.rate * (s.regen / REGEN_REF));
 }
 
 export function express(g: Genome, c: Conditions): Phenotype {
@@ -286,11 +297,15 @@ export function express(g: Genome, c: Conditions): Phenotype {
     hp: 100 * (1 + 0.6 * size01 + 0.4 * hard01 + 0.3 * vit01 - 0.3 * tempo01),
     atk: 20 * (1 + 0.7 * might01 + 0.3 * u01(axes.temper) + 0.2 * focus01),
     def: 30 * (1 + 0.8 * hard01 + 0.4 * weight01),
-    spd: (2.2 + 3.8 * tempo01) * (0.75 + 0.35 * plan.legLen) * (1 - 0.25 * weight01) * KIND_SPEED[g.kind],
+    // Ground speed grows with body size (longer strides): XS x0.85 .. XL x1.15 at equal tempo.
+    spd: (2.2 + 3.8 * tempo01) * (0.75 + 0.35 * plan.legLen) * (1 - 0.25 * weight01) * KIND_SPEED[g.kind] * (0.85 + 0.3 * size01),
     energy: 100,
-    regen: 7 + 7 * vit01,
+    // Narrow band: energy regeneration is action THROUGHPUT, and it also enters powerIndex below.
+    regen: 8.5 + 5 * vit01,
     accuracy: clamp(0.82 + 0.1 * focus01 + 0.06 * u01(axes.conviction), 0.6, 0.99),
-    evasion: clamp(0.04 + 0.12 * tempo01 + 0.06 * (1 - size01) - 0.04 * weight01, 0.02, 0.25),
+    // Fliers, light bodies and small fast bodies are hard to hit. A light body is physically BIGGER
+    // for its mass class (low density), so agility compensates its larger silhouette.
+    evasion: clamp(0.04 + 0.12 * tempo01 + 0.06 * (1 - size01) + 0.07 * (0.5 - weight01) + 0.08 * Math.max(0, axes.altitude), 0.02, 0.28),
     crit: clamp(0.04 + 0.07 * focus01 + 0.04 * Math.max(0, -axes.structure), 0.03, 0.18),
     balance: clamp(KIND_BALANCE[g.kind] * (0.7 + 0.3 * weight01 + 0.2 * hard01), 0.2, 1),
     reach: 0.55 + 0.45 * heightM + 0.25 * plan.neck * heightM,
@@ -307,7 +322,8 @@ export function express(g: Genome, c: Conditions): Phenotype {
     dig: axes.altitude < -0.3 && axes.hardness > -0.2 && g.kind !== "avian" && g.kind !== "blob",
     phaseShift: axes.form > 0.45 && Math.abs(axes.phase) < 0.6,
     weatherShaper: axes.wisdom > 0.2 &&
-      (["air", "water", "ice", "light", "shadow"] as ElementId[]).some((e) => els.affinity[e] > 0.42),
+      // Every element that owns a weather move can learn to call it.
+      (["air", "water", "ice", "light", "shadow", "fire", "earth", "electric", "poison"] as ElementId[]).some((e) => els.affinity[e] > 0.42),
     terraformer: axes.might > 0 && (["earth", "plant", "ice", "fire"] as ElementId[]).some((e) => els.affinity[e] > 0.48),
   };
   if (abilities.fly) stats.balance = Math.max(0.2, stats.balance - 0.1);

@@ -154,6 +154,7 @@ export const MOVES: readonly Move[] = [
   // air
   mv("galeSlash", "Gale Slash", "air", "melee", 48, 0.96, 0.5, 0, 0, 0.3, 0.2, 0.4),
   mv("airCutter", "Air Cutter", "air", "projectile", 45, 0.92, 13, 0, 26, 0.4, 0.2, 0.4),
+  mv("jetStream", "Jet Stream", "air", "beam", 68, 0.9, 14, 0, 0, 0.85, 0.35, 0.8, [kb(3)], 2),
   mv("tornado", "Tornado", "air", "zone", 62, 0.9, 11, 2.8, 0, 1.0, 0.5, 0.9, [kb(4), st("staggered", 0.4, 1)], 3),
   mv("takeFlight", "Take Flight", "air", "fly", 0, 1, 0, 0, 0, 0.5, 0.3, 0.3, [st("airborne", 1, 8, true)], 1, { requires: { ability: "fly" } }),
   mv("tailwind", "Tailwind", "air", "buff", 0, 1, 0, 0, 0, 0.5, 0.3, 0.4, [st("hasted", 1, 6, true)], 2),
@@ -178,21 +179,25 @@ export const MOVES: readonly Move[] = [
   mv("ironShell", "Iron Shell", "metal", "buff", 0, 1, 0, 0, 0, 0.5, 0.3, 0.4, [st("shielded", 1, 6, true)], 1),
   mv("shrapnel", "Shrapnel Burst", "metal", "burst", 68, 0.93, 0, 3, 0, 1.0, 0.3, 0.9, [], 3),
   // poison
-  mv("venomFang", "Venom Fang", "poison", "melee", 48, 0.95, 0, 0, 0, 0.45, 0.25, 0.5, [st("poisoned", 0.5, 5)]),
-  mv("toxicSpit", "Toxic Spit", "poison", "projectile", 40, 0.92, 11, 0, 16, 0.45, 0.2, 0.45, [st("poisoned", 0.4, 5)]),
-  mv("miasma", "Miasma", "poison", "zone", 30, 0.95, 10, 3, 0, 0.8, 0.4, 0.7, [st("poisoned", 0.8, 5)], 2),
-  mv("corrosion", "Corrosion", "poison", "beam", 62, 0.88, 13, 0, 0, 0.9, 0.35, 0.8, [st("softened", 0.4, 4)], 2),
+  mv("venomFang", "Venom Fang", "poison", "melee", 54, 0.95, 0, 0, 0, 0.45, 0.25, 0.5, [st("poisoned", 0.5, 5)]),
+  mv("toxicSpit", "Toxic Spit", "poison", "projectile", 48, 0.92, 11, 0, 16, 0.45, 0.2, 0.45, [st("poisoned", 0.4, 5)]),
+  mv("miasma", "Miasma", "poison", "zone", 38, 0.95, 10, 3, 0, 0.8, 0.4, 0.7, [st("poisoned", 0.8, 5)], 2),
+  mv("corrosion", "Corrosion", "poison", "beam", 68, 0.88, 13, 0, 0, 0.9, 0.35, 0.8, [st("softened", 0.4, 4)], 2),
+  mv("plagueBurst", "Plague Burst", "poison", "burst", 72, 0.95, 0, 3.2, 0, 1.0, 0.35, 0.9, [st("poisoned", 0.6, 5)], 3),
   mv("acidRainCall", "Acid Rain Call", "poison", "weather", 0, 1, 0, 0, 0, 1.4, 0.3, 1.2, [wx("acidRain")], 2, WS),
   // light
   mv("radiantStrike", "Radiant Strike", "light", "melee", 52, 0.96, 0, 0, 0, 0.4, 0.2, 0.45),
   mv("photonDart", "Photon Dart", "light", "projectile", 46, 0.98, 15, 0, 40, 0.4, 0.15, 0.4),
   mv("dazzle", "Dazzle", "light", "burst", 30, 1, 0, 3.5, 0, 0.6, 0.3, 0.6, [st("blinded", 0.7, 2.5)], 2),
+  mv("prismRay", "Prism Ray", "light", "beam", 72, 0.92, 14, 0, 0, 0.9, 0.3, 0.8, [st("blinded", 0.2, 2)], 2),
   mv("solarBeam", "Solar Beam", "light", "beam", 95, 0.9, 16, 0, 0, 1.6, 0.45, 1.0, [], 3),
   mv("auroraCall", "Aurora Call", "light", "weather", 0, 1, 0, 0, 0, 1.4, 0.3, 1.2, [wx("aurora")], 2, WS),
   // shadow
   mv("shadowClaw", "Shadow Claw", "shadow", "melee", 56, 0.94, 0, 0, 0, 0.45, 0.25, 0.5, [], 1, { tags: ["highCrit"] }),
   mv("umbraOrb", "Umbra Orb", "shadow", "projectile", 50, 0.9, 12, 0, 15, 0.55, 0.2, 0.5),
-  mv("dreadGaze", "Dread Gaze", "shadow", "beam", 20, 0.95, 12, 0, 0, 0.6, 0.4, 0.6, [st("feared", 0.7, 3)], 2),
+  mv("dreadGaze", "Dread Gaze", "shadow", "beam", 30, 0.95, 12, 0, 0, 0.6, 0.4, 0.6, [st("feared", 0.7, 3)], 2),
+  mv("umbralLance", "Umbral Lance", "shadow", "beam", 72, 0.88, 14, 0, 0, 0.95, 0.35, 0.8, [st("blinded", 0.2, 2)], 2),
+  mv("nightfall", "Nightfall", "shadow", "burst", 76, 0.95, 0, 3.3, 0, 1.1, 0.35, 0.9, [st("feared", 0.35, 2.5)], 3),
   mv("nightVeil", "Night Veil", "shadow", "buff", 0, 1, 0, 0, 0, 0.5, 0.3, 0.4, [st("evasive", 1, 6, true)], 2),
   mv("eclipseCall", "Eclipse Call", "shadow", "weather", 0, 1, 0, 0, 0, 1.4, 0.3, 1.2, [wx("eclipse")], 2, WS),
   // psychic
@@ -228,14 +233,45 @@ export interface CostBreakdown {
   cost: number;
 }
 
-/** Energy cost of a move: power x area x range x accuracy x tempo + effects, x rarity x meta. */
+/**
+ * Relative value of each status per (chance x duration/3) when pricing a move. Measured setup
+ * statuses (wet only matters with electric/ice teammates) are cheap; hard disables are expensive.
+ */
+export const STATUS_WEIGHT: Record<StatusId, number> = {
+  burn: 1,
+  wet: 0.3,
+  frozen: 1.6,
+  paralyzed: 1.2,
+  poisoned: 1,
+  slowed: 0.7,
+  blinded: 0.9,
+  feared: 0.8,
+  confused: 0.9,
+  staggered: 1,
+  shielded: 1,
+  hasted: 0.9,
+  evasive: 1,
+  focused: 0.8,
+  softened: 0.8,
+  airborne: 0.5,
+  burrowed: 0.5,
+  liquid: 0.6,
+  regen: 1,
+};
+
+/** Delivery premium: a beam resolves instantly along its line (no travel to dodge, no ground hits). */
+export const DELIVERY: Partial<Record<MoveShape, number>> = { beam: 1.2 };
+
+/** Energy cost of a move: power x area x range x accuracy x delivery x tempo + effects, x rarity x meta. */
 export function moveCostBreakdown(m: Move, meta?: MetaUsage): CostBreakdown {
-  const damage = m.power * (1 + 0.28 * m.area) * (m.range > 4 ? 1 + 0.025 * (m.range - 4) : 1) *
-    (0.6 + 0.5 * m.accuracy);
-  const tempo = 1 + clamp(0.9 - m.charge, -0.6, 0.6) * 0.45;
+  // A burst is centred on its user (who must stand in melee range to use it), so its area is worth
+  // less than a zone placed at range.
+  const damage = m.power * (1 + (m.shape === "burst" ? 0.16 : 0.28) * m.area) * (m.range > 4 ? 1 + 0.025 * (m.range - 4) : 1) *
+    (0.6 + 0.5 * m.accuracy) * (DELIVERY[m.shape] ?? 1);
+  const tempo = 1 + clamp(0.9 - m.charge, -0.6, 0.6) * 0.3;
   let effects = 0;
   for (const e of m.effects) {
-    if (e.kind === "status") effects += 9 * (e.chance ?? 1) * ((e.duration ?? 3) / 3) * (e.self ? 1.2 : 1);
+    if (e.kind === "status") effects += 9 * (e.status ? STATUS_WEIGHT[e.status] : 1) * (e.chance ?? 1) * ((e.duration ?? 3) / 3) * (e.self ? 1.2 : 1);
     else if (e.kind === "knockback" || e.kind === "pull") effects += (e.value ?? 0) * 1.4;
     else if (e.kind === "ground") effects += 9;
     else if (e.kind === "weather") effects += 16;

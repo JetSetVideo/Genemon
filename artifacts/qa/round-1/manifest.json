@@ -1,0 +1,7322 @@
+{
+ "round": 1,
+ "shots": [
+  {
+   "file": "01-home.png",
+   "title": "Home screen (dark theme) with the team leader in the lab view",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "home",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "genemon": "Frosmane",
+     "kind": "quadruped",
+     "phase": "idle",
+     "stability": 0.1095164156780528,
+     "strain": 0,
+     "joints": 31,
+     "triangles": 11440
+    },
+    "ledger": {
+     "size": 2,
+     "counts": {
+      "device.session.start": 1,
+      "device.gpu": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 0,
+    "frameMs": 1
+   }
+  },
+  {
+   "file": "02-lab-overview.png",
+   "title": "Lab: overview tab (body, stats, emergent element affinity)",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "lab",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "genemon": "Frosmane",
+     "kind": "quadruped",
+     "phase": "idle",
+     "stability": 1,
+     "strain": 0,
+     "joints": 31,
+     "triangles": 11440
+    },
+    "ledger": {
+     "size": 3,
+     "counts": {
+      "device.session.start": 1,
+      "device.gpu": 1,
+      "ui.navigate": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 0,
+    "frameMs": 1
+   }
+  },
+  {
+   "file": "03-lab-skeleton.png",
+   "title": "Lab: skeleton overlay - bones (cyan), centre of mass (red), support polygon (yellow)",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "lab",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "genemon": "Frosmane",
+     "kind": "quadruped",
+     "phase": "idle",
+     "stability": 0.10916190378874616,
+     "strain": 0,
+     "joints": 31,
+     "triangles": 11440
+    },
+    "ledger": {
+     "size": 4,
+     "counts": {
+      "device.session.start": 1,
+      "device.gpu": 1,
+      "ui.navigate": 1,
+      "ui.settings": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 55.335968379446605,
+    "frameMs": 1
+   }
+  },
+  {
+   "file": "04-lab-genome.png",
+   "title": "Lab: genome tab - 26 opposite-pole axes grouped by space, genetic vs expressed",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "lab",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "genemon": "Frosmane",
+     "kind": "quadruped",
+     "phase": "idle",
+     "stability": 0.10961082823275747,
+     "strain": 0,
+     "joints": 31,
+     "triangles": 11440
+    },
+    "ledger": {
+     "size": 5,
+     "counts": {
+      "ui.settings": 2,
+      "device.session.start": 1,
+      "device.gpu": 1,
+      "ui.navigate": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 55.335968379446605,
+    "frameMs": 0
+   }
+  },
+  {
+   "file": "05-team.png",
+   "title": "Team: 6 slots sized by Genemon size class, attack order, synergies",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "team",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "genemon": "Frosmane",
+     "kind": "quadruped",
+     "phase": "idle",
+     "stability": 1,
+     "strain": 0,
+     "joints": 31,
+     "triangles": 11440
+    },
+    "ledger": {
+     "size": 6,
+     "counts": {
+      "ui.navigate": 2,
+      "ui.settings": 2,
+      "device.session.start": 1,
+      "device.gpu": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 55.335968379446605,
+    "frameMs": 1
+   }
+  },
+  {
+   "file": "06-data-genospace.png",
+   "title": "Data: genospace (190 Genemon on heat x moisture x luminance) + ledger",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "data",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "points": 190,
+     "owned": 10,
+     "axes": [
+      "heat",
+      "moisture",
+      "luminance"
+     ]
+    },
+    "ledger": {
+     "size": 7,
+     "counts": {
+      "ui.navigate": 3,
+      "ui.settings": 2,
+      "device.session.start": 1,
+      "device.gpu": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 55.335968379446605,
+    "frameMs": 1
+   }
+  },
+  {
+   "file": "07-arena-setup.png",
+   "title": "Arena setup: arena cards, conditions, opponent",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "arena",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "genemon": "Frosmane",
+     "kind": "quadruped",
+     "phase": "idle",
+     "stability": 1,
+     "strain": 0,
+     "joints": 31,
+     "triangles": 11440
+    },
+    "ledger": {
+     "size": 8,
+     "counts": {
+      "ui.navigate": 4,
+      "ui.settings": 2,
+      "device.session.start": 1,
+      "device.gpu": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 55.335968379446605,
+    "frameMs": 0
+   }
+  },
+  {
+   "file": "08-settings-light.png",
+   "title": "Settings in the light theme",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "settings",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "light"
+    },
+    "view": {
+     "genemon": "Frosmane",
+     "kind": "quadruped",
+     "phase": "idle",
+     "stability": 0.1064069980954403,
+     "strain": 0,
+     "joints": 31,
+     "triangles": 11440
+    },
+    "ledger": {
+     "size": 10,
+     "counts": {
+      "ui.navigate": 5,
+      "ui.settings": 3,
+      "device.session.start": 1,
+      "device.gpu": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 55.335968379446605,
+    "frameMs": 1
+   }
+  },
+  {
+   "file": "09-lab-light.png",
+   "title": "Lab in the light theme",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "lab",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "light"
+    },
+    "view": {
+     "genemon": "Frosmane",
+     "kind": "quadruped",
+     "phase": "idle",
+     "stability": 1,
+     "strain": 0,
+     "joints": 31,
+     "triangles": 11440
+    },
+    "ledger": {
+     "size": 11,
+     "counts": {
+      "ui.navigate": 6,
+      "ui.settings": 3,
+      "device.session.start": 1,
+      "device.gpu": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 55.335968379446605,
+    "frameMs": 1
+   }
+  },
+  {
+   "file": "creature-00-34-Embrglon-quadruped.png",
+   "title": "Creature Embrglon-quadruped (three-quarter front view)",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "lab",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "genemon": "Embrglon",
+     "kind": "quadruped",
+     "phase": "idle",
+     "stability": 1,
+     "strain": 0,
+     "joints": 30,
+     "triangles": 12088
+    },
+    "ledger": {
+     "size": 12,
+     "counts": {
+      "ui.navigate": 6,
+      "ui.settings": 4,
+      "device.session.start": 1,
+      "device.gpu": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 55.335968379446605,
+    "frameMs": 176
+   }
+  },
+  {
+   "file": "creature-00-side-Embrglon-quadruped.png",
+   "title": "Creature Embrglon-quadruped (side view)",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "lab",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "genemon": "Embrglon",
+     "kind": "quadruped",
+     "phase": "idle",
+     "stability": 1,
+     "strain": 0,
+     "joints": 30,
+     "triangles": 12088
+    },
+    "ledger": {
+     "size": 12,
+     "counts": {
+      "ui.navigate": 6,
+      "ui.settings": 4,
+      "device.session.start": 1,
+      "device.gpu": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 55.335968379446605,
+    "frameMs": 1
+   }
+  },
+  {
+   "file": "creature-01-34-Tidlash-serpent.png",
+   "title": "Creature Tidlash-serpent (three-quarter front view)",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "lab",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "genemon": "Tidlash",
+     "kind": "serpent",
+     "phase": "idle",
+     "stability": 1,
+     "strain": 0,
+     "joints": 16,
+     "triangles": 8912
+    },
+    "ledger": {
+     "size": 12,
+     "counts": {
+      "ui.navigate": 6,
+      "ui.settings": 4,
+      "device.session.start": 1,
+      "device.gpu": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 55.335968379446605,
+    "frameMs": 255
+   }
+  },
+  {
+   "file": "creature-01-side-Tidlash-serpent.png",
+   "title": "Creature Tidlash-serpent (side view)",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "lab",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "genemon": "Tidlash",
+     "kind": "serpent",
+     "phase": "idle",
+     "stability": 1,
+     "strain": 0,
+     "joints": 16,
+     "triangles": 8912
+    },
+    "ledger": {
+     "size": 12,
+     "counts": {
+      "ui.navigate": 6,
+      "ui.settings": 4,
+      "device.session.start": 1,
+      "device.gpu": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 55.335968379446605,
+    "frameMs": 18
+   }
+  },
+  {
+   "file": "creature-02-34-Leafmemon-biped.png",
+   "title": "Creature Leafmemon-biped (three-quarter front view)",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "lab",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "genemon": "Leafmemon",
+     "kind": "biped",
+     "phase": "idle",
+     "stability": 1,
+     "strain": 0,
+     "joints": 22,
+     "triangles": 9276
+    },
+    "ledger": {
+     "size": 12,
+     "counts": {
+      "ui.navigate": 6,
+      "ui.settings": 4,
+      "device.session.start": 1,
+      "device.gpu": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 55.335968379446605,
+    "frameMs": 138
+   }
+  },
+  {
+   "file": "creature-02-side-Leafmemon-biped.png",
+   "title": "Creature Leafmemon-biped (side view)",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "lab",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "genemon": "Leafmemon",
+     "kind": "biped",
+     "phase": "idle",
+     "stability": 1,
+     "strain": 0,
+     "joints": 22,
+     "triangles": 9276
+    },
+    "ledger": {
+     "size": 12,
+     "counts": {
+      "ui.navigate": 6,
+      "ui.settings": 4,
+      "device.session.start": 1,
+      "device.gpu": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 55.335968379446605,
+    "frameMs": 0
+   }
+  },
+  {
+   "file": "creature-03-34-Ampix-hexapod.png",
+   "title": "Creature Ampix-hexapod (three-quarter front view)",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "lab",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "genemon": "Ampix",
+     "kind": "hexapod",
+     "phase": "idle",
+     "stability": 1,
+     "strain": 0,
+     "joints": 24,
+     "triangles": 9872
+    },
+    "ledger": {
+     "size": 12,
+     "counts": {
+      "ui.navigate": 6,
+      "ui.settings": 4,
+      "device.session.start": 1,
+      "device.gpu": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 55.335968379446605,
+    "frameMs": 0
+   }
+  },
+  {
+   "file": "creature-03-side-Ampix-hexapod.png",
+   "title": "Creature Ampix-hexapod (side view)",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "lab",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "genemon": "Ampix",
+     "kind": "hexapod",
+     "phase": "idle",
+     "stability": 0.15213630572702563,
+     "strain": 0,
+     "joints": 24,
+     "triangles": 9872
+    },
+    "ledger": {
+     "size": 12,
+     "counts": {
+      "ui.navigate": 6,
+      "ui.settings": 4,
+      "device.session.start": 1,
+      "device.gpu": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 55.335968379446605,
+    "frameMs": 1
+   }
+  },
+  {
+   "file": "creature-04-34-Clodsttusk-quadruped.png",
+   "title": "Creature Clodsttusk-quadruped (three-quarter front view)",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "lab",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "genemon": "Clodsttusk",
+     "kind": "quadruped",
+     "phase": "idle",
+     "stability": 1,
+     "strain": 0,
+     "joints": 25,
+     "triangles": 9220
+    },
+    "ledger": {
+     "size": 12,
+     "counts": {
+      "ui.navigate": 6,
+      "ui.settings": 4,
+      "device.session.start": 1,
+      "device.gpu": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 55.335968379446605,
+    "frameMs": 152
+   }
+  },
+  {
+   "file": "creature-04-side-Clodsttusk-quadruped.png",
+   "title": "Creature Clodsttusk-quadruped (side view)",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "lab",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "genemon": "Clodsttusk",
+     "kind": "quadruped",
+     "phase": "idle",
+     "stability": 1,
+     "strain": 0,
+     "joints": 25,
+     "triangles": 9220
+    },
+    "ledger": {
+     "size": 12,
+     "counts": {
+      "ui.navigate": 6,
+      "ui.settings": 4,
+      "device.session.start": 1,
+      "device.gpu": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 36.132812499999986,
+    "frameMs": 1
+   }
+  },
+  {
+   "file": "creature-05-34-Zephkite-avian.png",
+   "title": "Creature Zephkite-avian (three-quarter front view)",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "lab",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "genemon": "Zephkite",
+     "kind": "avian",
+     "phase": "idle",
+     "stability": 1,
+     "strain": 0,
+     "joints": 25,
+     "triangles": 9260
+    },
+    "ledger": {
+     "size": 12,
+     "counts": {
+      "ui.navigate": 6,
+      "ui.settings": 4,
+      "device.session.start": 1,
+      "device.gpu": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 36.132812499999986,
+    "frameMs": 1
+   }
+  },
+  {
+   "file": "creature-05-side-Zephkite-avian.png",
+   "title": "Creature Zephkite-avian (side view)",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "lab",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "genemon": "Zephkite",
+     "kind": "avian",
+     "phase": "idle",
+     "stability": 1,
+     "strain": 0,
+     "joints": 25,
+     "triangles": 9260
+    },
+    "ledger": {
+     "size": 12,
+     "counts": {
+      "ui.navigate": 6,
+      "ui.settings": 4,
+      "device.session.start": 1,
+      "device.gpu": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 36.132812499999986,
+    "frameMs": 0
+   }
+  },
+  {
+   "file": "creature-06-34-Murkmire-blob.png",
+   "title": "Creature Murkmire-blob (three-quarter front view)",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "lab",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "genemon": "Murkmire",
+     "kind": "blob",
+     "phase": "idle",
+     "stability": 0.32085583551819813,
+     "strain": 0,
+     "joints": 11,
+     "triangles": 5144
+    },
+    "ledger": {
+     "size": 12,
+     "counts": {
+      "ui.navigate": 6,
+      "ui.settings": 4,
+      "device.session.start": 1,
+      "device.gpu": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 36.132812499999986,
+    "frameMs": 1
+   }
+  },
+  {
+   "file": "creature-06-side-Murkmire-blob.png",
+   "title": "Creature Murkmire-blob (side view)",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "lab",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "genemon": "Murkmire",
+     "kind": "blob",
+     "phase": "idle",
+     "stability": 1,
+     "strain": 0,
+     "joints": 11,
+     "triangles": 5144
+    },
+    "ledger": {
+     "size": 12,
+     "counts": {
+      "ui.navigate": 6,
+      "ui.settings": 4,
+      "device.session.start": 1,
+      "device.gpu": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 36.132812499999986,
+    "frameMs": 0
+   }
+  },
+  {
+   "file": "creature-07-34-Frosmane-quadruped.png",
+   "title": "Creature Frosmane-quadruped (three-quarter front view)",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "lab",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "genemon": "Frosmane",
+     "kind": "quadruped",
+     "phase": "idle",
+     "stability": 1,
+     "strain": 0,
+     "joints": 31,
+     "triangles": 11440
+    },
+    "ledger": {
+     "size": 12,
+     "counts": {
+      "ui.navigate": 6,
+      "ui.settings": 4,
+      "device.session.start": 1,
+      "device.gpu": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 36.132812499999986,
+    "frameMs": 1
+   }
+  },
+  {
+   "file": "creature-07-side-Frosmane-quadruped.png",
+   "title": "Creature Frosmane-quadruped (side view)",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "lab",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "genemon": "Frosmane",
+     "kind": "quadruped",
+     "phase": "idle",
+     "stability": 1,
+     "strain": 0,
+     "joints": 31,
+     "triangles": 11440
+    },
+    "ledger": {
+     "size": 12,
+     "counts": {
+      "ui.navigate": 6,
+      "ui.settings": 4,
+      "device.session.start": 1,
+      "device.gpu": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 36.132812499999986,
+    "frameMs": 1
+   }
+  },
+  {
+   "file": "creature-08-34-Solar-biped.png",
+   "title": "Creature Solar-biped (three-quarter front view)",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "lab",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "genemon": "Solar",
+     "kind": "biped",
+     "phase": "idle",
+     "stability": 1,
+     "strain": 0,
+     "joints": 23,
+     "triangles": 10004
+    },
+    "ledger": {
+     "size": 12,
+     "counts": {
+      "ui.navigate": 6,
+      "ui.settings": 4,
+      "device.session.start": 1,
+      "device.gpu": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 36.132812499999986,
+    "frameMs": 1
+   }
+  },
+  {
+   "file": "creature-08-side-Solar-biped.png",
+   "title": "Creature Solar-biped (side view)",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "lab",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "genemon": "Solar",
+     "kind": "biped",
+     "phase": "idle",
+     "stability": 1,
+     "strain": 0,
+     "joints": 23,
+     "triangles": 10004
+    },
+    "ledger": {
+     "size": 12,
+     "counts": {
+      "ui.navigate": 6,
+      "ui.settings": 4,
+      "device.session.start": 1,
+      "device.gpu": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 54.56349206349203,
+    "frameMs": 1
+   }
+  },
+  {
+   "file": "creature-09-34-Psiooze-blob.png",
+   "title": "Creature Psiooze-blob (three-quarter front view)",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "lab",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "genemon": "Psiooze",
+     "kind": "blob",
+     "phase": "idle",
+     "stability": 0.34637623327015,
+     "strain": 0,
+     "joints": 11,
+     "triangles": 5144
+    },
+    "ledger": {
+     "size": 12,
+     "counts": {
+      "ui.navigate": 6,
+      "ui.settings": 4,
+      "device.session.start": 1,
+      "device.gpu": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 54.56349206349203,
+    "frameMs": 0
+   }
+  },
+  {
+   "file": "creature-09-side-Psiooze-blob.png",
+   "title": "Creature Psiooze-blob (side view)",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "lab",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "genemon": "Psiooze",
+     "kind": "blob",
+     "phase": "idle",
+     "stability": 0.34637623327015,
+     "strain": 0,
+     "joints": 11,
+     "triangles": 5144
+    },
+    "ledger": {
+     "size": 12,
+     "counts": {
+      "ui.navigate": 6,
+      "ui.settings": 4,
+      "device.session.start": 1,
+      "device.gpu": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 54.56349206349203,
+    "frameMs": 0
+   }
+  },
+  {
+   "file": "phase-charge.png",
+   "title": "Attack phase: charge (lab demo cycle of the first Genemon's moves)",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "lab",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "genemon": "Embrglon",
+     "kind": "quadruped",
+     "phase": "charge",
+     "stability": 0.1291168664533025,
+     "strain": 0,
+     "joints": 30,
+     "triangles": 12088
+    },
+    "ledger": {
+     "size": 12,
+     "counts": {
+      "ui.navigate": 6,
+      "ui.settings": 4,
+      "device.session.start": 1,
+      "device.gpu": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 62.49999999999996,
+    "frameMs": 0
+   }
+  },
+  {
+   "file": "phase-active.png",
+   "title": "Attack phase: active (lab demo cycle of the first Genemon's moves)",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "lab",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "genemon": "Embrglon",
+     "kind": "quadruped",
+     "phase": "active",
+     "stability": 0.128691580263258,
+     "strain": 0.41247955420154203,
+     "joints": 30,
+     "triangles": 12088
+    },
+    "ledger": {
+     "size": 12,
+     "counts": {
+      "ui.navigate": 6,
+      "ui.settings": 4,
+      "device.session.start": 1,
+      "device.gpu": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 62.49999999999996,
+    "frameMs": 0
+   }
+  },
+  {
+   "file": "phase-rest.png",
+   "title": "Attack phase: rest (lab demo cycle of the first Genemon's moves)",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "lab",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "genemon": "Embrglon",
+     "kind": "quadruped",
+     "phase": "rest",
+     "stability": 0.12915279168943375,
+     "strain": 0,
+     "joints": 30,
+     "triangles": 12088
+    },
+    "ledger": {
+     "size": 12,
+     "counts": {
+      "ui.navigate": 6,
+      "ui.settings": 4,
+      "device.session.start": 1,
+      "device.gpu": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 60.51587301587298,
+    "frameMs": 0
+   }
+  },
+  {
+   "file": "battle-angle-auto.png",
+   "title": "Meadow battle, same frozen instant, camera auto",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "arena",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "t": 5.133333333333325,
+     "winner": null,
+     "weather": "clear",
+     "arena": "meadow",
+     "camera": {
+      "mode": "auto",
+      "center": [
+       0.46086486359111795,
+       0.1972845665543422,
+       -0.6769150597952293
+      ],
+      "radius": 6.6581326223602755,
+      "distance": 29.700272486209133,
+      "elevation": 0.4207676374999006,
+      "outside": 0
+     },
+     "fighters": [
+      {
+       "name": "Frosmane",
+       "team": 0,
+       "kind": "quadruped",
+       "size": "S",
+       "hp": 316,
+       "maxHp": 316,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -3.69,
+        -0.29,
+        -5.42
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.11,
+       "triangles": 11440
+      },
+      {
+       "name": "Ampix",
+       "team": 0,
+       "kind": "hexapod",
+       "size": "M",
+       "hp": 485,
+       "maxHp": 543,
+       "phase": "rest",
+       "move": "sparkBolt",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -4.65,
+        -0.15,
+        0.56
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.208,
+       "triangles": 9872
+      },
+      {
+       "name": "Leafmemon",
+       "team": 0,
+       "kind": "biped",
+       "size": "S",
+       "hp": 28,
+       "maxHp": 297,
+       "phase": "active",
+       "move": "overgrowth",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -1.41,
+        -0.27,
+        -1.82
+       ],
+       "status": [
+        "regen"
+       ],
+       "strain": 0,
+       "stability": -0.009,
+       "triangles": 9276
+      },
+      {
+       "name": "Zephkite",
+       "team": 0,
+       "kind": "avian",
+       "size": "S",
+       "hp": 250,
+       "maxHp": 250,
+       "phase": "rest",
+       "move": "bodySlam",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        2.35,
+        -0.22,
+        3.36
+       ],
+       "status": [],
+       "strain": 0.002,
+       "stability": -0.091,
+       "triangles": 9260
+      },
+      {
+       "name": "Tidlash",
+       "team": 0,
+       "kind": "serpent",
+       "size": "S",
+       "hp": 117,
+       "maxHp": 262,
+       "phase": "rest",
+       "move": "hydroBeam",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -3.22,
+        -0.05,
+        3.54
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": -0.038,
+       "triangles": 8912
+      },
+      {
+       "name": "Vacskooze",
+       "team": 1,
+       "kind": "blob",
+       "size": "M",
+       "hp": 416,
+       "maxHp": 608,
+       "phase": "charge",
+       "move": "airCutter",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        3.87,
+        -0.32,
+        -2.76
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.383,
+       "triangles": 5676
+      },
+      {
+       "name": "Frosar",
+       "team": 1,
+       "kind": "biped",
+       "size": "S",
+       "hp": 8,
+       "maxHp": 301,
+       "phase": "rest",
+       "move": "bodySlam",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        4.01,
+        -0.24,
+        -1.78
+       ],
+       "status": [
+        "wet"
+       ],
+       "strain": 0,
+       "stability": -0.018,
+       "triangles": 8628
+      },
+      {
+       "name": "Acrooze",
+       "team": 1,
+       "kind": "blob",
+       "size": "M",
+       "hp": 484,
+       "maxHp": 648,
+       "phase": "rest",
+       "move": "corrosion",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        5.5,
+        -0.2,
+        0.85
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.397,
+       "triangles": 5676
+      },
+      {
+       "name": "Nullix",
+       "team": 1,
+       "kind": "hexapod",
+       "size": "XS",
+       "hp": 0,
+       "maxHp": 246,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        3.27,
+        -0.1,
+        5
+       ],
+       "status": [
+        "wet",
+        "staggered",
+        "paralyzed"
+       ],
+       "strain": 0,
+       "stability": 0.024,
+       "triangles": 9892
+      }
+     ],
+     "zones": [],
+     "projectiles": 0
+    },
+    "ledger": {
+     "size": 66,
+     "counts": {
+      "battle.decide": 23,
+      "battle.hit": 11,
+      "battle.miss": 9,
+      "ui.navigate": 7,
+      "ui.settings": 5,
+      "battle.status": 5,
+      "battle.terrain": 2,
+      "device.session.start": 1,
+      "device.gpu": 1,
+      "battle.start": 1,
+      "battle.ko": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 62.49999999999996,
+    "frameMs": 3
+   }
+  },
+  {
+   "file": "battle-angle-top.png",
+   "title": "Meadow battle, same frozen instant, camera top",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "arena",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "t": 5.133333333333325,
+     "winner": null,
+     "weather": "clear",
+     "arena": "meadow",
+     "camera": {
+      "mode": "top",
+      "center": [
+       0.46086486359111795,
+       0.1972845665543422,
+       -0.6769150597952293
+      ],
+      "radius": 6.6581326223602755,
+      "distance": 13.750498013871695,
+      "elevation": 1.35,
+      "outside": 0
+     },
+     "fighters": [
+      {
+       "name": "Frosmane",
+       "team": 0,
+       "kind": "quadruped",
+       "size": "S",
+       "hp": 316,
+       "maxHp": 316,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -3.69,
+        -0.29,
+        -5.42
+       ],
+       "status": [],
+       "strain": 0.015,
+       "stability": 0.113,
+       "triangles": 11440
+      },
+      {
+       "name": "Ampix",
+       "team": 0,
+       "kind": "hexapod",
+       "size": "M",
+       "hp": 485,
+       "maxHp": 543,
+       "phase": "rest",
+       "move": "sparkBolt",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -4.65,
+        -0.15,
+        0.56
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.157,
+       "triangles": 9872
+      },
+      {
+       "name": "Leafmemon",
+       "team": 0,
+       "kind": "biped",
+       "size": "S",
+       "hp": 28,
+       "maxHp": 297,
+       "phase": "active",
+       "move": "overgrowth",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -1.41,
+        -0.27,
+        -1.82
+       ],
+       "status": [
+        "regen"
+       ],
+       "strain": 0.053,
+       "stability": -0.009,
+       "triangles": 9276
+      },
+      {
+       "name": "Zephkite",
+       "team": 0,
+       "kind": "avian",
+       "size": "S",
+       "hp": 250,
+       "maxHp": 250,
+       "phase": "rest",
+       "move": "bodySlam",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        2.35,
+        -0.22,
+        3.36
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": -0.149,
+       "triangles": 9260
+      },
+      {
+       "name": "Tidlash",
+       "team": 0,
+       "kind": "serpent",
+       "size": "S",
+       "hp": 117,
+       "maxHp": 262,
+       "phase": "rest",
+       "move": "hydroBeam",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -3.22,
+        -0.05,
+        3.54
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": -0.033,
+       "triangles": 8912
+      },
+      {
+       "name": "Vacskooze",
+       "team": 1,
+       "kind": "blob",
+       "size": "M",
+       "hp": 416,
+       "maxHp": 608,
+       "phase": "charge",
+       "move": "airCutter",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        3.87,
+        -0.32,
+        -2.76
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.405,
+       "triangles": 5676
+      },
+      {
+       "name": "Frosar",
+       "team": 1,
+       "kind": "biped",
+       "size": "S",
+       "hp": 8,
+       "maxHp": 301,
+       "phase": "rest",
+       "move": "bodySlam",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        4.01,
+        -0.24,
+        -1.78
+       ],
+       "status": [
+        "wet"
+       ],
+       "strain": 0,
+       "stability": -0.056,
+       "triangles": 8628
+      },
+      {
+       "name": "Acrooze",
+       "team": 1,
+       "kind": "blob",
+       "size": "M",
+       "hp": 484,
+       "maxHp": 648,
+       "phase": "rest",
+       "move": "corrosion",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        5.5,
+        -0.2,
+        0.85
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.395,
+       "triangles": 5676
+      },
+      {
+       "name": "Nullix",
+       "team": 1,
+       "kind": "hexapod",
+       "size": "XS",
+       "hp": 0,
+       "maxHp": 246,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        3.27,
+        -0.1,
+        5
+       ],
+       "status": [
+        "wet",
+        "staggered",
+        "paralyzed"
+       ],
+       "strain": 0,
+       "stability": 0.059,
+       "triangles": 9892
+      }
+     ],
+     "zones": [],
+     "projectiles": 0
+    },
+    "ledger": {
+     "size": 66,
+     "counts": {
+      "battle.decide": 23,
+      "battle.hit": 11,
+      "battle.miss": 9,
+      "ui.navigate": 7,
+      "ui.settings": 5,
+      "battle.status": 5,
+      "battle.terrain": 2,
+      "device.session.start": 1,
+      "device.gpu": 1,
+      "battle.start": 1,
+      "battle.ko": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 62.49999999999996,
+    "frameMs": 3
+   }
+  },
+  {
+   "file": "battle-angle-side.png",
+   "title": "Meadow battle, same frozen instant, camera side",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "arena",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "t": 5.133333333333325,
+     "winner": null,
+     "weather": "clear",
+     "arena": "meadow",
+     "camera": {
+      "mode": "side",
+      "center": [
+       0.46086486359111795,
+       0.1972845665543422,
+       -0.6769150597952293
+      ],
+      "radius": 6.6581326223602755,
+      "distance": 29.62899183224223,
+      "elevation": 0.18,
+      "outside": 0
+     },
+     "fighters": [
+      {
+       "name": "Frosmane",
+       "team": 0,
+       "kind": "quadruped",
+       "size": "S",
+       "hp": 316,
+       "maxHp": 316,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -3.69,
+        -0.29,
+        -5.42
+       ],
+       "status": [],
+       "strain": 0.056,
+       "stability": 0.111,
+       "triangles": 11440
+      },
+      {
+       "name": "Ampix",
+       "team": 0,
+       "kind": "hexapod",
+       "size": "M",
+       "hp": 485,
+       "maxHp": 543,
+       "phase": "rest",
+       "move": "sparkBolt",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -4.65,
+        -0.15,
+        0.56
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.198,
+       "triangles": 9872
+      },
+      {
+       "name": "Leafmemon",
+       "team": 0,
+       "kind": "biped",
+       "size": "S",
+       "hp": 28,
+       "maxHp": 297,
+       "phase": "active",
+       "move": "overgrowth",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -1.41,
+        -0.27,
+        -1.82
+       ],
+       "status": [
+        "regen"
+       ],
+       "strain": 0.046,
+       "stability": -0.01,
+       "triangles": 9276
+      },
+      {
+       "name": "Zephkite",
+       "team": 0,
+       "kind": "avian",
+       "size": "S",
+       "hp": 250,
+       "maxHp": 250,
+       "phase": "rest",
+       "move": "bodySlam",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        2.35,
+        -0.22,
+        3.36
+       ],
+       "status": [],
+       "strain": 0.077,
+       "stability": -0.061,
+       "triangles": 9260
+      },
+      {
+       "name": "Tidlash",
+       "team": 0,
+       "kind": "serpent",
+       "size": "S",
+       "hp": 117,
+       "maxHp": 262,
+       "phase": "rest",
+       "move": "hydroBeam",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -3.22,
+        -0.05,
+        3.54
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.018,
+       "triangles": 8912
+      },
+      {
+       "name": "Vacskooze",
+       "team": 1,
+       "kind": "blob",
+       "size": "M",
+       "hp": 416,
+       "maxHp": 608,
+       "phase": "charge",
+       "move": "airCutter",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        3.87,
+        -0.32,
+        -2.76
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.383,
+       "triangles": 5676
+      },
+      {
+       "name": "Frosar",
+       "team": 1,
+       "kind": "biped",
+       "size": "S",
+       "hp": 8,
+       "maxHp": 301,
+       "phase": "rest",
+       "move": "bodySlam",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        4.01,
+        -0.24,
+        -1.78
+       ],
+       "status": [
+        "wet"
+       ],
+       "strain": 0,
+       "stability": -0.009,
+       "triangles": 8628
+      },
+      {
+       "name": "Acrooze",
+       "team": 1,
+       "kind": "blob",
+       "size": "M",
+       "hp": 484,
+       "maxHp": 648,
+       "phase": "rest",
+       "move": "corrosion",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        5.5,
+        -0.2,
+        0.85
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.394,
+       "triangles": 5676
+      },
+      {
+       "name": "Nullix",
+       "team": 1,
+       "kind": "hexapod",
+       "size": "XS",
+       "hp": 0,
+       "maxHp": 246,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        3.27,
+        -0.1,
+        5
+       ],
+       "status": [
+        "wet",
+        "staggered",
+        "paralyzed"
+       ],
+       "strain": 0,
+       "stability": 0.11,
+       "triangles": 9892
+      }
+     ],
+     "zones": [],
+     "projectiles": 0
+    },
+    "ledger": {
+     "size": 66,
+     "counts": {
+      "battle.decide": 23,
+      "battle.hit": 11,
+      "battle.miss": 9,
+      "ui.navigate": 7,
+      "ui.settings": 5,
+      "battle.status": 5,
+      "battle.terrain": 2,
+      "device.session.start": 1,
+      "device.gpu": 1,
+      "battle.start": 1,
+      "battle.ko": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 62.49999999999996,
+    "frameMs": 3
+   }
+  },
+  {
+   "file": "battle-angle-low.png",
+   "title": "Meadow battle, same frozen instant, camera low",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "arena",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "t": 5.133333333333325,
+     "winner": null,
+     "weather": "clear",
+     "arena": "meadow",
+     "camera": {
+      "mode": "low",
+      "center": [
+       0.46086486359111795,
+       0.1972845665543422,
+       -0.6769150597952293
+      ],
+      "radius": 6.6581326223602755,
+      "distance": 13.750498013871695,
+      "elevation": 0.08,
+      "outside": 0
+     },
+     "fighters": [
+      {
+       "name": "Frosmane",
+       "team": 0,
+       "kind": "quadruped",
+       "size": "S",
+       "hp": 316,
+       "maxHp": 316,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -3.69,
+        -0.29,
+        -5.42
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.113,
+       "triangles": 11440
+      },
+      {
+       "name": "Ampix",
+       "team": 0,
+       "kind": "hexapod",
+       "size": "M",
+       "hp": 485,
+       "maxHp": 543,
+       "phase": "rest",
+       "move": "sparkBolt",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -4.65,
+        -0.15,
+        0.56
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.177,
+       "triangles": 9872
+      },
+      {
+       "name": "Leafmemon",
+       "team": 0,
+       "kind": "biped",
+       "size": "S",
+       "hp": 28,
+       "maxHp": 297,
+       "phase": "active",
+       "move": "overgrowth",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -1.41,
+        -0.27,
+        -1.82
+       ],
+       "status": [
+        "regen"
+       ],
+       "strain": 0,
+       "stability": -0.018,
+       "triangles": 9276
+      },
+      {
+       "name": "Zephkite",
+       "team": 0,
+       "kind": "avian",
+       "size": "S",
+       "hp": 250,
+       "maxHp": 250,
+       "phase": "rest",
+       "move": "bodySlam",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        2.35,
+        -0.22,
+        3.36
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": -0.175,
+       "triangles": 9260
+      },
+      {
+       "name": "Tidlash",
+       "team": 0,
+       "kind": "serpent",
+       "size": "S",
+       "hp": 117,
+       "maxHp": 262,
+       "phase": "rest",
+       "move": "hydroBeam",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -3.22,
+        -0.05,
+        3.54
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.045,
+       "triangles": 8912
+      },
+      {
+       "name": "Vacskooze",
+       "team": 1,
+       "kind": "blob",
+       "size": "M",
+       "hp": 416,
+       "maxHp": 608,
+       "phase": "charge",
+       "move": "airCutter",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        3.87,
+        -0.32,
+        -2.76
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.381,
+       "triangles": 5676
+      },
+      {
+       "name": "Frosar",
+       "team": 1,
+       "kind": "biped",
+       "size": "S",
+       "hp": 8,
+       "maxHp": 301,
+       "phase": "rest",
+       "move": "bodySlam",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        4.01,
+        -0.24,
+        -1.78
+       ],
+       "status": [
+        "wet"
+       ],
+       "strain": 0,
+       "stability": -0.043,
+       "triangles": 8628
+      },
+      {
+       "name": "Acrooze",
+       "team": 1,
+       "kind": "blob",
+       "size": "M",
+       "hp": 484,
+       "maxHp": 648,
+       "phase": "rest",
+       "move": "corrosion",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        5.5,
+        -0.2,
+        0.85
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.395,
+       "triangles": 5676
+      },
+      {
+       "name": "Nullix",
+       "team": 1,
+       "kind": "hexapod",
+       "size": "XS",
+       "hp": 0,
+       "maxHp": 246,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        3.27,
+        -0.1,
+        5
+       ],
+       "status": [
+        "wet",
+        "staggered",
+        "paralyzed"
+       ],
+       "strain": 0,
+       "stability": 0.142,
+       "triangles": 9892
+      }
+     ],
+     "zones": [],
+     "projectiles": 0
+    },
+    "ledger": {
+     "size": 66,
+     "counts": {
+      "battle.decide": 23,
+      "battle.hit": 11,
+      "battle.miss": 9,
+      "ui.navigate": 7,
+      "ui.settings": 5,
+      "battle.status": 5,
+      "battle.terrain": 2,
+      "device.session.start": 1,
+      "device.gpu": 1,
+      "battle.start": 1,
+      "battle.ko": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 62.49999999999996,
+    "frameMs": 4
+   }
+  },
+  {
+   "file": "battle-angle-follow.png",
+   "title": "Meadow battle, same frozen instant, camera follow",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "arena",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "t": 5.133333333333325,
+     "winner": null,
+     "weather": "clear",
+     "arena": "meadow",
+     "camera": {
+      "mode": "follow",
+      "center": [
+       -1.615004413084815,
+       0.24702319037275505,
+       -3.0477017206777
+      ],
+      "radius": 6.6581326223602755,
+      "distance": 29.84334798738884,
+      "elevation": 0.32,
+      "outside": 0
+     },
+     "fighters": [
+      {
+       "name": "Frosmane",
+       "team": 0,
+       "kind": "quadruped",
+       "size": "S",
+       "hp": 316,
+       "maxHp": 316,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -3.69,
+        -0.29,
+        -5.42
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.111,
+       "triangles": 11440
+      },
+      {
+       "name": "Ampix",
+       "team": 0,
+       "kind": "hexapod",
+       "size": "M",
+       "hp": 485,
+       "maxHp": 543,
+       "phase": "rest",
+       "move": "sparkBolt",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -4.65,
+        -0.15,
+        0.56
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.202,
+       "triangles": 9872
+      },
+      {
+       "name": "Leafmemon",
+       "team": 0,
+       "kind": "biped",
+       "size": "S",
+       "hp": 28,
+       "maxHp": 297,
+       "phase": "active",
+       "move": "overgrowth",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -1.41,
+        -0.27,
+        -1.82
+       ],
+       "status": [
+        "regen"
+       ],
+       "strain": 0,
+       "stability": -0.006,
+       "triangles": 9276
+      },
+      {
+       "name": "Zephkite",
+       "team": 0,
+       "kind": "avian",
+       "size": "S",
+       "hp": 250,
+       "maxHp": 250,
+       "phase": "rest",
+       "move": "bodySlam",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        2.35,
+        -0.22,
+        3.36
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": -0.105,
+       "triangles": 9260
+      },
+      {
+       "name": "Tidlash",
+       "team": 0,
+       "kind": "serpent",
+       "size": "S",
+       "hp": 117,
+       "maxHp": 262,
+       "phase": "rest",
+       "move": "hydroBeam",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -3.22,
+        -0.05,
+        3.54
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": -0.007,
+       "triangles": 8912
+      },
+      {
+       "name": "Vacskooze",
+       "team": 1,
+       "kind": "blob",
+       "size": "M",
+       "hp": 416,
+       "maxHp": 608,
+       "phase": "charge",
+       "move": "airCutter",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        3.87,
+        -0.32,
+        -2.76
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.402,
+       "triangles": 5676
+      },
+      {
+       "name": "Frosar",
+       "team": 1,
+       "kind": "biped",
+       "size": "S",
+       "hp": 8,
+       "maxHp": 301,
+       "phase": "rest",
+       "move": "bodySlam",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        4.01,
+        -0.24,
+        -1.78
+       ],
+       "status": [
+        "wet"
+       ],
+       "strain": 0,
+       "stability": -0.025,
+       "triangles": 8628
+      },
+      {
+       "name": "Acrooze",
+       "team": 1,
+       "kind": "blob",
+       "size": "M",
+       "hp": 484,
+       "maxHp": 648,
+       "phase": "rest",
+       "move": "corrosion",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        5.5,
+        -0.2,
+        0.85
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.397,
+       "triangles": 5676
+      },
+      {
+       "name": "Nullix",
+       "team": 1,
+       "kind": "hexapod",
+       "size": "XS",
+       "hp": 0,
+       "maxHp": 246,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        3.27,
+        -0.1,
+        5
+       ],
+       "status": [
+        "wet",
+        "staggered",
+        "paralyzed"
+       ],
+       "strain": 0,
+       "stability": 0.169,
+       "triangles": 9892
+      }
+     ],
+     "zones": [],
+     "projectiles": 0
+    },
+    "ledger": {
+     "size": 66,
+     "counts": {
+      "battle.decide": 23,
+      "battle.hit": 11,
+      "battle.miss": 9,
+      "ui.navigate": 7,
+      "ui.settings": 5,
+      "battle.status": 5,
+      "battle.terrain": 2,
+      "device.session.start": 1,
+      "device.gpu": 1,
+      "battle.start": 1,
+      "battle.ko": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 62.49999999999996,
+    "frameMs": 3
+   }
+  },
+  {
+   "file": "battle-angle-orbit-0.png",
+   "title": "Meadow battle, same frozen instant, camera orbit yaw 0 deg",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "arena",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "t": 5.133333333333325,
+     "winner": null,
+     "weather": "clear",
+     "arena": "meadow",
+     "camera": {
+      "mode": "orbit",
+      "center": [
+       0.46086486359111795,
+       0.1972845665543422,
+       -0.6769150597952293
+      ],
+      "radius": 6.6581326223602755,
+      "distance": 28.51148986821145,
+      "elevation": 0.4207676374999006,
+      "outside": 0
+     },
+     "fighters": [
+      {
+       "name": "Frosmane",
+       "team": 0,
+       "kind": "quadruped",
+       "size": "S",
+       "hp": 316,
+       "maxHp": 316,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -3.69,
+        -0.29,
+        -5.42
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.112,
+       "triangles": 11440
+      },
+      {
+       "name": "Ampix",
+       "team": 0,
+       "kind": "hexapod",
+       "size": "M",
+       "hp": 485,
+       "maxHp": 543,
+       "phase": "rest",
+       "move": "sparkBolt",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -4.65,
+        -0.15,
+        0.56
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.192,
+       "triangles": 9872
+      },
+      {
+       "name": "Leafmemon",
+       "team": 0,
+       "kind": "biped",
+       "size": "S",
+       "hp": 28,
+       "maxHp": 297,
+       "phase": "active",
+       "move": "overgrowth",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -1.41,
+        -0.27,
+        -1.82
+       ],
+       "status": [
+        "regen"
+       ],
+       "strain": 0.004,
+       "stability": -0.015,
+       "triangles": 9276
+      },
+      {
+       "name": "Zephkite",
+       "team": 0,
+       "kind": "avian",
+       "size": "S",
+       "hp": 250,
+       "maxHp": 250,
+       "phase": "rest",
+       "move": "bodySlam",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        2.35,
+        -0.22,
+        3.36
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": -0.228,
+       "triangles": 9260
+      },
+      {
+       "name": "Tidlash",
+       "team": 0,
+       "kind": "serpent",
+       "size": "S",
+       "hp": 117,
+       "maxHp": 262,
+       "phase": "rest",
+       "move": "hydroBeam",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -3.22,
+        -0.05,
+        3.54
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": -0.038,
+       "triangles": 8912
+      },
+      {
+       "name": "Vacskooze",
+       "team": 1,
+       "kind": "blob",
+       "size": "M",
+       "hp": 416,
+       "maxHp": 608,
+       "phase": "charge",
+       "move": "airCutter",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        3.87,
+        -0.32,
+        -2.76
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.384,
+       "triangles": 5676
+      },
+      {
+       "name": "Frosar",
+       "team": 1,
+       "kind": "biped",
+       "size": "S",
+       "hp": 8,
+       "maxHp": 301,
+       "phase": "rest",
+       "move": "bodySlam",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        4.01,
+        -0.24,
+        -1.78
+       ],
+       "status": [
+        "wet"
+       ],
+       "strain": 0,
+       "stability": -0.018,
+       "triangles": 8628
+      },
+      {
+       "name": "Acrooze",
+       "team": 1,
+       "kind": "blob",
+       "size": "M",
+       "hp": 484,
+       "maxHp": 648,
+       "phase": "rest",
+       "move": "corrosion",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        5.5,
+        -0.2,
+        0.85
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.396,
+       "triangles": 5676
+      },
+      {
+       "name": "Nullix",
+       "team": 1,
+       "kind": "hexapod",
+       "size": "XS",
+       "hp": 0,
+       "maxHp": 246,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        3.27,
+        -0.1,
+        5
+       ],
+       "status": [
+        "wet",
+        "staggered",
+        "paralyzed"
+       ],
+       "strain": 0,
+       "stability": 0.154,
+       "triangles": 9892
+      }
+     ],
+     "zones": [],
+     "projectiles": 0
+    },
+    "ledger": {
+     "size": 66,
+     "counts": {
+      "battle.decide": 23,
+      "battle.hit": 11,
+      "battle.miss": 9,
+      "ui.navigate": 7,
+      "ui.settings": 5,
+      "battle.status": 5,
+      "battle.terrain": 2,
+      "device.session.start": 1,
+      "device.gpu": 1,
+      "battle.start": 1,
+      "battle.ko": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 62.49999999999996,
+    "frameMs": 3
+   }
+  },
+  {
+   "file": "battle-angle-orbit-120.png",
+   "title": "Meadow battle, same frozen instant, camera orbit yaw 120 deg",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "arena",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "t": 5.133333333333325,
+     "winner": null,
+     "weather": "clear",
+     "arena": "meadow",
+     "camera": {
+      "mode": "orbit",
+      "center": [
+       0.46086486359111795,
+       0.1972845665543422,
+       -0.6769150597952293
+      ],
+      "radius": 6.6581326223602755,
+      "distance": 27.173696554321044,
+      "elevation": 0.4207676374999006,
+      "outside": 0
+     },
+     "fighters": [
+      {
+       "name": "Frosmane",
+       "team": 0,
+       "kind": "quadruped",
+       "size": "S",
+       "hp": 316,
+       "maxHp": 316,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -3.69,
+        -0.29,
+        -5.42
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.111,
+       "triangles": 11440
+      },
+      {
+       "name": "Ampix",
+       "team": 0,
+       "kind": "hexapod",
+       "size": "M",
+       "hp": 485,
+       "maxHp": 543,
+       "phase": "rest",
+       "move": "sparkBolt",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -4.65,
+        -0.15,
+        0.56
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.19,
+       "triangles": 9872
+      },
+      {
+       "name": "Leafmemon",
+       "team": 0,
+       "kind": "biped",
+       "size": "S",
+       "hp": 28,
+       "maxHp": 297,
+       "phase": "active",
+       "move": "overgrowth",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -1.41,
+        -0.27,
+        -1.82
+       ],
+       "status": [
+        "regen"
+       ],
+       "strain": 0.059,
+       "stability": -0.005,
+       "triangles": 9276
+      },
+      {
+       "name": "Zephkite",
+       "team": 0,
+       "kind": "avian",
+       "size": "S",
+       "hp": 250,
+       "maxHp": 250,
+       "phase": "rest",
+       "move": "bodySlam",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        2.35,
+        -0.22,
+        3.36
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": -0.07,
+       "triangles": 9260
+      },
+      {
+       "name": "Tidlash",
+       "team": 0,
+       "kind": "serpent",
+       "size": "S",
+       "hp": 117,
+       "maxHp": 262,
+       "phase": "rest",
+       "move": "hydroBeam",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -3.22,
+        -0.05,
+        3.54
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": -0.024,
+       "triangles": 8912
+      },
+      {
+       "name": "Vacskooze",
+       "team": 1,
+       "kind": "blob",
+       "size": "M",
+       "hp": 416,
+       "maxHp": 608,
+       "phase": "charge",
+       "move": "airCutter",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        3.87,
+        -0.32,
+        -2.76
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.38,
+       "triangles": 5676
+      },
+      {
+       "name": "Frosar",
+       "team": 1,
+       "kind": "biped",
+       "size": "S",
+       "hp": 8,
+       "maxHp": 301,
+       "phase": "rest",
+       "move": "bodySlam",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        4.01,
+        -0.24,
+        -1.78
+       ],
+       "status": [
+        "wet"
+       ],
+       "strain": 0,
+       "stability": -0.035,
+       "triangles": 8628
+      },
+      {
+       "name": "Acrooze",
+       "team": 1,
+       "kind": "blob",
+       "size": "M",
+       "hp": 484,
+       "maxHp": 648,
+       "phase": "rest",
+       "move": "corrosion",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        5.5,
+        -0.2,
+        0.85
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.397,
+       "triangles": 5676
+      },
+      {
+       "name": "Nullix",
+       "team": 1,
+       "kind": "hexapod",
+       "size": "XS",
+       "hp": 0,
+       "maxHp": 246,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        3.27,
+        -0.1,
+        5
+       ],
+       "status": [
+        "wet",
+        "staggered",
+        "paralyzed"
+       ],
+       "strain": 0,
+       "stability": 0.148,
+       "triangles": 9892
+      }
+     ],
+     "zones": [],
+     "projectiles": 0
+    },
+    "ledger": {
+     "size": 66,
+     "counts": {
+      "battle.decide": 23,
+      "battle.hit": 11,
+      "battle.miss": 9,
+      "ui.navigate": 7,
+      "ui.settings": 5,
+      "battle.status": 5,
+      "battle.terrain": 2,
+      "device.session.start": 1,
+      "device.gpu": 1,
+      "battle.start": 1,
+      "battle.ko": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 62.49999999999996,
+    "frameMs": 3
+   }
+  },
+  {
+   "file": "battle-angle-orbit-241.png",
+   "title": "Meadow battle, same frozen instant, camera orbit yaw 241 deg",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "arena",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "t": 5.133333333333325,
+     "winner": null,
+     "weather": "clear",
+     "arena": "meadow",
+     "camera": {
+      "mode": "orbit",
+      "center": [
+       0.46086486359111795,
+       0.1972845665543422,
+       -0.6769150597952293
+      ],
+      "radius": 6.6581326223602755,
+      "distance": 25.89867410785856,
+      "elevation": 0.4207676374999006,
+      "outside": 0
+     },
+     "fighters": [
+      {
+       "name": "Frosmane",
+       "team": 0,
+       "kind": "quadruped",
+       "size": "S",
+       "hp": 316,
+       "maxHp": 316,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -3.69,
+        -0.29,
+        -5.42
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.111,
+       "triangles": 11440
+      },
+      {
+       "name": "Ampix",
+       "team": 0,
+       "kind": "hexapod",
+       "size": "M",
+       "hp": 485,
+       "maxHp": 543,
+       "phase": "rest",
+       "move": "sparkBolt",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -4.65,
+        -0.15,
+        0.56
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.203,
+       "triangles": 9872
+      },
+      {
+       "name": "Leafmemon",
+       "team": 0,
+       "kind": "biped",
+       "size": "S",
+       "hp": 28,
+       "maxHp": 297,
+       "phase": "active",
+       "move": "overgrowth",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -1.41,
+        -0.27,
+        -1.82
+       ],
+       "status": [
+        "regen"
+       ],
+       "strain": 0,
+       "stability": -0.014,
+       "triangles": 9276
+      },
+      {
+       "name": "Zephkite",
+       "team": 0,
+       "kind": "avian",
+       "size": "S",
+       "hp": 250,
+       "maxHp": 250,
+       "phase": "rest",
+       "move": "bodySlam",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        2.35,
+        -0.22,
+        3.36
+       ],
+       "status": [],
+       "strain": 0.002,
+       "stability": -0.231,
+       "triangles": 9260
+      },
+      {
+       "name": "Tidlash",
+       "team": 0,
+       "kind": "serpent",
+       "size": "S",
+       "hp": 117,
+       "maxHp": 262,
+       "phase": "rest",
+       "move": "hydroBeam",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -3.22,
+        -0.05,
+        3.54
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.032,
+       "triangles": 8912
+      },
+      {
+       "name": "Vacskooze",
+       "team": 1,
+       "kind": "blob",
+       "size": "M",
+       "hp": 416,
+       "maxHp": 608,
+       "phase": "charge",
+       "move": "airCutter",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        3.87,
+        -0.32,
+        -2.76
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.407,
+       "triangles": 5676
+      },
+      {
+       "name": "Frosar",
+       "team": 1,
+       "kind": "biped",
+       "size": "S",
+       "hp": 8,
+       "maxHp": 301,
+       "phase": "rest",
+       "move": "bodySlam",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        4.01,
+        -0.24,
+        -1.78
+       ],
+       "status": [
+        "wet"
+       ],
+       "strain": 0,
+       "stability": -0.001,
+       "triangles": 8628
+      },
+      {
+       "name": "Acrooze",
+       "team": 1,
+       "kind": "blob",
+       "size": "M",
+       "hp": 484,
+       "maxHp": 648,
+       "phase": "rest",
+       "move": "corrosion",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        5.5,
+        -0.2,
+        0.85
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.399,
+       "triangles": 5676
+      },
+      {
+       "name": "Nullix",
+       "team": 1,
+       "kind": "hexapod",
+       "size": "XS",
+       "hp": 0,
+       "maxHp": 246,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        3.27,
+        -0.1,
+        5
+       ],
+       "status": [
+        "wet",
+        "staggered",
+        "paralyzed"
+       ],
+       "strain": 0,
+       "stability": 0.129,
+       "triangles": 9892
+      }
+     ],
+     "zones": [],
+     "projectiles": 0
+    },
+    "ledger": {
+     "size": 66,
+     "counts": {
+      "battle.decide": 23,
+      "battle.hit": 11,
+      "battle.miss": 9,
+      "ui.navigate": 7,
+      "ui.settings": 5,
+      "battle.status": 5,
+      "battle.terrain": 2,
+      "device.session.start": 1,
+      "device.gpu": 1,
+      "battle.start": 1,
+      "battle.ko": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 62.49999999999996,
+    "frameMs": 3
+   }
+  },
+  {
+   "file": "battle-result.png",
+   "title": "Battle result panel (meadow, seed 101)",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "arena",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1512,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "t": 12.099999999999968,
+     "winner": 0,
+     "weather": "clear",
+     "arena": "meadow",
+     "camera": {
+      "mode": "auto",
+      "center": [
+       1.9949510861171378,
+       0.6622319575707982,
+       -2.042117252544589
+      ],
+      "radius": 7.934957839214708,
+      "distance": 16.387420947706907,
+      "elevation": 0.5152486976604254,
+      "outside": 0
+     },
+     "fighters": [
+      {
+       "name": "Frosmane",
+       "team": 0,
+       "kind": "quadruped",
+       "size": "S",
+       "hp": 81,
+       "maxHp": 316,
+       "phase": "rest",
+       "move": "iceShard",
+       "mode": "ground",
+       "ground": "sand",
+       "pos": [
+        -0.86,
+        -0.84,
+        -7.79
+       ],
+       "status": [
+        "poisoned"
+       ],
+       "strain": 0,
+       "stability": 0.112,
+       "triangles": 11440
+      },
+      {
+       "name": "Ampix",
+       "team": 0,
+       "kind": "hexapod",
+       "size": "M",
+       "hp": 485,
+       "maxHp": 543,
+       "phase": "rest",
+       "move": "staticFang",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -0.68,
+        -0.17,
+        4.86
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.182,
+       "triangles": 9872
+      },
+      {
+       "name": "Leafmemon",
+       "team": 0,
+       "kind": "biped",
+       "size": "S",
+       "hp": 0,
+       "maxHp": 297,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -1.43,
+        -0.28,
+        -1.98
+       ],
+       "status": [
+        "regen"
+       ],
+       "strain": 0.661,
+       "stability": -0.247,
+       "triangles": 9276
+      },
+      {
+       "name": "Zephkite",
+       "team": 0,
+       "kind": "avian",
+       "size": "S",
+       "hp": 250,
+       "maxHp": 250,
+       "phase": "idle",
+       "move": null,
+       "mode": "fly",
+       "ground": "grass",
+       "pos": [
+        5.34,
+        2.11,
+        -1.82
+       ],
+       "status": [
+        "airborne"
+       ],
+       "strain": 0,
+       "stability": -1,
+       "triangles": 9260
+      },
+      {
+       "name": "Tidlash",
+       "team": 0,
+       "kind": "serpent",
+       "size": "S",
+       "hp": 0,
+       "maxHp": 262,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -2.76,
+        -0.1,
+        2.4
+       ],
+       "status": [],
+       "strain": 0.311,
+       "stability": -0.008,
+       "triangles": 8912
+      },
+      {
+       "name": "Vacskooze",
+       "team": 1,
+       "kind": "blob",
+       "size": "M",
+       "hp": 0,
+       "maxHp": 608,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        4.18,
+        -0.3,
+        -2.69
+       ],
+       "status": [
+        "paralyzed"
+       ],
+       "strain": 0,
+       "stability": 0.386,
+       "triangles": 5676
+      },
+      {
+       "name": "Frosar",
+       "team": 1,
+       "kind": "biped",
+       "size": "S",
+       "hp": 0,
+       "maxHp": 301,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        5.58,
+        -0.24,
+        -3.08
+       ],
+       "status": [
+        "wet"
+       ],
+       "strain": 1.806,
+       "stability": -0.3,
+       "triangles": 8628
+      },
+      {
+       "name": "Acrooze",
+       "team": 1,
+       "kind": "blob",
+       "size": "M",
+       "hp": 0,
+       "maxHp": 648,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        4.39,
+        -0.25,
+        -1.32
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.392,
+       "triangles": 5676
+      },
+      {
+       "name": "Nullix",
+       "team": 1,
+       "kind": "hexapod",
+       "size": "XS",
+       "hp": 0,
+       "maxHp": 246,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        3.27,
+        -0.1,
+        5
+       ],
+       "status": [
+        "wet",
+        "staggered",
+        "paralyzed"
+       ],
+       "strain": 1.366,
+       "stability": -0.424,
+       "triangles": 9892
+      }
+     ],
+     "zones": [
+      "bloom"
+     ],
+     "projectiles": 0
+    },
+    "ledger": {
+     "size": 115,
+     "counts": {
+      "battle.decide": 43,
+      "battle.hit": 21,
+      "battle.miss": 17,
+      "battle.status": 8,
+      "ui.navigate": 7,
+      "battle.ko": 6,
+      "ui.settings": 5,
+      "battle.terrain": 3,
+      "device.session.start": 1,
+      "device.gpu": 1,
+      "battle.start": 1,
+      "battle.reaction": 1,
+      "battle.end": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 62.49999999999996,
+    "frameMs": 4
+   }
+  },
+  {
+   "file": "arena-lake-storm-21h.png",
+   "title": "lake / storm / 21h: night thunderstorm over a lake: conduction, lightning, rain",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "arena",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1512,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "t": 6.033333333333322,
+     "winner": null,
+     "weather": "storm",
+     "arena": "lake",
+     "camera": {
+      "mode": "auto",
+      "center": [
+       -0.0872217997637037,
+       -0.31141300796091814,
+       0.35505814298392496
+      ],
+      "radius": 7.397600919958953,
+      "distance": 15.721895686874351,
+      "elevation": 0.4714973563962459,
+      "outside": 1
+     },
+     "fighters": [
+      {
+       "name": "Frosmane",
+       "team": 0,
+       "kind": "quadruped",
+       "size": "S",
+       "hp": 316,
+       "maxHp": 316,
+       "phase": "rest",
+       "move": "iceShard",
+       "mode": "ground",
+       "ground": "muddyWater",
+       "pos": [
+        -3.49,
+        -0.75,
+        -5.81
+       ],
+       "status": [
+        "wet"
+       ],
+       "strain": 0,
+       "stability": 0.112,
+       "triangles": 11440
+      },
+      {
+       "name": "Ampix",
+       "team": 0,
+       "kind": "hexapod",
+       "size": "M",
+       "hp": 542,
+       "maxHp": 542,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "water",
+       "pos": [
+        -3.71,
+        -0.75,
+        -2.65
+       ],
+       "status": [
+        "wet",
+        "slowed",
+        "regen"
+       ],
+       "strain": 0,
+       "stability": 0.166,
+       "triangles": 9872
+      },
+      {
+       "name": "Leafmemon",
+       "team": 0,
+       "kind": "biped",
+       "size": "S",
+       "hp": 276,
+       "maxHp": 297,
+       "phase": "charge",
+       "move": "rootSnare",
+       "mode": "ground",
+       "ground": "water",
+       "pos": [
+        -3.46,
+        -0.75,
+        1.74
+       ],
+       "status": [
+        "wet"
+       ],
+       "strain": 0,
+       "stability": -0.039,
+       "triangles": 9276
+      },
+      {
+       "name": "Zephkite",
+       "team": 0,
+       "kind": "avian",
+       "size": "S",
+       "hp": 250,
+       "maxHp": 250,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "deepWater",
+       "pos": [
+        -0.81,
+        -0.75,
+        2.68
+       ],
+       "status": [
+        "wet"
+       ],
+       "strain": 0,
+       "stability": -0.177,
+       "triangles": 9260
+      },
+      {
+       "name": "Tidlash",
+       "team": 0,
+       "kind": "serpent",
+       "size": "S",
+       "hp": 239,
+       "maxHp": 262,
+       "phase": "rest",
+       "move": "riptide",
+       "mode": "ground",
+       "ground": "water",
+       "pos": [
+        -3.2,
+        -0.75,
+        4.6
+       ],
+       "status": [
+        "wet"
+       ],
+       "strain": 0,
+       "stability": -0.031,
+       "triangles": 8912
+      },
+      {
+       "name": "Sproukin",
+       "team": 1,
+       "kind": "biped",
+       "size": "S",
+       "hp": 215,
+       "maxHp": 353,
+       "phase": "rest",
+       "move": "seedShot",
+       "mode": "ground",
+       "ground": "water",
+       "pos": [
+        5.17,
+        -0.75,
+        -2.66
+       ],
+       "status": [
+        "wet"
+       ],
+       "strain": 0,
+       "stability": -0.037,
+       "triangles": 7736
+      },
+      {
+       "name": "Nihilcoil",
+       "team": 1,
+       "kind": "serpent",
+       "size": "M",
+       "hp": 696,
+       "maxHp": 696,
+       "phase": "rest",
+       "move": "voidOrb",
+       "mode": "ground",
+       "ground": "muddyWater",
+       "pos": [
+        5.97,
+        -0.75,
+        0.08
+       ],
+       "status": [
+        "wet"
+       ],
+       "strain": 0,
+       "stability": -0.015,
+       "triangles": 9276
+      },
+      {
+       "name": "Bouldlash",
+       "team": 1,
+       "kind": "serpent",
+       "size": "L",
+       "hp": 795,
+       "maxHp": 1000,
+       "phase": "rest",
+       "move": "rockToss",
+       "mode": "ground",
+       "ground": "water",
+       "pos": [
+        4.69,
+        -0.74,
+        3.68
+       ],
+       "status": [
+        "wet",
+        "slowed",
+        "regen"
+       ],
+       "strain": 0,
+       "stability": -0.002,
+       "triangles": 8840
+      }
+     ],
+     "zones": [
+      "field",
+      "bloom",
+      "field",
+      "bloom"
+     ],
+     "projectiles": 0
+    },
+    "ledger": {
+     "size": 172,
+     "counts": {
+      "battle.decide": 68,
+      "battle.miss": 33,
+      "battle.hit": 24,
+      "battle.status": 12,
+      "ui.navigate": 7,
+      "ui.settings": 6,
+      "battle.ko": 6,
+      "battle.terrain": 4,
+      "battle.reaction": 3,
+      "battle.start": 2,
+      "battle.clash": 2,
+      "device.session.start": 1,
+      "device.gpu": 1,
+      "battle.end": 1,
+      "battle.fail": 1,
+      "battle.lightning": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 62.49999999999996,
+    "frameMs": 3
+   }
+  },
+  {
+   "file": "arena-volcano-heatwave-15h.png",
+   "title": "volcano / heatwave / 15h: lava caldera in a heatwave",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "arena",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1512,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "t": 6.033333333333322,
+     "winner": null,
+     "weather": "heatwave",
+     "arena": "volcano",
+     "camera": {
+      "mode": "auto",
+      "center": [
+       -0.35317151959566273,
+       1.986120091676864,
+       -0.7713239236001133
+      ],
+      "radius": 7.679971312960097,
+      "distance": 37.107518562367964,
+      "elevation": 0.45105542300397783,
+      "outside": 0
+     },
+     "fighters": [
+      {
+       "name": "Frosmane",
+       "team": 0,
+       "kind": "quadruped",
+       "size": "S",
+       "hp": 316,
+       "maxHp": 316,
+       "phase": "charge",
+       "move": "cryoBeam",
+       "mode": "ground",
+       "ground": "ash",
+       "pos": [
+        -3.22,
+        1.28,
+        -5.05
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": -0.417,
+       "triangles": 11440
+      },
+      {
+       "name": "Ampix",
+       "team": 0,
+       "kind": "hexapod",
+       "size": "M",
+       "hp": 466,
+       "maxHp": 542,
+       "phase": "rest",
+       "move": "staticFang",
+       "mode": "ground",
+       "ground": "lava",
+       "pos": [
+        -1.46,
+        2.52,
+        0.81
+       ],
+       "status": [
+        "poisoned"
+       ],
+       "strain": 0,
+       "stability": 0.164,
+       "triangles": 9872
+      },
+      {
+       "name": "Leafmemon",
+       "team": 0,
+       "kind": "biped",
+       "size": "S",
+       "hp": 51,
+       "maxHp": 297,
+       "phase": "rest",
+       "move": "vineLash",
+       "mode": "ground",
+       "ground": "stone",
+       "pos": [
+        -2.64,
+        2.36,
+        1.44
+       ],
+       "status": [
+        "regen",
+        "feared",
+        "poisoned"
+       ],
+       "strain": 0.041,
+       "stability": -0.018,
+       "triangles": 9276
+      },
+      {
+       "name": "Zephkite",
+       "team": 0,
+       "kind": "avian",
+       "size": "S",
+       "hp": 51,
+       "maxHp": 250,
+       "phase": "rest",
+       "move": "galeSlash",
+       "mode": "ground",
+       "ground": "moss",
+       "pos": [
+        0.58,
+        2.06,
+        1.91
+       ],
+       "status": [
+        "slowed"
+       ],
+       "strain": 0,
+       "stability": -0.103,
+       "triangles": 9260
+      },
+      {
+       "name": "Tidlash",
+       "team": 0,
+       "kind": "serpent",
+       "size": "S",
+       "hp": 191,
+       "maxHp": 262,
+       "phase": "rest",
+       "move": "riptide",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -3.45,
+        1.31,
+        4.62
+       ],
+       "status": [
+        "slowed"
+       ],
+       "strain": 0,
+       "stability": -0.018,
+       "triangles": 8912
+      },
+      {
+       "name": "Lucidard",
+       "team": 1,
+       "kind": "biped",
+       "size": "S",
+       "hp": 335,
+       "maxHp": 335,
+       "phase": "charge",
+       "move": "mindSpike",
+       "mode": "ground",
+       "ground": "ash",
+       "pos": [
+        4.59,
+        0.96,
+        -5.33
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": -0.044,
+       "triangles": 9276
+      },
+      {
+       "name": "Bligtusk",
+       "team": 1,
+       "kind": "quadruped",
+       "size": "S",
+       "hp": 347,
+       "maxHp": 347,
+       "phase": "charge",
+       "move": "toxicSpit",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        4.88,
+        1.98,
+        -1.21
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.128,
+       "triangles": 10996
+      },
+      {
+       "name": "Nocttusk",
+       "team": 1,
+       "kind": "quadruped",
+       "size": "M",
+       "hp": 523,
+       "maxHp": 595,
+       "phase": "rest",
+       "move": "shadowClaw",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        2.93,
+        2.48,
+        0.5
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.132,
+       "triangles": 9164
+      },
+      {
+       "name": "Lumtusk",
+       "team": 1,
+       "kind": "quadruped",
+       "size": "S",
+       "hp": 22,
+       "maxHp": 324,
+       "phase": "active",
+       "move": "photonDart",
+       "mode": "ground",
+       "ground": "moss",
+       "pos": [
+        1.4,
+        2.45,
+        2.96
+       ],
+       "status": [
+        "wet"
+       ],
+       "strain": 0.334,
+       "stability": -0.352,
+       "triangles": 11360
+      },
+      {
+       "name": "Blossmon",
+       "team": 1,
+       "kind": "biped",
+       "size": "S",
+       "hp": 318,
+       "maxHp": 318,
+       "phase": "charge",
+       "move": "thornSpray",
+       "mode": "ground",
+       "ground": "ash",
+       "pos": [
+        1.96,
+        0.98,
+        6.38
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": -0.012,
+       "triangles": 8632
+      }
+     ],
+     "zones": [
+      "field",
+      "bloom",
+      "field",
+      "field"
+     ],
+     "projectiles": 0
+    },
+    "ledger": {
+     "size": 248,
+     "counts": {
+      "battle.decide": 100,
+      "battle.miss": 51,
+      "battle.hit": 35,
+      "battle.status": 19,
+      "battle.terrain": 8,
+      "ui.navigate": 7,
+      "ui.settings": 7,
+      "battle.ko": 6,
+      "battle.reaction": 5,
+      "battle.start": 3,
+      "battle.clash": 2,
+      "device.session.start": 1,
+      "device.gpu": 1,
+      "battle.end": 1,
+      "battle.fail": 1,
+      "battle.lightning": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 62.49999999999996,
+    "frameMs": 4
+   }
+  },
+  {
+   "file": "arena-tundra-snow-9h.png",
+   "title": "tundra / snow / 9h: frozen lake and snow, slippery ice",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "arena",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1512,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "t": 6.099999999999988,
+     "winner": null,
+     "weather": "snow",
+     "arena": "tundra",
+     "camera": {
+      "mode": "auto",
+      "center": [
+       -2.1360606070613635,
+       0.19435191807644808,
+       1.7212254655450099
+      ],
+      "radius": 7.414024202551053,
+      "distance": 15.311579215109624,
+      "elevation": 0.4200909762142872,
+      "outside": 0
+     },
+     "fighters": [
+      {
+       "name": "Frosmane",
+       "team": 0,
+       "kind": "quadruped",
+       "size": "S",
+       "hp": 139,
+       "maxHp": 316,
+       "phase": "rest",
+       "move": "cryoBeam",
+       "mode": "ground",
+       "ground": "snow",
+       "pos": [
+        -4.52,
+        -0.28,
+        -4.92
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.098,
+       "triangles": 11440
+      },
+      {
+       "name": "Ampix",
+       "team": 0,
+       "kind": "hexapod",
+       "size": "M",
+       "hp": 542,
+       "maxHp": 542,
+       "phase": "active",
+       "move": "thunderBeam",
+       "mode": "ground",
+       "ground": "snow",
+       "pos": [
+        -3.65,
+        -0.28,
+        0.45
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.199,
+       "triangles": 9872
+      },
+      {
+       "name": "Leafmemon",
+       "team": 0,
+       "kind": "biped",
+       "size": "S",
+       "hp": 0,
+       "maxHp": 297,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "snow",
+       "pos": [
+        -5.66,
+        -0.11,
+        0.09
+       ],
+       "status": [
+        "regen"
+       ],
+       "strain": 0.797,
+       "stability": -0.206,
+       "triangles": 9276
+      },
+      {
+       "name": "Zephkite",
+       "team": 0,
+       "kind": "avian",
+       "size": "S",
+       "hp": 157,
+       "maxHp": 250,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "snow",
+       "pos": [
+        -1.19,
+        -0.23,
+        3.57
+       ],
+       "status": [
+        "wet"
+       ],
+       "strain": 0,
+       "stability": -0.2,
+       "triangles": 9260
+      },
+      {
+       "name": "Tidlash",
+       "team": 0,
+       "kind": "serpent",
+       "size": "S",
+       "hp": 262,
+       "maxHp": 262,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "ice",
+       "pos": [
+        -3.58,
+        -0.04,
+        4.92
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": -0.007,
+       "triangles": 8912
+      },
+      {
+       "name": "Lumbltalon",
+       "team": 1,
+       "kind": "avian",
+       "size": "S",
+       "hp": 0,
+       "maxHp": 321,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "snow",
+       "pos": [
+        1.43,
+        -0.69,
+        -0.41
+       ],
+       "status": [
+        "wet"
+       ],
+       "strain": 2.192,
+       "stability": -0.351,
+       "triangles": 9568
+      },
+      {
+       "name": "Wavra",
+       "team": 1,
+       "kind": "serpent",
+       "size": "S",
+       "hp": 0,
+       "maxHp": 350,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        4.84,
+        -0.55,
+        -0.07
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.03,
+       "triangles": 8856
+      },
+      {
+       "name": "Noctmon",
+       "team": 1,
+       "kind": "biped",
+       "size": "S",
+       "hp": 302,
+       "maxHp": 302,
+       "phase": "active",
+       "move": "bodySlam",
+       "mode": "ground",
+       "ground": "snow",
+       "pos": [
+        -0.02,
+        -0.45,
+        2.33
+       ],
+       "status": [
+        "evasive"
+       ],
+       "strain": 0.005,
+       "stability": -0.007,
+       "triangles": 8548
+      },
+      {
+       "name": "Whispnomon",
+       "team": 1,
+       "kind": "biped",
+       "size": "L",
+       "hp": 978,
+       "maxHp": 978,
+       "phase": "rest",
+       "move": "airCutter",
+       "mode": "ground",
+       "ground": "snow",
+       "pos": [
+        0.43,
+        -0.31,
+        3.3
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": -0.038,
+       "triangles": 8520
+      }
+     ],
+     "zones": [
+      "freeze"
+     ],
+     "projectiles": 0
+    },
+    "ledger": {
+     "size": 305,
+     "counts": {
+      "battle.decide": 125,
+      "battle.miss": 64,
+      "battle.hit": 42,
+      "battle.status": 23,
+      "battle.terrain": 9,
+      "battle.ko": 9,
+      "ui.settings": 8,
+      "ui.navigate": 7,
+      "battle.reaction": 6,
+      "battle.start": 4,
+      "battle.clash": 3,
+      "device.session.start": 1,
+      "device.gpu": 1,
+      "battle.end": 1,
+      "battle.fail": 1,
+      "battle.lightning": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 62.49999999999996,
+    "frameMs": 4
+   }
+  },
+  {
+   "file": "arena-swamp-fog-6h.png",
+   "title": "swamp / fog / 6h: dawn fog over mud and muddy water",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "arena",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1512,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "t": 6.066666666666655,
+     "winner": null,
+     "weather": "fog",
+     "arena": "swamp",
+     "camera": {
+      "mode": "auto",
+      "center": [
+       -0.49971638714041233,
+       0.55467315882182,
+       0.9534303808968185
+      ],
+      "radius": 6.173254182297147,
+      "distance": 13.630931606825298,
+      "elevation": 0.5247820637312697,
+      "outside": 1
+     },
+     "fighters": [
+      {
+       "name": "Frosmane",
+       "team": 0,
+       "kind": "quadruped",
+       "size": "S",
+       "hp": 247,
+       "maxHp": 316,
+       "phase": "rest",
+       "move": "cryoBeam",
+       "mode": "ground",
+       "ground": "muddyWater",
+       "pos": [
+        -3,
+        -0.05,
+        -3.77
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.112,
+       "triangles": 11440
+      },
+      {
+       "name": "Ampix",
+       "team": 0,
+       "kind": "hexapod",
+       "size": "M",
+       "hp": 510,
+       "maxHp": 542,
+       "phase": "rest",
+       "move": "bodySlam",
+       "mode": "ground",
+       "ground": "muddyWater",
+       "pos": [
+        -5.09,
+        -0.05,
+        -1.76
+       ],
+       "status": [
+        "wet"
+       ],
+       "strain": 0,
+       "stability": 0.168,
+       "triangles": 9872
+      },
+      {
+       "name": "Leafmemon",
+       "team": 0,
+       "kind": "biped",
+       "size": "S",
+       "hp": 280,
+       "maxHp": 297,
+       "phase": "active",
+       "move": "vineLash",
+       "mode": "ground",
+       "ground": "muddyWater",
+       "pos": [
+        -5.94,
+        -0.05,
+        0.56
+       ],
+       "status": [
+        "wet",
+        "regen",
+        "slowed"
+       ],
+       "strain": 1.097,
+       "stability": -0.012,
+       "triangles": 9276
+      },
+      {
+       "name": "Zephkite",
+       "team": 0,
+       "kind": "avian",
+       "size": "S",
+       "hp": 147,
+       "maxHp": 250,
+       "phase": "active",
+       "move": "galeSlash",
+       "mode": "fly",
+       "ground": "muddyWater",
+       "pos": [
+        -1.54,
+        2.29,
+        0.86
+       ],
+       "status": [
+        "airborne"
+       ],
+       "strain": 0,
+       "stability": -1,
+       "triangles": 9260
+      },
+      {
+       "name": "Tidlash",
+       "team": 0,
+       "kind": "serpent",
+       "size": "S",
+       "hp": 259,
+       "maxHp": 262,
+       "phase": "charge",
+       "move": "riptide",
+       "mode": "ground",
+       "ground": "muddyWater",
+       "pos": [
+        -3.92,
+        -0.05,
+        5.08
+       ],
+       "status": [
+        "wet",
+        "regen"
+       ],
+       "strain": 0,
+       "stability": 0.016,
+       "triangles": 8912
+      },
+      {
+       "name": "Gloamfemite",
+       "team": 1,
+       "kind": "hexapod",
+       "size": "L",
+       "hp": 876,
+       "maxHp": 876,
+       "phase": "rest",
+       "move": "shadowClaw",
+       "mode": "ground",
+       "ground": "muddyWater",
+       "pos": [
+        2.66,
+        -0.05,
+        -2.97
+       ],
+       "status": [
+        "wet"
+       ],
+       "strain": 0,
+       "stability": 0.145,
+       "triangles": 9960
+      },
+      {
+       "name": "Thornplume",
+       "team": 1,
+       "kind": "avian",
+       "size": "S",
+       "hp": 342,
+       "maxHp": 342,
+       "phase": "active",
+       "move": "rootSnare",
+       "mode": "ground",
+       "ground": "muddyWater",
+       "pos": [
+        4.76,
+        -0.05,
+        -1.08
+       ],
+       "status": [
+        "wet"
+       ],
+       "strain": 0,
+       "stability": -0.103,
+       "triangles": 8920
+      },
+      {
+       "name": "Oracplop",
+       "team": 1,
+       "kind": "blob",
+       "size": "S",
+       "hp": 170,
+       "maxHp": 274,
+       "phase": "active",
+       "move": "psiBeam",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        5.28,
+        -0.17,
+        1.6
+       ],
+       "status": [
+        "focused"
+       ],
+       "strain": 0,
+       "stability": 0.34,
+       "triangles": 5144
+      },
+      {
+       "name": "Toxdrmite",
+       "team": 1,
+       "kind": "hexapod",
+       "size": "S",
+       "hp": 269,
+       "maxHp": 275,
+       "phase": "rest",
+       "move": "corrosion",
+       "mode": "ground",
+       "ground": "muddyWater",
+       "pos": [
+        3.64,
+        -0.05,
+        4.57
+       ],
+       "status": [
+        "wet",
+        "slowed",
+        "regen"
+       ],
+       "strain": 0,
+       "stability": 0.145,
+       "triangles": 9972
+      }
+     ],
+     "zones": [
+      "field",
+      "bloom",
+      "bloom",
+      "blight",
+      "blight",
+      "field",
+      "bloom"
+     ],
+     "projectiles": 0
+    },
+    "ledger": {
+     "size": 376,
+     "counts": {
+      "battle.decide": 155,
+      "battle.miss": 80,
+      "battle.hit": 47,
+      "battle.status": 30,
+      "battle.reaction": 13,
+      "battle.terrain": 10,
+      "ui.settings": 9,
+      "battle.ko": 9,
+      "ui.navigate": 7,
+      "battle.clash": 6,
+      "battle.start": 5,
+      "device.session.start": 1,
+      "device.gpu": 1,
+      "battle.end": 1,
+      "battle.fail": 1,
+      "battle.lightning": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 62.49999999999996,
+    "frameMs": 4
+   }
+  },
+  {
+   "file": "arena-city-rain-22h.png",
+   "title": "city / rain / 22h: neon plaza at night in the rain, metal plates",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "arena",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1512,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "t": 6.033333333333322,
+     "winner": null,
+     "weather": "rain",
+     "arena": "city",
+     "camera": {
+      "mode": "auto",
+      "center": [
+       0.0012310820762286906,
+       0.9838207931787112,
+       -0.4152787931534489
+      ],
+      "radius": 7.3560200437699335,
+      "distance": 32.81337457596849,
+      "elevation": 0.4320000009536743,
+      "outside": 0
+     },
+     "fighters": [
+      {
+       "name": "Frosmane",
+       "team": 0,
+       "kind": "quadruped",
+       "size": "S",
+       "hp": 316,
+       "maxHp": 316,
+       "phase": "charge",
+       "move": "bodySlam",
+       "mode": "ground",
+       "ground": "metal",
+       "pos": [
+        -1.99,
+        0.8,
+        -3.57
+       ],
+       "status": [
+        "wet"
+       ],
+       "strain": 0,
+       "stability": 0.113,
+       "triangles": 11440
+      },
+      {
+       "name": "Ampix",
+       "team": 0,
+       "kind": "hexapod",
+       "size": "M",
+       "hp": 48,
+       "maxHp": 542,
+       "phase": "rest",
+       "move": "thunderBeam",
+       "mode": "ground",
+       "ground": "metal",
+       "pos": [
+        -6.78,
+        0.91,
+        0.34
+       ],
+       "status": [
+        "wet"
+       ],
+       "strain": 0,
+       "stability": 0.203,
+       "triangles": 9872
+      },
+      {
+       "name": "Leafmemon",
+       "team": 0,
+       "kind": "biped",
+       "size": "S",
+       "hp": 0,
+       "maxHp": 297,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "water",
+       "pos": [
+        1.26,
+        -0.3,
+        1.58
+       ],
+       "status": [
+        "wet",
+        "paralyzed"
+       ],
+       "strain": 0.461,
+       "stability": -0.306,
+       "triangles": 9276
+      },
+      {
+       "name": "Zephkite",
+       "team": 0,
+       "kind": "avian",
+       "size": "S",
+       "hp": 0,
+       "maxHp": 250,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "water",
+       "pos": [
+        2.36,
+        -0.3,
+        1.49
+       ],
+       "status": [
+        "wet",
+        "paralyzed"
+       ],
+       "strain": 0.274,
+       "stability": -1,
+       "triangles": 9260
+      },
+      {
+       "name": "Tidlash",
+       "team": 0,
+       "kind": "serpent",
+       "size": "S",
+       "hp": 262,
+       "maxHp": 262,
+       "phase": "rest",
+       "move": "hydroBeam",
+       "mode": "ground",
+       "ground": "metal",
+       "pos": [
+        -4.36,
+        0.9,
+        4.49
+       ],
+       "status": [
+        "wet"
+       ],
+       "strain": 0,
+       "stability": -0.031,
+       "triangles": 8912
+      },
+      {
+       "name": "Sparkmane",
+       "team": 1,
+       "kind": "quadruped",
+       "size": "S",
+       "hp": 302,
+       "maxHp": 312,
+       "phase": "active",
+       "move": "sparkBolt",
+       "mode": "ground",
+       "ground": "water",
+       "pos": [
+        2.82,
+        -0.3,
+        -1.94
+       ],
+       "status": [
+        "wet"
+       ],
+       "strain": 0,
+       "stability": 0.128,
+       "triangles": 9244
+      },
+      {
+       "name": "Bouldmane",
+       "team": 1,
+       "kind": "quadruped",
+       "size": "L",
+       "hp": 396,
+       "maxHp": 900,
+       "phase": "charge",
+       "move": "rockToss",
+       "mode": "ground",
+       "ground": "metal",
+       "pos": [
+        4.34,
+        0.9,
+        0.7
+       ],
+       "status": [
+        "wet",
+        "slowed",
+        "regen"
+       ],
+       "strain": 0,
+       "stability": 0.137,
+       "triangles": 9220
+      },
+      {
+       "name": "Pellblob",
+       "team": 1,
+       "kind": "blob",
+       "size": "M",
+       "hp": 0,
+       "maxHp": 623,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "water",
+       "pos": [
+        2.95,
+        -0.28,
+        2.57
+       ],
+       "status": [
+        "wet",
+        "paralyzed"
+       ],
+       "strain": 0.186,
+       "stability": 0.405,
+       "triangles": 5676
+      }
+     ],
+     "zones": [
+      "field",
+      "bloom"
+     ],
+     "projectiles": 0
+    },
+    "ledger": {
+     "size": 437,
+     "counts": {
+      "battle.decide": 178,
+      "battle.miss": 95,
+      "battle.hit": 54,
+      "battle.status": 36,
+      "battle.reaction": 17,
+      "battle.ko": 12,
+      "battle.terrain": 11,
+      "ui.settings": 10,
+      "ui.navigate": 7,
+      "battle.start": 6,
+      "battle.clash": 6,
+      "device.session.start": 1,
+      "device.gpu": 1,
+      "battle.end": 1,
+      "battle.fail": 1,
+      "battle.lightning": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 62.49999999999996,
+    "frameMs": 4
+   }
+  },
+  {
+   "file": "arena-canyon-sandstorm-17h.png",
+   "title": "canyon / sandstorm / 17h: sandstorm in a canyon, late afternoon",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "arena",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1512,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "t": 6.033333333333322,
+     "winner": null,
+     "weather": "sandstorm",
+     "arena": "canyon",
+     "camera": {
+      "mode": "auto",
+      "center": [
+       1.4084297719646237,
+       0.2319250945212481,
+       -0.10235718185571185
+      ],
+      "radius": 7.250286245899113,
+      "distance": 17.54904969999763,
+      "elevation": 0.4206221531614533,
+      "outside": 1
+     },
+     "fighters": [
+      {
+       "name": "Frosmane",
+       "team": 0,
+       "kind": "quadruped",
+       "size": "S",
+       "hp": 301,
+       "maxHp": 316,
+       "phase": "rest",
+       "move": "bodySlam",
+       "mode": "ground",
+       "ground": "sand",
+       "pos": [
+        -2.14,
+        -0.23,
+        -2.91
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.112,
+       "triangles": 11440
+      },
+      {
+       "name": "Ampix",
+       "team": 0,
+       "kind": "hexapod",
+       "size": "M",
+       "hp": 516,
+       "maxHp": 542,
+       "phase": "rest",
+       "move": "thunderBeam",
+       "mode": "ground",
+       "ground": "gravel",
+       "pos": [
+        -4.03,
+        -0.4,
+        1.24
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.169,
+       "triangles": 9872
+      },
+      {
+       "name": "Leafmemon",
+       "team": 0,
+       "kind": "biped",
+       "size": "S",
+       "hp": 297,
+       "maxHp": 297,
+       "phase": "rest",
+       "move": "vineLash",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        2.55,
+        -0.49,
+        -1.11
+       ],
+       "status": [
+        "regen"
+       ],
+       "strain": 0.026,
+       "stability": -0.041,
+       "triangles": 9276
+      },
+      {
+       "name": "Zephkite",
+       "team": 0,
+       "kind": "avian",
+       "size": "S",
+       "hp": 237,
+       "maxHp": 250,
+       "phase": "active",
+       "move": "airCutter",
+       "mode": "ground",
+       "ground": "sand",
+       "pos": [
+        -2.35,
+        -0.12,
+        4.01
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": -0.168,
+       "triangles": 9260
+      },
+      {
+       "name": "Tidlash",
+       "team": 0,
+       "kind": "serpent",
+       "size": "S",
+       "hp": 249,
+       "maxHp": 262,
+       "phase": "charge",
+       "move": "hydroBeam",
+       "mode": "ground",
+       "ground": "sand",
+       "pos": [
+        -3.7,
+        -0.06,
+        4.11
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.019,
+       "triangles": 8912
+      },
+      {
+       "name": "Ampumwyrm",
+       "team": 1,
+       "kind": "serpent",
+       "size": "S",
+       "hp": 294,
+       "maxHp": 309,
+       "phase": "charge",
+       "move": "thunderBeam",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        3.05,
+        -0.13,
+        -3.86
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": -0.003,
+       "triangles": 8840
+      },
+      {
+       "name": "Sollura",
+       "team": 1,
+       "kind": "serpent",
+       "size": "S",
+       "hp": 180,
+       "maxHp": 299,
+       "phase": "charge",
+       "move": "psiBeam",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        3.15,
+        -0.49,
+        -0.73
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.053,
+       "triangles": 8884
+      },
+      {
+       "name": "Whisptalon",
+       "team": 1,
+       "kind": "avian",
+       "size": "M",
+       "hp": 242,
+       "maxHp": 629,
+       "phase": "charge",
+       "move": "bodySlam",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        4.16,
+        -0.44,
+        1.02
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": -0.19,
+       "triangles": 9188
+      },
+      {
+       "name": "Cryobeet",
+       "team": 1,
+       "kind": "hexapod",
+       "size": "M",
+       "hp": 622,
+       "maxHp": 654,
+       "phase": "charge",
+       "move": "cryoBeam",
+       "mode": "ground",
+       "ground": "stone",
+       "pos": [
+        4.56,
+        -0.11,
+        6.41
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.078,
+       "triangles": 9928
+      }
+     ],
+     "zones": [],
+     "projectiles": 1
+    },
+    "ledger": {
+     "size": 490,
+     "counts": {
+      "battle.decide": 206,
+      "battle.miss": 110,
+      "battle.hit": 58,
+      "battle.status": 38,
+      "battle.reaction": 17,
+      "battle.terrain": 12,
+      "battle.ko": 12,
+      "ui.settings": 11,
+      "ui.navigate": 7,
+      "battle.start": 7,
+      "battle.clash": 7,
+      "device.session.start": 1,
+      "device.gpu": 1,
+      "battle.end": 1,
+      "battle.fail": 1,
+      "battle.lightning": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 62.49999999999996,
+    "frameMs": 3
+   }
+  },
+  {
+   "file": "arena-crystal-eclipse-0h.png",
+   "title": "crystal / eclipse / 0h: crystal grotto at midnight during an eclipse",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "arena",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1512,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "t": 6.066666666666655,
+     "winner": null,
+     "weather": "eclipse",
+     "arena": "crystal",
+     "camera": {
+      "mode": "auto",
+      "center": [
+       -0.2927906135958112,
+       0.47643777250419583,
+       -0.9685077060589783
+      ],
+      "radius": 6.296328576355886,
+      "distance": 14.118587598555306,
+      "elevation": 0.4200483209106885,
+      "outside": 0
+     },
+     "fighters": [
+      {
+       "name": "Frosmane",
+       "team": 0,
+       "kind": "quadruped",
+       "size": "S",
+       "hp": 149,
+       "maxHp": 316,
+       "phase": "charge",
+       "move": "cryoBeam",
+       "mode": "ground",
+       "ground": "stone",
+       "pos": [
+        -2.65,
+        0.07,
+        -4.13
+       ],
+       "status": [],
+       "strain": 0.057,
+       "stability": -0.351,
+       "triangles": 11440
+      },
+      {
+       "name": "Ampix",
+       "team": 0,
+       "kind": "hexapod",
+       "size": "M",
+       "hp": 542,
+       "maxHp": 542,
+       "phase": "rest",
+       "move": "thunderBeam",
+       "mode": "ground",
+       "ground": "stone",
+       "pos": [
+        -4.91,
+        0.02,
+        1.03
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.2,
+       "triangles": 9872
+      },
+      {
+       "name": "Leafmemon",
+       "team": 0,
+       "kind": "biped",
+       "size": "S",
+       "hp": 0,
+       "maxHp": 297,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "stone",
+       "pos": [
+        0.41,
+        0.14,
+        1
+       ],
+       "status": [],
+       "strain": 1.85,
+       "stability": -0.064,
+       "triangles": 9276
+      },
+      {
+       "name": "Zephkite",
+       "team": 0,
+       "kind": "avian",
+       "size": "S",
+       "hp": 220,
+       "maxHp": 250,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "stone",
+       "pos": [
+        0.73,
+        0.11,
+        2.06
+       ],
+       "status": [
+        "blinded",
+        "paralyzed"
+       ],
+       "strain": 0,
+       "stability": -0.175,
+       "triangles": 9260
+      },
+      {
+       "name": "Tidlash",
+       "team": 0,
+       "kind": "serpent",
+       "size": "S",
+       "hp": 240,
+       "maxHp": 262,
+       "phase": "charge",
+       "move": "hydroBeam",
+       "mode": "ground",
+       "ground": "crystal",
+       "pos": [
+        -2.85,
+        0.09,
+        3.67
+       ],
+       "status": [
+        "blinded"
+       ],
+       "strain": 0,
+       "stability": 0.011,
+       "triangles": 8912
+      },
+      {
+       "name": "Aergoo",
+       "team": 1,
+       "kind": "blob",
+       "size": "S",
+       "hp": 316,
+       "maxHp": 316,
+       "phase": "active",
+       "move": "airCutter",
+       "mode": "ground",
+       "ground": "stone",
+       "pos": [
+        3.18,
+        0.21,
+        -3.42
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.391,
+       "triangles": 5676
+      },
+      {
+       "name": "Lumblard",
+       "team": 1,
+       "kind": "biped",
+       "size": "S",
+       "hp": 166,
+       "maxHp": 328,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "stone",
+       "pos": [
+        4.38,
+        0.2,
+        -3.26
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": -0.049,
+       "triangles": 9232
+      },
+      {
+       "name": "Nullkin",
+       "team": 1,
+       "kind": "biped",
+       "size": "S",
+       "hp": 294,
+       "maxHp": 294,
+       "phase": "rest",
+       "move": "nullBite",
+       "mode": "ground",
+       "ground": "stone",
+       "pos": [
+        1.02,
+        0.14,
+        -0.13
+       ],
+       "status": [
+        "paralyzed"
+       ],
+       "strain": 0,
+       "stability": -0.042,
+       "triangles": 11048
+      },
+      {
+       "name": "Voltard",
+       "team": 1,
+       "kind": "biped",
+       "size": "M",
+       "hp": 350,
+       "maxHp": 514,
+       "phase": "charge",
+       "move": "thunderBeam",
+       "mode": "ground",
+       "ground": "stone",
+       "pos": [
+        5.53,
+        0.11,
+        2.7
+       ],
+       "status": [],
+       "strain": 0.592,
+       "stability": -0.041,
+       "triangles": 9612
+      },
+      {
+       "name": "Lumskitter",
+       "team": 1,
+       "kind": "hexapod",
+       "size": "S",
+       "hp": 222,
+       "maxHp": 275,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "crystal",
+       "pos": [
+        -0.76,
+        0.07,
+        3.15
+       ],
+       "status": [
+        "paralyzed"
+       ],
+       "strain": 0,
+       "stability": 0.2,
+       "triangles": 9928
+      }
+     ],
+     "zones": [
+      "mist"
+     ],
+     "projectiles": 1
+    },
+    "ledger": {
+     "size": 558,
+     "counts": {
+      "battle.decide": 237,
+      "battle.miss": 125,
+      "battle.hit": 69,
+      "battle.status": 43,
+      "battle.reaction": 19,
+      "battle.ko": 13,
+      "ui.settings": 12,
+      "battle.terrain": 12,
+      "battle.start": 8,
+      "battle.clash": 8,
+      "ui.navigate": 7,
+      "device.session.start": 1,
+      "device.gpu": 1,
+      "battle.end": 1,
+      "battle.fail": 1,
+      "battle.lightning": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 62.49999999999996,
+    "frameMs": 5
+   }
+  },
+  {
+   "file": "arena-beach-wind-19h.png",
+   "title": "beach / wind / 19h: windy beach at dusk, deep water",
+   "viewport": "1440x900",
+   "snapshot": {
+    "screen": "arena",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1512,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "t": 6.033333333333322,
+     "winner": null,
+     "weather": "wind",
+     "arena": "beach",
+     "camera": {
+      "mode": "auto",
+      "center": [
+       1.449915071948074,
+       0.4169505356502092,
+       -0.43221543710466465
+      ],
+      "radius": 10.973399946189586,
+      "distance": 22.662467500085636,
+      "elevation": 0.4352269660625717,
+      "outside": 0
+     },
+     "fighters": [
+      {
+       "name": "Frosmane",
+       "team": 0,
+       "kind": "quadruped",
+       "size": "S",
+       "hp": 316,
+       "maxHp": 316,
+       "phase": "rest",
+       "move": "iceShard",
+       "mode": "ground",
+       "ground": "sand",
+       "pos": [
+        -2.4,
+        0.96,
+        -7
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.114,
+       "triangles": 11440
+      },
+      {
+       "name": "Ampix",
+       "team": 0,
+       "kind": "hexapod",
+       "size": "M",
+       "hp": 229,
+       "maxHp": 542,
+       "phase": "rest",
+       "move": "thunderBeam",
+       "mode": "ground",
+       "ground": "sand",
+       "pos": [
+        -2.56,
+        0.93,
+        -3.24
+       ],
+       "status": [
+        "poisoned"
+       ],
+       "strain": 0,
+       "stability": 0.235,
+       "triangles": 9872
+      },
+      {
+       "name": "Leafmemon",
+       "team": 0,
+       "kind": "biped",
+       "size": "S",
+       "hp": 180,
+       "maxHp": 297,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "sand",
+       "pos": [
+        -9.19,
+        0.67,
+        -0.06
+       ],
+       "status": [
+        "poisoned",
+        "regen"
+       ],
+       "strain": 0,
+       "stability": -0.004,
+       "triangles": 9276
+      },
+      {
+       "name": "Zephkite",
+       "team": 0,
+       "kind": "avian",
+       "size": "S",
+       "hp": 138,
+       "maxHp": 250,
+       "phase": "active",
+       "move": "galeSlash",
+       "mode": "ground",
+       "ground": "sand",
+       "pos": [
+        3.75,
+        -0.15,
+        3.23
+       ],
+       "status": [
+        "paralyzed"
+       ],
+       "strain": 0,
+       "stability": -0.063,
+       "triangles": 9260
+      },
+      {
+       "name": "Tidlash",
+       "team": 0,
+       "kind": "serpent",
+       "size": "S",
+       "hp": 262,
+       "maxHp": 262,
+       "phase": "rest",
+       "move": "hydroBeam",
+       "mode": "ground",
+       "ground": "sand",
+       "pos": [
+        -2.63,
+        0.64,
+        5.36
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": -0.032,
+       "triangles": 8912
+      },
+      {
+       "name": "Nihilard",
+       "team": 1,
+       "kind": "biped",
+       "size": "S",
+       "hp": 174,
+       "maxHp": 272,
+       "phase": "rest",
+       "move": "voidOrb",
+       "mode": "ground",
+       "ground": "water",
+       "pos": [
+        7.36,
+        -0.5,
+        -5.89
+       ],
+       "status": [
+        "wet"
+       ],
+       "strain": 0,
+       "stability": -0.033,
+       "triangles": 9276
+      },
+      {
+       "name": "Acrsss",
+       "team": 1,
+       "kind": "serpent",
+       "size": "S",
+       "hp": 311,
+       "maxHp": 311,
+       "phase": "charge",
+       "move": "corrosion",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        5.2,
+        -0.4,
+        -2.89
+       ],
+       "status": [
+        "wet",
+        "paralyzed"
+       ],
+       "strain": 0,
+       "stability": 0.027,
+       "triangles": 7776
+      },
+      {
+       "name": "Dribbblob",
+       "team": 1,
+       "kind": "blob",
+       "size": "S",
+       "hp": 0,
+       "maxHp": 344,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        6.24,
+        -0.73,
+        -0.01
+       ],
+       "status": [],
+       "strain": 0.163,
+       "stability": 0.354,
+       "triangles": 5144
+      },
+      {
+       "name": "Murktoon",
+       "team": 1,
+       "kind": "quadruped",
+       "size": "S",
+       "hp": 125,
+       "maxHp": 304,
+       "phase": "rest",
+       "move": "corrosion",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        4.68,
+        -0.32,
+        2.06
+       ],
+       "status": [
+        "paralyzed"
+       ],
+       "strain": 0,
+       "stability": 0.117,
+       "triangles": 9188
+      },
+      {
+       "name": "Glimwyrm",
+       "team": 1,
+       "kind": "serpent",
+       "size": "M",
+       "hp": 489,
+       "maxHp": 572,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "water",
+       "pos": [
+        6.58,
+        -0.5,
+        5.21
+       ],
+       "status": [
+        "wet"
+       ],
+       "strain": 0,
+       "stability": 0.036,
+       "triangles": 8964
+      }
+     ],
+     "zones": [
+      "field",
+      "contamination",
+      "field",
+      "bloom",
+      "contamination",
+      "mist"
+     ],
+     "projectiles": 1
+    },
+    "ledger": {
+     "size": 631,
+     "counts": {
+      "battle.decide": 265,
+      "battle.miss": 141,
+      "battle.hit": 78,
+      "battle.status": 49,
+      "battle.reaction": 27,
+      "battle.terrain": 15,
+      "battle.ko": 14,
+      "ui.settings": 13,
+      "battle.start": 9,
+      "battle.clash": 8,
+      "ui.navigate": 7,
+      "device.session.start": 1,
+      "device.gpu": 1,
+      "battle.end": 1,
+      "battle.fail": 1,
+      "battle.lightning": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": false,
+      "screen": "1440x900",
+      "dpr": 1,
+      "formFactor": "laptop",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 62.49999999999996,
+    "frameMs": 3
+   }
+  },
+  {
+   "file": "tablet-home.png",
+   "title": "tablet: home screen",
+   "viewport": "820x1180",
+   "snapshot": {
+    "screen": "home",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "genemon": "Frosmane",
+     "kind": "quadruped",
+     "phase": "idle",
+     "stability": 0.1091757471632569,
+     "strain": 0,
+     "joints": 31,
+     "triangles": 11440
+    },
+    "ledger": {
+     "size": 2,
+     "counts": {
+      "device.session.start": 1,
+      "device.gpu": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": true,
+      "screen": "820x1180",
+      "dpr": 2,
+      "formFactor": "tablet",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 0,
+    "frameMs": 1
+   }
+  },
+  {
+   "file": "tablet-battle.png",
+   "title": "tablet: battle with HUD",
+   "viewport": "820x1180",
+   "snapshot": {
+    "screen": "arena",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "t": 5.033333333333325,
+     "winner": null,
+     "weather": "clear",
+     "arena": "meadow",
+     "camera": {
+      "mode": "auto",
+      "center": [
+       0.6460463069541703,
+       0.1789260218941999,
+       0.3524233342366089
+      ],
+      "radius": 7.502059985982251,
+      "distance": 45.04178894431557,
+      "elevation": 0.42072605901147386,
+      "outside": 0
+     },
+     "fighters": [
+      {
+       "name": "Frosmane",
+       "team": 0,
+       "kind": "quadruped",
+       "size": "S",
+       "hp": 316,
+       "maxHp": 316,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -3.73,
+        -0.29,
+        -5.3
+       ],
+       "status": [],
+       "strain": 0.036,
+       "stability": 0.112,
+       "triangles": 11440
+      },
+      {
+       "name": "Ampix",
+       "team": 0,
+       "kind": "hexapod",
+       "size": "M",
+       "hp": 485,
+       "maxHp": 543,
+       "phase": "active",
+       "move": "sparkBolt",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -4.62,
+        -0.16,
+        0.49
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.205,
+       "triangles": 9872
+      },
+      {
+       "name": "Leafmemon",
+       "team": 0,
+       "kind": "biped",
+       "size": "S",
+       "hp": 27,
+       "maxHp": 297,
+       "phase": "active",
+       "move": "overgrowth",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -1.39,
+        -0.27,
+        -1.75
+       ],
+       "status": [
+        "regen"
+       ],
+       "strain": 0,
+       "stability": -0.002,
+       "triangles": 9276
+      },
+      {
+       "name": "Zephkite",
+       "team": 0,
+       "kind": "avian",
+       "size": "S",
+       "hp": 250,
+       "maxHp": 250,
+       "phase": "active",
+       "move": "bodySlam",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        2.25,
+        -0.23,
+        3.06
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": -0.14,
+       "triangles": 9260
+      },
+      {
+       "name": "Tidlash",
+       "team": 0,
+       "kind": "serpent",
+       "size": "S",
+       "hp": 117,
+       "maxHp": 262,
+       "phase": "rest",
+       "move": "hydroBeam",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -3.2,
+        -0.06,
+        3.56
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": -0.037,
+       "triangles": 8912
+      },
+      {
+       "name": "Vacskooze",
+       "team": 1,
+       "kind": "blob",
+       "size": "M",
+       "hp": 416,
+       "maxHp": 608,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        3.98,
+        -0.33,
+        -2.87
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.405,
+       "triangles": 5676
+      },
+      {
+       "name": "Frosar",
+       "team": 1,
+       "kind": "biped",
+       "size": "S",
+       "hp": 8,
+       "maxHp": 301,
+       "phase": "rest",
+       "move": "bodySlam",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        3.97,
+        -0.24,
+        -1.89
+       ],
+       "status": [
+        "wet"
+       ],
+       "strain": 0,
+       "stability": -0.001,
+       "triangles": 8628
+      },
+      {
+       "name": "Acrooze",
+       "team": 1,
+       "kind": "blob",
+       "size": "M",
+       "hp": 484,
+       "maxHp": 648,
+       "phase": "active",
+       "move": "corrosion",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        5.51,
+        -0.2,
+        0.87
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.392,
+       "triangles": 5676
+      },
+      {
+       "name": "Nullix",
+       "team": 1,
+       "kind": "hexapod",
+       "size": "XS",
+       "hp": 146,
+       "maxHp": 246,
+       "phase": "rest",
+       "move": "bodySlam",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        3.21,
+        -0.11,
+        4.85
+       ],
+       "status": [
+        "wet",
+        "staggered"
+       ],
+       "strain": 0.253,
+       "stability": 0.15,
+       "triangles": 9892
+      }
+     ],
+     "zones": [],
+     "projectiles": 1
+    },
+    "ledger": {
+     "size": 52,
+     "counts": {
+      "battle.decide": 22,
+      "battle.hit": 10,
+      "battle.miss": 9,
+      "battle.status": 4,
+      "battle.terrain": 2,
+      "device.session.start": 1,
+      "device.gpu": 1,
+      "ui.settings": 1,
+      "battle.start": 1,
+      "ui.navigate": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": true,
+      "screen": "820x1180",
+      "dpr": 2,
+      "formFactor": "tablet",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 62.49999999999996,
+    "frameMs": 3
+   }
+  },
+  {
+   "file": "tablet-lab.png",
+   "title": "tablet: lab",
+   "viewport": "820x1180",
+   "snapshot": {
+    "screen": "lab",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "genemon": "Frosmane",
+     "kind": "quadruped",
+     "phase": "idle",
+     "stability": 0.10440239685954922,
+     "strain": 0,
+     "joints": 31,
+     "triangles": 11440
+    },
+    "ledger": {
+     "size": 53,
+     "counts": {
+      "battle.decide": 22,
+      "battle.hit": 10,
+      "battle.miss": 9,
+      "battle.status": 4,
+      "ui.navigate": 2,
+      "battle.terrain": 2,
+      "device.session.start": 1,
+      "device.gpu": 1,
+      "ui.settings": 1,
+      "battle.start": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": true,
+      "screen": "820x1180",
+      "dpr": 2,
+      "formFactor": "tablet",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 62.49999999999996,
+    "frameMs": 1
+   }
+  },
+  {
+   "file": "mobile-home.png",
+   "title": "mobile: home screen",
+   "viewport": "390x844",
+   "snapshot": {
+    "screen": "home",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "genemon": "Frosmane",
+     "kind": "quadruped",
+     "phase": "idle",
+     "stability": 0.10973590522011796,
+     "strain": 0,
+     "joints": 31,
+     "triangles": 11440
+    },
+    "ledger": {
+     "size": 2,
+     "counts": {
+      "device.session.start": 1,
+      "device.gpu": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": true,
+      "screen": "390x844",
+      "dpr": 2,
+      "formFactor": "mobile",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 0,
+    "frameMs": 0
+   }
+  },
+  {
+   "file": "mobile-battle.png",
+   "title": "mobile: battle with HUD",
+   "viewport": "390x844",
+   "snapshot": {
+    "screen": "arena",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "t": 5.066666666666658,
+     "winner": null,
+     "weather": "clear",
+     "arena": "meadow",
+     "camera": {
+      "mode": "auto",
+      "center": [
+       1.0528223940656654,
+       0.19253831968075497,
+       0.07158441641669958
+      ],
+      "radius": 7.568143825829424,
+      "distance": 15.629869897195292,
+      "elevation": 0.420740078076303,
+      "outside": 0
+     },
+     "fighters": [
+      {
+       "name": "Frosmane",
+       "team": 0,
+       "kind": "quadruped",
+       "size": "S",
+       "hp": 316,
+       "maxHp": 316,
+       "phase": "idle",
+       "move": null,
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -3.72,
+        -0.29,
+        -5.34
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.112,
+       "triangles": 11440
+      },
+      {
+       "name": "Ampix",
+       "team": 0,
+       "kind": "hexapod",
+       "size": "M",
+       "hp": 485,
+       "maxHp": 543,
+       "phase": "rest",
+       "move": "sparkBolt",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -4.64,
+        -0.16,
+        0.52
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.155,
+       "triangles": 9872
+      },
+      {
+       "name": "Leafmemon",
+       "team": 0,
+       "kind": "biped",
+       "size": "S",
+       "hp": 27,
+       "maxHp": 297,
+       "phase": "active",
+       "move": "overgrowth",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -1.4,
+        -0.27,
+        -1.78
+       ],
+       "status": [
+        "regen"
+       ],
+       "strain": 0,
+       "stability": -0.008,
+       "triangles": 9276
+      },
+      {
+       "name": "Zephkite",
+       "team": 0,
+       "kind": "avian",
+       "size": "S",
+       "hp": 250,
+       "maxHp": 250,
+       "phase": "rest",
+       "move": "bodySlam",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        2.28,
+        -0.22,
+        3.16
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": -0.102,
+       "triangles": 9260
+      },
+      {
+       "name": "Tidlash",
+       "team": 0,
+       "kind": "serpent",
+       "size": "S",
+       "hp": 117,
+       "maxHp": 262,
+       "phase": "rest",
+       "move": "hydroBeam",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        -3.2,
+        -0.05,
+        3.55
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": -0.037,
+       "triangles": 8912
+      },
+      {
+       "name": "Vacskooze",
+       "team": 1,
+       "kind": "blob",
+       "size": "M",
+       "hp": 416,
+       "maxHp": 608,
+       "phase": "charge",
+       "move": "airCutter",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        3.93,
+        -0.33,
+        -2.82
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.396,
+       "triangles": 5676
+      },
+      {
+       "name": "Frosar",
+       "team": 1,
+       "kind": "biped",
+       "size": "S",
+       "hp": 8,
+       "maxHp": 301,
+       "phase": "rest",
+       "move": "bodySlam",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        3.98,
+        -0.24,
+        -1.84
+       ],
+       "status": [
+        "wet"
+       ],
+       "strain": 0,
+       "stability": -0.055,
+       "triangles": 8628
+      },
+      {
+       "name": "Acrooze",
+       "team": 1,
+       "kind": "blob",
+       "size": "M",
+       "hp": 484,
+       "maxHp": 648,
+       "phase": "active",
+       "move": "corrosion",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        5.5,
+        -0.2,
+        0.86
+       ],
+       "status": [],
+       "strain": 0,
+       "stability": 0.392,
+       "triangles": 5676
+      },
+      {
+       "name": "Nullix",
+       "team": 1,
+       "kind": "hexapod",
+       "size": "XS",
+       "hp": 146,
+       "maxHp": 246,
+       "phase": "rest",
+       "move": "bodySlam",
+       "mode": "ground",
+       "ground": "grass",
+       "pos": [
+        3.27,
+        -0.1,
+        5
+       ],
+       "status": [
+        "wet",
+        "staggered"
+       ],
+       "strain": 0,
+       "stability": 0.182,
+       "triangles": 9892
+      }
+     ],
+     "zones": [],
+     "projectiles": 1
+    },
+    "ledger": {
+     "size": 53,
+     "counts": {
+      "battle.decide": 23,
+      "battle.hit": 10,
+      "battle.miss": 9,
+      "battle.status": 4,
+      "battle.terrain": 2,
+      "device.session.start": 1,
+      "device.gpu": 1,
+      "ui.settings": 1,
+      "battle.start": 1,
+      "ui.navigate": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": true,
+      "screen": "390x844",
+      "dpr": 2,
+      "formFactor": "mobile",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 62.49999999999996,
+    "frameMs": 3
+   }
+  },
+  {
+   "file": "mobile-lab.png",
+   "title": "mobile: lab",
+   "viewport": "390x844",
+   "snapshot": {
+    "screen": "lab",
+    "profile": {
+     "id": "max-s6r",
+     "name": "Max",
+     "mmr": 1500,
+     "collection": 10,
+     "team": 5,
+     "theme": "dark"
+    },
+    "view": {
+     "genemon": "Frosmane",
+     "kind": "quadruped",
+     "phase": "idle",
+     "stability": 1,
+     "strain": 0,
+     "joints": 31,
+     "triangles": 11440
+    },
+    "ledger": {
+     "size": 54,
+     "counts": {
+      "battle.decide": 23,
+      "battle.hit": 10,
+      "battle.miss": 9,
+      "battle.status": 4,
+      "ui.navigate": 2,
+      "battle.terrain": 2,
+      "device.session.start": 1,
+      "device.gpu": 1,
+      "ui.settings": 1,
+      "battle.start": 1
+     }
+    },
+    "realWorld": {
+     "hour": 14.5,
+     "dayPhase": "afternoon",
+     "season": "autumn",
+     "weather": "wind",
+     "device": {
+      "platform": "macOS",
+      "cores": 10,
+      "memoryGB": 16,
+      "touch": true,
+      "screen": "390x844",
+      "dpr": 2,
+      "formFactor": "mobile",
+      "connection": "4g",
+      "language": "fr-FR",
+      "timezone": "Europe/Paris",
+      "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)"
+     }
+    },
+    "fps": 62.49999999999996,
+    "frameMs": 1
+   }
+  }
+ ],
+ "consoleErrors": [],
+ "blocked": [],
+ "overflow": [],
+ "fpsSamples": [
+  {
+   "label": "battle meadow 1440x900",
+   "fps": 60.51587301587298,
+   "frameMs": 1599
+  },
+  {
+   "label": "battle meadow tablet",
+   "fps": 55.39070227497524,
+   "frameMs": 3
+  },
+  {
+   "label": "battle meadow mobile",
+   "fps": 55.335968379446605,
+   "frameMs": 3
+  }
+ ]
+}
