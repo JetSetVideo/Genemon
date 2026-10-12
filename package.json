@@ -1,0 +1,24 @@
+{
+  "name": "genemon-lab",
+  "private": true,
+  "type": "module",
+  "version": "0.0.1",
+  "description": "Prototype lab to generate, evolve, and visualize Genemons in 3D (Nuxt 4 + Deno 2 + Three.js)",
+  "scripts": {
+    "dev": "nuxi dev",
+    "build": "nuxi build",
+    "preview": "nuxi preview"
+  },
+  "dependencies": {
+    "consola": "^3.4.2",
+    "defu": "^6.1.4",
+    "klona": "^2.0.6",
+    "mlly": "^1.8.0",
+    "nuxt": "4.1.3",
+    "ohash": "^2.0.11",
+    "pathe": "^2.0.3",
+    "scule": "^1.3.0",
+    "three": "0.180.0",
+    "ufo": "^1.6.1"
+  }
+}

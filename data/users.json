@@ -1,0 +1,19 @@
+[
+  {
+    "id": "u-001",
+    "name": "Alex 'CyberDoc' Chen",
+    "sex": "Female",
+    "age": 28,
+    "nationality": "Taiwanese",
+    "job": "Data Scientist",
+    "hobbies": ["Hiking", "Strategy Games", "Cooking"],
+    "biometrics": { "height_cm": 168, "weight_kg": 62 },
+    "influence_profile": {
+      "INT_growth_bonus": 1.1,
+      "STA_growth_bonus": 1.05,
+      "aggression_modifier": -0.1
+    }
+  }
+]
+
+

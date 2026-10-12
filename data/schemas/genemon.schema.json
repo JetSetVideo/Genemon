@@ -1,0 +1,162 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://genemon.lab/schema/genemon.json",
+  "title": "Genemon",
+  "type": "object",
+  "required": ["id", "name", "seeds", "taxonomy", "types", "morphology", "physiology", "senses", "reproduction", "intelligence", "temperament", "colors", "growthCurves", "environment", "attacks", "animation", "stats", "state"],
+  "properties": {
+    "genotype": {
+      "type": "object",
+      "required": ["length", "strandA", "strandB"],
+      "properties": {
+        "length": { "type": "integer", "minimum": 1 },
+        "strandA": { "type": "array", "items": { "type": "number" }, "minItems": 1 },
+        "strandB": { "type": "array", "items": { "type": "number" }, "minItems": 1 },
+        "geneMap": { "type": "array", "items": { "type": "object", "required": ["index", "trait"], "properties": { "index": { "type": "integer", "minimum": 0 }, "trait": { "type": "string" } } } }
+      }
+    },
+    "id": { "type": "string" },
+    "name": { "type": "string" },
+    "seeds": {
+      "type": "object",
+      "required": ["genotypeSeed", "environmentSeed"],
+      "properties": {
+        "genotypeSeed": { "type": "integer" },
+        "environmentSeed": { "type": "integer" }
+      }
+    },
+    "taxonomy": {
+      "type": "object",
+      "required": ["inspirations", "category"],
+      "properties": {
+        "inspirations": { "type": "array", "items": { "type": "string" } },
+        "category": { "type": "string", "enum": ["animal", "object", "hybrid"] }
+      }
+    },
+    "types": {
+      "type": "object",
+      "required": ["primary", "secondary", "secondaryLevel"],
+      "properties": {
+        "primary": { "$ref": "#/definitions/element" },
+        "secondary": { "anyOf": [ { "$ref": "#/definitions/element" }, { "type": "null" } ] },
+        "secondaryLevel": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "morphology": {
+      "type": "object",
+      "required": ["bodySegments", "limbs", "hasTail", "hasWings"],
+      "properties": {
+        "bodySegments": { "type": "integer", "minimum": 1, "maximum": 32 },
+        "limbs": { "type": "object", "required": ["count", "types"], "properties": { "count": { "type": "integer", "minimum": 0, "maximum": 16 }, "types": { "type": "array", "items": { "type": "string" } } } },
+        "hasTail": { "type": "boolean" },
+        "hasWings": { "type": "boolean" }
+      }
+    },
+    "physiology": {
+      "type": "object",
+      "required": ["sizeClass", "massKg", "digestion", "energyReserve", "sleepPattern"],
+      "properties": {
+        "sizeClass": { "type": "string", "enum": ["XS", "S", "M", "L", "XL"] },
+        "massKg": { "type": "number", "minimum": 0 },
+        "digestion": { "type": "string", "enum": ["herbivore", "carnivore", "omnivore", "detritivore"] },
+        "energyReserve": { "type": "number", "minimum": 0, "maximum": 1 },
+        "sleepPattern": { "type": "string", "enum": ["diurnal", "nocturnal", "crepuscular"] }
+      }
+    },
+    "senses": {
+      "type": "object",
+      "required": ["vision", "nightVision", "smell", "hearing"],
+      "properties": {
+        "vision": { "type": "string", "enum": ["poor", "normal", "sharp"] },
+        "nightVision": { "type": "boolean" },
+        "smell": { "type": "string", "enum": ["poor", "normal", "sharp"] },
+        "hearing": { "type": "string", "enum": ["poor", "normal", "sharp"] }
+      }
+    },
+    "reproduction": {
+      "type": "object",
+      "required": ["sex", "strategy", "potentialOffsprings"],
+      "properties": {
+        "sex": { "type": "string", "enum": ["male", "female", "asexual", "unknown"] },
+        "strategy": { "type": "string", "enum": ["sexual", "asexual", "spores"] },
+        "potentialOffsprings": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "type": "integer", "minimum": 0 } }
+      }
+    },
+    "intelligence": {
+      "type": "object",
+      "required": ["level", "traits"],
+      "properties": {
+        "level": { "type": "number", "minimum": 0, "maximum": 1 },
+        "traits": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "temperament": {
+      "type": "object",
+      "required": ["traits"],
+      "properties": { "traits": { "type": "array", "items": { "type": "string" } } }
+    },
+    "colors": {
+      "type": "object",
+      "required": ["palette", "pattern"],
+      "properties": {
+        "palette": { "type": "array", "items": { "type": "string", "pattern": "^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$" }, "minItems": 2, "maxItems": 8 },
+        "pattern": { "type": "string", "enum": ["solid", "stripe", "mottle", "spot"] }
+      }
+    },
+    "growthCurves": {
+      "type": "object",
+      "required": ["overall", "segments", "limbGrowth", "specializationRules"],
+      "properties": {
+        "overall": { "type": "string", "enum": ["linear", "sigmoid", "logistic"] },
+        "segments": { "type": "array", "items": { "type": "number", "minimum": 0 }, "minItems": 1 },
+        "limbGrowth": { "type": "array", "items": { "type": "number", "minimum": 0 }, "minItems": 0 },
+        "specializationRules": { "type": "array", "items": { "$ref": "#/definitions/specializationRule" } }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "required": ["biomes", "climate"],
+      "properties": {
+        "biomes": { "type": "array", "items": { "type": "string" } },
+        "climate": { "type": "string", "enum": ["tropical", "temperate", "arid", "polar", "montane"] }
+      }
+    },
+    "attacks": { "type": "array", "items": { "$ref": "#/definitions/attack" } },
+    "animation": { "type": "object", "required": ["canWalk", "canRun", "canSwim", "canFly"], "properties": { "canWalk": { "type": "boolean" }, "canRun": { "type": "boolean" }, "canSwim": { "type": "boolean" }, "canFly": { "type": "boolean" } } },
+    "stats": { "type": "object", "required": ["hp", "attack", "defense", "speed"], "properties": { "hp": { "type": "integer", "minimum": 1 }, "attack": { "type": "integer", "minimum": 0 }, "defense": { "type": "integer", "minimum": 0 }, "speed": { "type": "integer", "minimum": 0 } } },
+    "statsPotential": { "type": "object", "required": ["hp", "attack", "defense", "speed"], "properties": { "hp": { "type": "integer", "minimum": 1 }, "attack": { "type": "integer", "minimum": 0 }, "defense": { "type": "integer", "minimum": 0 }, "speed": { "type": "integer", "minimum": 0 } } },
+    "timeline": {
+      "type": "object",
+      "required": ["lifeStages", "events"],
+      "properties": {
+        "lifeStages": { "type": "object", "required": ["baby", "juvenile", "adult"], "properties": { "baby": { "type": "number", "minimum": 0, "maximum": 1 }, "juvenile": { "type": "number", "minimum": 0, "maximum": 1 }, "adult": { "type": "number", "minimum": 0, "maximum": 1 }, "elder": { "type": "number", "minimum": 0, "maximum": 1 } } },
+        "events": { "type": "array", "items": { "type": "object", "required": ["t", "type", "label"], "properties": { "t": { "type": "number", "minimum": 0, "maximum": 1 }, "type": { "type": "string" }, "label": { "type": "string" }, "value": { "type": "number" }, "meta": { "type": "object" } } } }
+      }
+    },
+    "state": { "type": "object", "required": ["growthT"], "properties": { "growthT": { "type": "number", "minimum": 0, "maximum": 1 } } }
+  },
+  "definitions": {
+    "element": { "type": "string", "enum": ["neutral", "water", "fire", "earth", "air", "electric", "ice", "poison", "plant", "metal", "psychic", "shadow", "light", "steam", "magma", "toxin", "crystal"] },
+    "specializationRule": {
+      "type": "object",
+      "required": ["whenGrowthAbove"],
+      "properties": {
+        "whenGrowthAbove": { "type": "number", "minimum": 0, "maximum": 1 },
+        "addTrait": { "type": "string" },
+        "unlockLimb": { "type": "string" },
+        "changeTypeSecondary": { "$ref": "#/definitions/element" }
+      }
+    },
+    "attack": {
+      "type": "object",
+      "required": ["name", "element", "basePower"],
+      "properties": {
+        "name": { "type": "string" },
+        "element": { "$ref": "#/definitions/element" },
+        "basePower": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}
+
+

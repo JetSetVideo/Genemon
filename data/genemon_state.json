@@ -1,0 +1,53 @@
+[
+  {
+    "id": "g-001",
+    "current_age": 42.5,
+    "phenotype": {
+      "biometrics": {
+        "height_m": 1.2,
+        "width_m": 0.4,
+        "length_m": 2.5,
+        "weight_kg": 55,
+        "imc_equivalent": 18.2
+      },
+      "morphology": {
+        "current_skeleton_path": "/rigs/g-001_age_42.json",
+        "limbs": { "count": 14, "type": "arthropodic_legs" },
+        "eyes": { "count": 8, "color_hex": "#FF2200" },
+        "integument": {
+          "type": "chitinous",
+          "base_color_hex": "#4A4A4A",
+          "pattern_type": "perlin_stripes",
+          "pattern_color_hex": "#D00000"
+        },
+        "claws": { "type": "venomous_tips" }
+      },
+      "elemental": {
+        "primary": "Fire",
+        "secondary": "Poison"
+      }
+    },
+    "behavior": {
+      "current_anim_state": "idle_neutral",
+      "intelligence_rating": 0.7,
+      "character_trait": "irascible"
+    },
+    "combat": {
+      "stats": { "hp": 120, "stamina": 80, "str": 18, "dex": 14, "con": 15, "int": 11 },
+      "attacks": [
+        {
+          "name": "Fire Spit",
+          "element": "Fire",
+          "range": "10m",
+          "damage": "2d6",
+          "effect": "burn_1_turn",
+          "anim_charge_sec": 0.5,
+          "anim_cast_sec": 0.2,
+          "anim_end_sec": 0.3
+        }
+      ]
+    }
+  }
+]
+
+

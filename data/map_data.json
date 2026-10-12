@@ -1,0 +1,25 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-77.0369, 38.9072, 100] },
+      "properties": {
+        "name": "Washington Monument (Top)",
+        "type": "Landmark",
+        "spawn_table": [{ "genemon_id": "g-avian-rare", "chance": 0.05 }]
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Polygon", "coordinates": [] },
+      "properties": {
+        "name": "Amazon Rainforest",
+        "type": "Biome",
+        "elemental_influence": ["Water", "Poison", "Grass"]
+      }
+    }
+  ]
+}
+
+

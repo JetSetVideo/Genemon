@@ -1,0 +1,7 @@
+[
+  { "name": "Fire Spit", "element": "Fire", "basePower": 40 },
+  { "name": "Water Jet", "element": "Water", "basePower": 35 },
+  { "name": "Poison Sting", "element": "Poison", "basePower": 25 }
+]
+
+

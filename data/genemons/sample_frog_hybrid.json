@@ -1,0 +1,36 @@
+{
+  "id": "gm_10001",
+  "name": "Froggit",
+  "seeds": { "genotypeSeed": 123456789, "environmentSeed": 987654321 },
+  "taxonomy": { "inspirations": ["frog", "umbrella"], "category": "hybrid" },
+  "genotype": { "length": 16, "strandA": [1.1,1.3,0.8,1.5,0.6,1.0,1.2,0.9,1.4,1.1,0.7,1.6,1.3,0.5,0.9,1.2], "strandB": [-0.3,-0.5,-0.2,-0.6,-0.4,-0.3,-0.5,-0.2,-0.4,-0.3,-0.1,-0.6,-0.5,-0.2,-0.2,-0.4] },
+  "types": { "primary": "water", "secondary": "air", "secondaryLevel": 0.35 },
+  "morphology": { "bodySegments": 6, "limbs": { "count": 4, "types": ["leg", "leg", "arm", "arm"] }, "hasTail": true, "hasWings": false },
+  "physiology": { "sizeClass": "S", "massKg": 7.2, "digestion": "omnivore", "energyReserve": 0.6, "sleepPattern": "nocturnal" },
+  "senses": { "vision": "normal", "nightVision": true, "smell": "sharp", "hearing": "normal" },
+  "reproduction": { "sex": "unknown", "strategy": "sexual", "potentialOffsprings": [2, 10] },
+  "intelligence": { "level": 0.35, "traits": ["problem-solving"] },
+  "temperament": { "traits": ["curious", "skittish"] },
+  "colors": { "palette": ["#59d4ff", "#114455", "#c3f2ff"], "pattern": "mottle" },
+  "growthCurves": {
+    "overall": "sigmoid",
+    "segments": [0.15, 0.22, 0.27, 0.33, 0.38, 0.42],
+    "limbGrowth": [0.2, 0.26, 0.32, 0.38],
+    "specializationRules": [
+      { "whenGrowthAbove": 0.4, "unlockLimb": "webbed-feet" },
+      { "whenGrowthAbove": 0.7, "changeTypeSecondary": "air" }
+    ]
+  },
+  "environment": { "biomes": ["wetlands", "temperate-forest"], "climate": "temperate" },
+  "attacks": [
+    { "name": "Bubble Jet", "element": "water", "basePower": 40 },
+    { "name": "Gust Hop", "element": "air", "basePower": 25 }
+  ],
+  "animation": { "canWalk": true, "canRun": true, "canSwim": true, "canFly": false },
+  "stats": { "hp": 36, "attack": 9, "defense": 7, "speed": 8 },
+  "statsPotential": { "hp": 72, "attack": 18, "defense": 14, "speed": 16 },
+  "timeline": { "lifeStages": { "baby": 0, "juvenile": 0.35, "adult": 0.7 }, "events": [ { "t": 0.2, "type": "item", "label": "Aqua Shard" }, { "t": 0.55, "type": "training", "label": "Cardio", "value": 0.3 } ] },
+  "state": { "growthT": 0.1 }
+}
+
+

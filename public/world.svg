@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="o" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0" stop-color="#0f1421"/>
+      <stop offset="1" stop-color="#0b0f14"/>
+    </linearGradient>
+  </defs>
+  <rect width="1000" height="500" fill="url(#o)"/>
+  <g fill="#1a2033">
+    <rect x="0" y="240" width="1000" height="20" opacity=".5"/>
+    <rect x="490" y="0" width="20" height="500" opacity=".5"/>
+  </g>
+  <g stroke="#26324a" stroke-width="1" opacity=".5">
+    <!-- simple graticule -->
+    <g>
+      <!-- vertical lines every 60 deg -->
+      <path d="M166,0 166,500"/>
+      <path d="M333,0 333,500"/>
+      <path d="M666,0 666,500"/>
+      <path d="M833,0 833,500"/>
+    </g>
+    <g>
+      <!-- horizontal lines every 30 deg -->
+      <path d="M0,83 1000,83"/>
+      <path d="M0,166 1000,166"/>
+      <path d="M0,333 1000,333"/>
+      <path d="M0,416 1000,416"/>
+    </g>
+  </g>
+  <text x="20" y="30" fill="#96a0b5" font-family="monospace" font-size="14">World (lon/lat grid)</text>
+</svg>
+
+

@@ -1,0 +1,14 @@
+# dependencies / build caches
+node_modules/
+.nuxt/
+.output/
+legacy/nuxt-lab/node_modules/
+legacy/nuxt-lab/.nuxt/
+legacy/nuxt-lab/.output/
+dist/
+.DS_Store
+
+# heavy generated artifacts (reports and the latest screenshots ARE committed)
+artifacts/tmp/
+artifacts/**/*.webm
+artifacts/**/*.mp4

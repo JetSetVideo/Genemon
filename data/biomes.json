@@ -1,0 +1,8 @@
+[
+  { "id": "wetlands", "name": "Wetlands", "climate": "temperate" },
+  { "id": "reef", "name": "Coral Reef", "climate": "tropical" },
+  { "id": "temperate-forest", "name": "Temperate Forest", "climate": "temperate" },
+  { "id": "desert", "name": "Desert", "climate": "arid" }
+]
+
+
