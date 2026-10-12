@@ -1,0 +1,26 @@
+{
+  "tasks": {
+    "prepare": "deno run -A npm:nuxi prepare",
+    "dev": "deno run -A --unstable-fs npm:nuxi dev --port 3000",
+    "build": "deno run -A npm:nuxi build",
+    "preview": "deno run -A npm:nuxi preview --port 3000",
+    "serve": "deno run -A ./.output/server/index.ts",
+    "clean": "sh -c 'rm -rf .nuxt .output && true'",
+    "rebuild": "deno task clean && deno task build",
+    "rebuild:serve": "deno task rebuild && deno task serve"
+  },
+  "imports": {
+    "ohash": "npm:ohash",
+    "klona": "npm:klona",
+    "scule": "npm:scule",
+    "pathe": "npm:pathe",
+    "defu": "npm:defu",
+    "consola": "npm:consola",
+    "ufo": "npm:ufo",
+    "mlly": "npm:mlly"
+  },
+  "nodeModulesDir": "auto",
+  "lock": false
+}
+
+

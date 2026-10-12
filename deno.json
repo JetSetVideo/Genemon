@@ -1,26 +1,30 @@
 {
-  "tasks": {
-    "prepare": "deno run -A npm:nuxi prepare",
-    "dev": "deno run -A --unstable-fs npm:nuxi dev --port 3000",
-    "build": "deno run -A npm:nuxi build",
-    "preview": "deno run -A npm:nuxi preview --port 3000",
-    "serve": "deno run -A ./.output/server/index.ts",
-    "clean": "sh -c 'rm -rf .nuxt .output && true'",
-    "rebuild": "deno task clean && deno task build",
-    "rebuild:serve": "deno task rebuild && deno task serve"
+  "compilerOptions": {
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "lib": ["deno.window", "dom", "dom.iterable", "esnext"]
   },
   "imports": {
-    "ohash": "npm:ohash",
-    "klona": "npm:klona",
-    "scule": "npm:scule",
-    "pathe": "npm:pathe",
-    "defu": "npm:defu",
-    "consola": "npm:consola",
-    "ufo": "npm:ufo",
-    "mlly": "npm:mlly"
+    "three": "npm:three@0.180.0",
+    "three/addons/": "npm:/three@0.180.0/examples/jsm/",
+    "@types/three": "npm:@types/three@0.180.0",
+    "playwright": "npm:playwright@1.56.1"
   },
-  "nodeModulesDir": "auto",
-  "lock": false
+  "exclude": ["legacy/", "dist/", "artifacts/"],
+  "lint": {
+    "rules": { "exclude": ["no-explicit-any"] }
+  },
+  "fmt": { "lineWidth": 110 },
+  "tasks": {
+    "build": "deno run -A tools/build.ts",
+    "dev": "deno task build && deno run --allow-net=127.0.0.1:8800 --allow-read=dist tools/serve.ts",
+    "check": "deno check main.ts src/ tools/ tests/",
+    "test": "deno test --allow-read --allow-write=artifacts tests/",
+    "lint": "deno lint",
+    "scenarios": "deno run --allow-read --allow-write=artifacts tools/scenarios.ts",
+    "sim": "deno run --allow-read --allow-write=artifacts tools/sim.ts",
+    "balance": "deno run --allow-read --allow-write=artifacts tools/balance.ts",
+    "capture": "deno run -A tools/capture.ts"
+  }
 }
-
-
