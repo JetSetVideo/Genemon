@@ -80,6 +80,11 @@ Honest gaps after pass 2:
   - Disagreement kept: the critic asks for a 30-45 s median; the design keeps ~25 s (measured 22.9 s) for phone sessions.
 
 - Market lots do not say whether the seller is a company, an NPC or a player, and promotions are not shown on the lot; World map labels clip at the frame edge (round-4 vision check).
+- Balance regression to check first: an intermediate configuration measured better than the final one. Both runs use `deno task balance 6`.
+  - Intermediate (PACE 0.6, every team starting ~11 m apart, XL budget 3.9): 12/13 elements in band, air 26 % the only miss; XL vs 4 S 47 %, L vs 3 S 53 %, M vs 2 S 44 %; median 18.0 s.
+  - Final (PACE 0.5, start line scaled to body size): 10/13 in band (water 32 %, air 22 %).
+  - The drop is within the +-11-point noise, but it coincides with the compact start for small bodies, which favours melee elements.
+  - Re-measure with `deno task balance 12` before tuning elements.
 - Element balance: water 32 %, air 22 %, fire 65 % (CI about +-11 points at n = 72). Probe
   (`artifacts/tmp/probe-elements.ts`): at equal power, air spends its budget on evasion (0.244 vs
   0.137), speed and rate; flight costs 1.5 energy/s. Neither evasion pricing nor the take-off decision
