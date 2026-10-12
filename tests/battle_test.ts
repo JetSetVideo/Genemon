@@ -1,5 +1,6 @@
 import { assert, assertAlmostEquals, assertEquals } from "./_assert.ts";
-import { Battle } from "../src/combat/battle.ts";
+import { applyBattleResult, Battle } from "../src/combat/battle.ts";
+import { emptyConditions, noteActivity } from "../src/genome/epigenetics.ts";
 import { ARCHETYPES, arenaSpec, makeArchetype, team } from "../src/combat/scenario.ts";
 import { createGenemon, type Genemon, phenotypeOf } from "../src/genome/genemon.ts";
 import { autoTeam, synergies, type Team, validateTeam } from "../src/combat/team.ts";
@@ -57,6 +58,25 @@ Deno.test("scenario SC-01: a big fire brawler beats two small plants (>= 70%)", 
     if (r.winner === 0) wins++;
   }
   assert(n > 0 && wins / n >= 0.7, `big fire won ${wins}/${n}`);
+});
+
+Deno.test("epigenetics [SPEC G2]: time of day shapes a creature - circular active hour, night raising -> nocturnal rhythm", () => {
+  // Circular mean: alternating 23 h and 1 h is midnight, never noon (a plain average gives 12).
+  const c = emptyConditions();
+  for (let i = 0; i < 200; i++) noteActivity(c, i % 2 ? 23 : 1);
+  const offMidnight = Math.min(c.activeHour, 24 - c.activeHour);
+  assert(offMidnight < 1.2, `alternating 23 h / 1 h settles near midnight, got ${c.activeHour.toFixed(2)} h`);
+  // The live path: the same creature raised by night battles vs day battles ends with a lower rhythm axis.
+  const raise = (hour: number) => {
+    const g = createGenemon({ seed: hashSeed("rhythm"), level: 20 });
+    g.conditions.ageDays = 60;
+    const r = new Battle({ seed: 9, arena: arenaSpec("meadow", 9, "clear", hour), teams: [mk([g]), randomTeams(9)[1]] }).run();
+    for (let k = 0; k < 40; k++) applyBattleResult({ ...r, hour }, [mk([g]), { ...randomTeams(9)[1], members: [] }]);
+    return { hour: g.conditions.activeHour, rhythm: phenotypeOf(g).axes.rhythm };
+  };
+  const night = raise(1), day = raise(13);
+  assert(Math.min(night.hour, 24 - night.hour) < 2, `40 night battles move the active hour to night (${night.hour.toFixed(2)} h)`);
+  assert(night.rhythm < day.rhythm - 0.05, `night-raised rhythm ${night.rhythm.toFixed(3)} < day-raised ${day.rhythm.toFixed(3)}`);
 });
 
 // ------------------------------------------------------------------ pass 2: review fixes pinned

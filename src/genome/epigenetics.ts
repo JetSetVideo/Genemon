@@ -93,6 +93,27 @@ export function epigeneticPressure(c: Conditions): { total: AxisVector; sources:
   return { total, sources };
 }
 
+/** Per-activity weight of the active-hour average (recent activity counts more; ~16 events = 63 %). */
+export const ACTIVE_HOUR_RATE = 0.06;
+
+/**
+ * Record activity at local `hour` (0-24) into the CIRCULAR running mean `activeHour`.
+ * WHY circular: 23 h and 1 h are two hours apart, and a plain average of them is noon, which turned
+ * night owls into day creatures (personas review F3). Before this function existed nothing wrote
+ * `activeHour` at all: every Genemon stayed at 13 h forever and time of day never shaped a creature.
+ * The caller passes the hour (pure module: it never reads the clock). `weight` = units of activity.
+ */
+export function noteActivity(c: Conditions, hour: number, weight = 1): void {
+  if (!Number.isFinite(hour) || !(weight > 0)) return;
+  const a = 1 - Math.pow(1 - ACTIVE_HOUR_RATE, Math.min(20, weight));
+  // Move along the SHORTER arc by a share `a` of the gap. (Blending unit vectors and keeping only the
+  // angle never moves between two opposite hours: 13 h and 1 h are exactly opposite, so the blend just
+  // shrinks and still points at 13 h. The [SPEC G2] test caught that.)
+  let d = (((hour - c.activeHour) % 24) + 24) % 24;
+  if (d > 12) d -= 24;
+  c.activeHour = (((c.activeHour + a * d) % 24) + 24) % 24;
+}
+
 /** Saturated epigenetic shift per axis, each within +-EPIGENETIC_CAP. */
 export function epigeneticShift(c: Conditions): AxisVector {
   const { total } = epigeneticPressure(c);

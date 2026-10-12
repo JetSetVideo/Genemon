@@ -423,6 +423,12 @@ export interface Fed {
   food: FoodId;
 }
 
+/** Device-local hour (0-24) of an epoch time (UI layer: derived from the `now` passed in, never the clock). */
+export function localHour(now: number): number {
+  const d = new Date(now);
+  return d.getHours() + d.getMinutes() / 60;
+}
+
 /** Shop in person: every team member eats one food from the shop's stock (feed(), ledger rows). */
 export function applyBuyFood(world: WorldMap, s: WorldSession, keeper: Keeper, place: Place, now: number, ledger?: Ledger): Verdict & { fed: Fed[] } {
   const ka = kindAction(place.kind);
@@ -436,7 +442,7 @@ export function applyBuyFood(world: WorldMap, s: WorldSession, keeper: Keeper, p
   const day = Math.floor(now / DAY_MS);
   const fed = team.map((g): Fed => {
     const food = pickFood(stock, phenotypeOf(g).elements.primary, hashSeed(place.id, g.id, day));
-    feed(g, food, 1, { ledger, when: now, who: keeper.id, where, why: `bought at ${place.name} (${ka.action}, simulated GPS)` });
+    feed(g, food, 1, { ledger, when: now, hour: localHour(now), who: keeper.id, where, why: `bought at ${place.name} (${ka.action}, simulated GPS)` });
     return { name: g.name, food };
   });
   return { ok: true, reason: `fed ${fed.map((f) => `${f.name}: ${FOODS[f.food].name.toLowerCase()}`).join(", ")}`, fed };
@@ -453,7 +459,7 @@ export function applyTrain(world: WorldMap, s: WorldSession, keeper: Keeper, pla
   const where = cellWhere(world, place.pos, "physical");
   let trained = 0;
   for (const g of team) {
-    if (live(g, "gymTraining", 1, { physical: true, ledger, when: now, who: keeper.id, where, why: `trained at ${place.name} (simulated GPS)` })) trained++;
+    if (live(g, "gymTraining", 1, { physical: true, ledger, when: now, hour: localHour(now), who: keeper.id, where, why: `trained at ${place.name} (simulated GPS)` })) trained++;
   }
   return { ok: true, reason: `${trained} Genemon trained at ${place.name} (+${EXPERIENCES.gymTraining.xp} xp each)` };
 }

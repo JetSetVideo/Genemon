@@ -65,6 +65,7 @@ Honest gaps after pass 2:
     - mono-element accent colour: the complementary hue is replaced by an analogous one. Of 262 mono creatures, 0 now have an accent more than 60 deg from the body hue; the old formula put all of them 126-180 deg away.
     - element-chip contrast: theme text on a tint
     - light-theme muted text set to #5b6678
+    - time of day now shapes creatures. Nothing ever wrote `activeHour`, so every Genemon stayed at 13 h. Battles, feeding and training now record their local hour as a circular running mean that moves along the shorter arc; an angle-only vector blend never moved between opposite hours. Pinned by the `[SPEC G2]` test.
   - FIXED, visual check pending (next capture): eyes now sit on the upper half of the head. The "up" vector was negated: +Z x +X = +Y, then x(-1).
   - STILL OPEN:
     - wing membranes fold into level shelves

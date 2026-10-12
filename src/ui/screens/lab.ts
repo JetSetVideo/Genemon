@@ -20,7 +20,7 @@ let partner = "";
 let morphT = 0.5;
 
 function ctx(app: App) {
-  return { ledger: app.ledger, when: Date.now(), who: app.profile.id, where: { x: 0, y: 0, z: 0, zone: "lab", space: "lab" as const } };
+  return { ledger: app.ledger, when: Date.now(), hour: app.hourNow(), who: app.profile.id, where: { x: 0, y: 0, z: 0, zone: "lab", space: "lab" as const } };
 }
 
 function addChild(app: App, child: Genemon, why: string): void {

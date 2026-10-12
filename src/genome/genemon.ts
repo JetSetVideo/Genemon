@@ -10,7 +10,7 @@ import type { ElementId } from "../data/elements.ts";
 import type { GroundId } from "../data/grounds.ts";
 import { EXPERIENCES, type ExperienceId, FOODS, type FoodId } from "../data/lifestyle.ts";
 import { isDamaging, type Move, MOVES, TIER_LEVEL } from "../combat/moves.ts";
-import { type Conditions, emptyConditions, levelOf, xpForLevel } from "./epigenetics.ts";
+import { type Conditions, emptyConditions, levelOf, noteActivity, xpForLevel } from "./epigenetics.ts";
 import { type Genome, type GenomeBias, randomGenome } from "./genome.ts";
 import { express, nameFor, type Phenotype } from "./phenotype.ts";
 import { u01 } from "../core/math.ts";
@@ -143,6 +143,8 @@ export interface LifeCtx {
   when?: number;
   who?: string;
   why?: string;
+  /** Local hour of the event (0-24), passed by the caller: shapes the creature's day/night rhythm. */
+  hour?: number;
 }
 
 function log(ctx: LifeCtx, g: Genemon, what: string, entries: Record<string, number | string | boolean>, exits: Record<string, number | string | boolean>, why = "") {
@@ -194,6 +196,7 @@ export function feed(g: Genemon, food: FoodId, units = 1, ctx: LifeCtx = {}): vo
   g.conditions.diet[food] = (g.conditions.diet[food] ?? 0) + units;
   g.conditions.hunger = Math.max(0, g.conditions.hunger - 0.15 * FOODS[food].nutrition * units);
   g.conditions.bond = Math.min(1, g.conditions.bond + 0.005 * units);
+  if (ctx.hour !== undefined) noteActivity(g.conditions, ctx.hour, units);
   log(ctx, g, "genemon.feed", { food, units }, { hunger: r3(g.conditions.hunger), bond: r3(g.conditions.bond) }, "owner fed");
   settle(g, before, ctx);
 }
@@ -207,6 +210,7 @@ export function live(g: Genemon, exp: ExperienceId, units = 1, ctx: LifeCtx & { 
   const before = snapshot(g);
   g.conditions.experiences[exp] = (g.conditions.experiences[exp] ?? 0) + units;
   g.conditions.xp += e.xp * units;
+  if (ctx.hour !== undefined) noteActivity(g.conditions, ctx.hour, units);
   log(ctx, g, "genemon.experience", { experience: exp, units, physical: ctx.physical ?? true }, { xp: g.conditions.xp });
   settle(g, before, ctx);
   return true;

@@ -17,6 +17,7 @@ import { type WeatherId, WEATHERS } from "../data/weather.ts";
 import { type Genemon, phenotypeOf } from "../genome/genemon.ts";
 import type { Emotions, Phenotype, Stats } from "../genome/phenotype.ts";
 import { EVASION_CAP } from "../genome/phenotype.ts";
+import { noteActivity } from "../genome/epigenetics.ts";
 import { type Arena, type ArenaSpec, generateArena } from "../world/arena.ts";
 import { applyImpulse, type Body, makeBody, stepPhysics } from "../world/physics.ts";
 import { isDamaging, type MetaUsage, type Move, MOVE_BY_ID, moveCost, type StatusId } from "./moves.ts";
@@ -1456,6 +1457,8 @@ export function applyBattleResult(r: BattleResult, teams: [Team, Team]): void {
       }
       c.xp += r.winner === ti ? 60 : r.winner === 2 ? 35 : 25;
       c.bond = Math.min(1, c.bond + 0.01);
+      // A battle is activity at its local hour: night fighters grow nocturnal.
+      noteActivity(c, r.hour, 2);
       Object.assign(g.knowledge, r.knowledge[g.id] ?? {});
     }
   });
