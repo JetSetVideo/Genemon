@@ -23,7 +23,19 @@ export type MoveShape =
   | "terrain"
   | "dig"
   | "fly"
-  | "phase";
+  | "phase"
+  /** A cone breathed or sprayed from the mouth (special): every enemy inside the arc and range. */
+  | "cone"
+  /** A dash: the body itself travels to the target and strikes on arrival (physical, mobility). */
+  | "dash";
+
+/** Damage category: PHYSICAL hits with the body (scaled by size, weight, claws, horns), SPECIAL
+ * channels the element through an organ (mouth, eyes, aura), STATUS deals no direct damage. */
+export type MoveCategory = "physical" | "special" | "status";
+/** The body part a move is delivered by: its power and learnability follow that part's genes. */
+export type BodyPart = "mouth" | "jaw" | "claws" | "horns" | "tail" | "wings" | "mass" | "eyes" | "aura" | "legs";
+/** League-style kit slot: Q basic, W control (stun/snare), E mobility (dash/flight), R ultimate. */
+export type KitSlot = "basic" | "control" | "mobility" | "ultimate" | "utility";
 
 export const STATUS_IDS = [
   "burn",
@@ -45,6 +57,8 @@ export const STATUS_IDS = [
   "burrowed",
   "liquid",
   "regen",
+  /** Hard crowd control: no action and no movement; interrupts a charge it lands on. */
+  "stunned",
 ] as const;
 export type StatusId = typeof STATUS_IDS[number];
 
@@ -79,17 +93,23 @@ export interface Move {
   tags: string[];
   tier: 1 | 2 | 3;
   requires?: { ability?: keyof Abilities; kinds?: BodyKind[] };
+  /** Pass-4 kit fields (optional on legacy rows; src/combat/kit.ts derives defaults). */
+  category?: MoveCategory;
+  part?: BodyPart;
+  slot?: KitSlot;
+  /** Cone half-angle in radians (shape "cone"). */
+  arc?: number;
 }
 
 type Fx = MoveEffect[];
-const st = (status: StatusId, chance: number, duration = 3, self = false): MoveEffect => ({ kind: "status", status, chance, duration, self });
-const kb = (value: number): MoveEffect => ({ kind: "knockback", value });
-const pull = (value: number): MoveEffect => ({ kind: "pull", value });
-const wx = (weather: WeatherId, duration = 14): MoveEffect => ({ kind: "weather", weather, duration });
-const gr = (ground: GroundId): MoveEffect => ({ kind: "ground", ground });
-const heal = (value: number): MoveEffect => ({ kind: "heal", value, self: true });
+export const st = (status: StatusId, chance: number, duration = 3, self = false): MoveEffect => ({ kind: "status", status, chance, duration, self });
+export const kb = (value: number): MoveEffect => ({ kind: "knockback", value });
+export const pull = (value: number): MoveEffect => ({ kind: "pull", value });
+export const wx = (weather: WeatherId, duration = 14): MoveEffect => ({ kind: "weather", weather, duration });
+export const gr = (ground: GroundId): MoveEffect => ({ kind: "ground", ground });
+export const heal = (value: number): MoveEffect => ({ kind: "heal", value, self: true });
 
-function mv(
+export function mv(
   id: string,
   name: string,
   element: ElementId,
@@ -104,11 +124,16 @@ function mv(
   rest: number,
   effects: Fx = [],
   tier: 1 | 2 | 3 = 1,
-  extra: { tags?: string[]; requires?: Move["requires"] } = {},
+  extra: { tags?: string[]; requires?: Move["requires"]; category?: MoveCategory; part?: BodyPart; slot?: KitSlot; arc?: number } = {},
 ): Move {
   const tags = [...(extra.tags ?? [])];
-  if (shape === "melee") tags.push("contact");
-  return { id, name, element, shape, power, accuracy, range, area, speed, charge, active, rest, effects, tags, tier, requires: extra.requires };
+  if (shape === "melee" || shape === "dash") tags.push("contact");
+  const m: Move = { id, name, element, shape, power, accuracy, range, area, speed, charge, active, rest, effects, tags, tier, requires: extra.requires };
+  if (extra.category) m.category = extra.category;
+  if (extra.part) m.part = extra.part;
+  if (extra.slot) m.slot = extra.slot;
+  if (extra.arc !== undefined) m.arc = extra.arc;
+  return m;
 }
 
 const WS = { requires: { ability: "weatherShaper" as const } };
@@ -257,6 +282,7 @@ export const STATUS_WEIGHT: Record<StatusId, number> = {
   burrowed: 0.5,
   liquid: 0.6,
   regen: 1,
+  stunned: 1.8,
 };
 
 /** Delivery premium: a beam resolves instantly along its line (no travel to dodge, no ground hits). */

@@ -443,6 +443,7 @@ Weather and terrain moves are learnable only by Genemon whose primary or seconda
 | `burrowed` | - | burrow | 1 |
 | `liquid` | - | meltForm | 1 |
 | `regen` | - | sapMend, overgrowth | 2 |
+| `stunned` | - | - | 0 |
 <!-- /GEN:statuses -->
 
 **Expand.** `STATUS_IDS` + at least one move that applies it + engine semantics + its weight in `moveCostBreakdown` (9 x chance x duration / 3, x1.2 on self).
