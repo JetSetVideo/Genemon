@@ -7,7 +7,8 @@
  *   population the MEAN factor per part is ~1: the body reshapes power, never adds it [SPEC B1].
  * - `learnCheck`: limited learnsets with human-readable refusal reasons (level, element, size,
  *   energy, missing body part, ability).
- * - `buildKit`: League-style kit [Q basic, W control, E mobility, R ultimate].
+ * - `buildKit`: League-style kit [Q basic, W control, E mobility, R ultimate]; a support psyche gives
+ *   E (or W) to a weather call, terraform, heal or buff (`utilityValue`) [P4-M4].
  * - `counterValue` / `interrupts`: how well one move answers the enemy's current move and phase.
  * - `phaseLaw` / `retimed`: the timing law (defined in ./movesKit.ts, re-exported here).
  */
@@ -99,6 +100,9 @@ function hasSpecialEffect(m: Move): boolean {
 // ------------------------------------------------------------------ body factor [P4-M2]
 
 const BAND_LO = 0.7, BAND_HI = 1.35;
+/** Aura power per unit of element affinity. Own-element affinity is ~0.4, so 0.6 gave every aura move
+ * a ~+25 % premium over claws / jaw / mouth and Q became one aura projectile per element. */
+const AURA_SLOPE = 0.4;
 /** 1 + slope x (x - population mean), clamped to the band. */
 const lin = (x: number, mean: number, slope: number) => clamp(1 + slope * (x - mean), BAND_LO, BAND_HI);
 /** Population reference mass (kg, geometric mean per class, 400 random level-35 Genemon). */
@@ -121,7 +125,7 @@ export function bodyFactor(m: Move, ph: Phenotype, helix?: MorphHelix): number {
     case "eyes":
       return helix ? lin(helix.eyes.size, 0.285, 1.6) : lin(p.eyes, 0.5, 0.6);
     case "aura":
-      return m.element === "neutral" ? 1 : lin(ph.elements.affinity[m.element], 0, 0.6);
+      return m.element === "neutral" ? 1 : lin(ph.elements.affinity[m.element], 0, AURA_SLOPE);
     case "mass": {
       const r = Math.pow(ph.massKg / MASS_REF[ph.sizeClass], 0.25) * Math.pow(ph.heightM / HEIGHT_REF[ph.sizeClass], 0.1);
       return clamp(r, BAND_LO, BAND_HI);
@@ -192,6 +196,9 @@ export function learnCheck(m: Move, ph: Phenotype, helix?: MorphHelix): { ok: bo
 
 const CC_WEIGHT: Partial<Record<StatusId, number>> = { stunned: 1.5, frozen: 1.4, paralyzed: 0.8, staggered: 0.7, feared: 0.8, slowed: 0.3 };
 
+/** Seconds of dead time between two moves (cooldown + re-positioning) charged to every Q cast. */
+const Q_OVERHEAD = 0.35;
+
 /** Score a utility move needs (x the creature's support psyche) to take a kit slot. */
 export const UTILITY_BAR = 0.62;
 
@@ -226,9 +233,11 @@ export function utilityValue(m: Move, ph: Phenotype): number {
 
 /**
  * Four move ids ordered [Q basic, W control, E mobility, R ultimate], each slot taken by the best
- * learnable move (score = STAB x bodyFactor x range fit x slot value, +-2 % seeded tiebreak).
+ * learnable move (score = STAB x bodyFactor x range fit x slot value, +-6 % seeded individual taste).
  * Fallbacks: R -> best tier-2 damaging move; W -> best status-applying move; E -> a damaging move of
  * the other range class than Q. Then any learnable damaging move, then anything learnable.
+ * Utility rule [P4-M4]: a support psyche (wisdom, weatherShaper) trades E (W for a flyer whose E is its
+ * flight) for its best weather call / terraform / heal / buff when `utilityValue x support >= UTILITY_BAR`.
  */
 export function buildKit(ph: Phenotype, seed: string, helix?: MorphHelix, pool: readonly Move[] = ALL_MOVES): string[] {
   const learn = pool.filter((m) => learnCheck(m, ph, helix).ok);
@@ -237,18 +246,20 @@ export function buildKit(ph: Phenotype, seed: string, helix?: MorphHelix, pool: 
   const el = (m: Move) =>
     m.element === primary ? 1.25 : m.element === secondary ? 1.05 + 0.15 * secondaryLevel : m.element === "neutral" ? 0.95 : 0.85 + 0.3 * Math.max(0, affinity[m.element]);
   const isClose = (m: Move) => m.shape === "melee" || m.shape === "dash" || m.shape === "burst" || m.shape === "dig" || m.shape === "cone";
-  const fit = (m: Move) => (m.shape === "cone" ? 0.9 + 0.2 * (1 - far) : isClose(m) ? 0.8 + 0.4 * (1 - far) : 0.8 + 0.4 * far);
-  const jitter = (m: Move) => 1 + 0.04 * (new Rng(hashSeed(seed, "kit", m.id)).next() - 0.5);
+  const fit = (m: Move) => (m.shape === "cone" ? 0.9 + 0.2 * (1 - far) : isClose(m) ? 0.75 + 0.5 * (1 - far) : 0.75 + 0.5 * far);
+  // +-6 % individual taste: two creatures of one element and build do not always pick the same kit.
+  const jitter = (m: Move) => 1 + 0.12 * (new Rng(hashSeed(seed, "kit", m.id)).next() - 0.5);
   const base = (m: Move) => el(m) * bodyFactor(m, ph, helix) * fit(m) * jitter(m);
   const fx = (m: Move) => m.effects.reduce((s, e) => s + (e.kind === "status" && !e.self ? (e.chance ?? 1) * (e.duration ?? 3) / 3 : 0), 0);
   const cc = (m: Move) =>
     m.effects.reduce((s, e) => s + (e.kind === "status" && !e.self && e.status ? (CC_WEIGHT[e.status] ?? 0.2) * (e.chance ?? 1) * (e.duration ?? 3) : 0), 0);
   const cycle = (m: Move) => m.charge + m.active + m.rest;
   // Q is the reliable bread-and-butter hit: damage per second of its cycle. Under the phase law that
-  // rate is nearly flat in power, so area (only a placed zone or a cone, never a self-centred burst)
-  // and the status rider are small multipliers, not additive bonuses that made weak status bursts win.
-  const spread = (m: Move) => (m.shape === "zone" || m.shape === "cone" ? 0.06 * Math.min(3, m.area) : 0);
-  const sQ = (m: Move) => base(m) * m.power * (1 + spread(m)) * (1 + 0.2 * fx(m)) / Math.max(0.5, cycle(m));
+  // rate is nearly flat in power, so the status rider is a small multiplier, not an additive bonus
+  // (that made weak status zones and bursts every element's Q, and the zone-Q elements lost). The
+  // ~0.35 s between two moves (cooldown, turning, closing in) is paid by every cast, so very light
+  // fast moves are worth a little less than their raw rate.
+  const sQ = (m: Move) => base(m) * m.power * (1 + 0.1 * fx(m)) / (cycle(m) + Q_OVERHEAD);
   // W is the stun slot: a move that can interrupt a charge is preferred over a long fear or slow.
   const sW = (m: Move) => base(m) * (cc(m) + m.power / 100 + (interrupts(m) ? 0.6 : 0));
   const sE = (m: Move) => base(m) * (m.shape === "dash" ? 0.3 + m.power / 60 : m.shape === "fly" ? 0.95 : 0.8 + m.power / 100);

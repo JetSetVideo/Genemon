@@ -1,7 +1,7 @@
 // Pass-4 move kit [P4-M1..M7]: categories, body-part power, limited learnsets, phase law, counters,
 // the League-style 4-slot kit builder and the ~47 kit moves.
 import { assert, assertEquals } from "./_assert.ts";
-import { MOVE_BY_ID, MOVES, moveCost, type BodyPart, type Move } from "../src/combat/moves.ts";
+import { isDamaging, MOVE_BY_ID, MOVES, moveCost, type BodyPart, type Move } from "../src/combat/moves.ts";
 import {
   ALL_MOVE_BY_ID,
   ALL_MOVES,
@@ -17,7 +17,9 @@ import {
   phaseLaw,
   retimed,
   slotOf,
+  utilityValue,
 } from "../src/combat/kit.ts";
+import { hashSeed } from "../src/core/rng.ts";
 import { createGenemon, phenotypeOf } from "../src/genome/genemon.ts";
 import type { Phenotype } from "../src/genome/phenotype.ts";
 import { ANIM_CHANNELS, type MorphHelix } from "../src/genome/morphTypes.ts";
@@ -108,9 +110,74 @@ Deno.test("[SPEC M5] kit rows follow the law within 15 %; retimed keeps the move
     for (const k of ["charge", "active", "rest"] as const) assert(Math.abs(x[k] - t[k]) <= 0.15 * t[k], `${x.id}.${k} ${x[k]} vs law ${t[k]}`);
   }
   const r = retimed(K("solarBeam"));
-  assertEquals([r.id, r.power, r.effects.length, r.shape], ["solarBeam", 95, 0, "beam"]);
-  assertEquals(r.charge, phaseLaw(95, 0, 0).charge);
+  assertEquals([r.id, r.power, r.effects.length, r.shape], ["solarBeam", 140, 0, "beam"]);
+  assertEquals(r.charge, phaseLaw(140, 0, 0).charge);
   assert(retimed(K("rest")) === K("rest"), "utility moves are not retimed");
+});
+
+Deno.test("[SPEC M5] legacy damaging rows are re-timed by the law at the source; dig, terrain and utility keep theirs", () => {
+  let lawed = 0;
+  for (const m of MOVES) {
+    const t = phaseLaw(m.power, m.area, m.effects.length);
+    const onLaw = m.charge === t.charge && m.active === t.active && m.rest === t.rest;
+    const exempt = !isDamaging(m) || m.shape === "dig" || m.shape === "terrain";
+    if (!exempt) {
+      assert(onLaw, `${m.id} is damaging but off the law: ${m.charge}/${m.active}/${m.rest} vs ${JSON.stringify(t)}`);
+      lawed++;
+    }
+  }
+  assert(lawed >= 55, `only ${lawed} legacy rows re-timed`);
+  assertEquals(MOVE_BY_ID.burrow.active, 2.2, "the dig keeps its time underground");
+  assertEquals(MOVE_BY_ID.rainCall.charge, 1.4, "a weather call keeps its hand timing");
+  // Photon Dart was faster than the law for its power (12.8 % of all casts): no longer.
+  assert(MOVE_BY_ID.photonDart.charge >= phaseLaw(46).charge, "photonDart on the law");
+});
+
+Deno.test("[SPEC M4] a zone's lingering field re-applies a SOFT status, never a stun / freeze / stagger lock", () => {
+  // battle.ts spawnZone re-applies the move's FIRST target status to everyone inside the field.
+  const HARD = new Set(["stunned", "frozen", "staggered"]);
+  for (const m of ALL_MOVES.filter((x) => x.shape === "zone")) {
+    const first = m.effects.find((e) => e.kind === "status" && !e.self && e.status);
+    assert(!first || !HARD.has(first.status!), `${m.id}: field would lock with ${first?.status}`);
+  }
+  // FALSIFIER: the rule catches a stun-first zone.
+  const lock: Move = { ...K("whirlpool"), effects: [...K("whirlpool").effects].reverse() };
+  assert(HARD.has(lock.effects.find((e) => e.kind === "status" && !e.self)!.status!), "reversed whirlpool must lead with its stun");
+});
+
+Deno.test("[SPEC M4] utility slot: weather / terrain / heal / buff moves are learned again, weather by its element", () => {
+  const n = 4000;
+  const learned = new Map<string, number>();
+  let utilityKits = 0, withControl = 0;
+  for (let i = 0; i < n; i++) {
+    const ph = phenotypeOf(createGenemon({ seed: hashSeed("kit-utility", i), level: 15 + (i % 20) }));
+    const kit = buildKit(ph, `u-${i}`);
+    assertEquals(kit.length, 4);
+    if (kit.some((id) => slotOf(K(id)) === "utility")) utilityKits++;
+    if (slotOf(K(kit[1])) === "control") withControl++;
+    for (const id of kit) {
+      learned.set(id, (learned.get(id) ?? 0) + 1);
+      const m = K(id);
+      if (m.shape === "weather") {
+        assert(ph.abilities.weatherShaper, `${id} learned without weatherShaper`);
+        assert(utilityValue(m, ph) > 0, `${id} does not raise ${ph.elements.primary}/${ph.elements.secondary}`);
+      }
+    }
+  }
+  const weather = ALL_MOVES.filter((m) => m.shape === "weather");
+  assert(weather.length >= 9, "weather calls");
+  for (const m of weather) assert((learned.get(m.id) ?? 0) > 0, `${m.id} never learned in ${n} kits`);
+  const share = learned.size / ALL_MOVES.length;
+  assert(share >= 0.85, `only ${learned.size}/${ALL_MOVES.length} moves learned`);
+  // A support slot is common but not the rule: W stays control for most creatures.
+  assert(utilityKits >= 0.08 * n && utilityKits <= 0.5 * n, `utility kits ${utilityKits}/${n}`);
+  assert(withControl >= 0.9 * n, `control ${withControl}/${n}`);
+  // utilityValue: Rain helps water, not fire; a buff and a heal are worth something.
+  const ph = phenotypeOf(createGenemon({ seed: 1, level: 30 }));
+  const water = { ...ph, elements: { ...ph.elements, primary: "water" as const, secondary: null } };
+  const fire = { ...ph, elements: { ...ph.elements, primary: "fire" as const, secondary: null } };
+  assert(utilityValue(K("rainCall"), water) > 0.9 && utilityValue(K("rainCall"), fire) === 0, "rain for water only");
+  assert(utilityValue(K("rest"), ph) > 0 && utilityValue(K("tailwind"), ph) > 0);
 });
 
 Deno.test("[SPEC M2] bodyFactor stays in [0.7, 1.35] and averages ~1 per body part over 400 Genemon", () => {

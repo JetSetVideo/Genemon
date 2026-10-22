@@ -1,5 +1,5 @@
 /**
- * Pass-4 move kit [P4-M1, P4-M2, P4-M5, P4-M7]: ~47 new moves, each one bound to a CATEGORY
+ * Pass-4 move kit [P4-M1, P4-M2, P4-M5, P4-M7]: ~59 new moves, each one bound to a CATEGORY
  * (physical / special / status), a BODY PART (its power follows that part's genes, see
  * `bodyFactor` in ./kit.ts) and a League-style SLOT (Q basic, W control, E mobility, R ultimate).
  *
@@ -82,7 +82,7 @@ export const KIT_MOVES: readonly Move[] = [
 
   // ------------------------------------------------ dashes (E, physical, range = dash distance)
   dash("quickDash", "Quick Dash", "neutral", 30, 7, 18, []),
-  dash("flameDash", "Flame Dash", "fire", 48, 8, 16, [st("burn", 0.25, 3)]),
+  dash("flameDash", "Flame Dash", "fire", 52, 8, 16, [st("burn", 0.35, 3)]),
   dash("aquaJet", "Aqua Jet", "water", 44, 8, 20, [st("wet", 0.5, 4)]),
   dash("voltRush", "Volt Rush", "electric", 46, 9, 24, [st("paralyzed", 0.2, 1.5)]),
   dash("galeDash", "Gale Dash", "air", 42, 10, 22, [kb(2)]),
@@ -90,32 +90,51 @@ export const KIT_MOVES: readonly Move[] = [
   dash("shadowStep", "Shadow Step", "shadow", 46, 9, 30, [st("evasive", 1, 1.5, true)], 2, "legs", ["highCrit"]),
   dash("hornCharge", "Horn Charge", "neutral", 54, 8, 15, [kb(4), st("stunned", 0.3, 1)], 2, "horns"),
   dash("rollingCharge", "Rolling Charge", "neutral", 56, 9, 13, [kb(5), st("staggered", 0.3, 1)], 2, "mass", ["massScaled"]),
+  // Every element owns a dash, so E is not a neutral move by default (neutral is resisted by earth,
+  // metal and void, which made those three win on defence alone).
+  dash("thornRush", "Thorn Rush", "plant", 44, 8, 16, [st("slowed", 0.3, 2)]),
+  dash("steelCharge", "Steel Charge", "metal", 40, 8, 15, [kb(4)], 1, "mass"),
+  dash("venomLunge", "Venom Lunge", "poison", 42, 8, 20, [st("poisoned", 0.6, 4)], 1, "jaw"),
+  dash("flashStep", "Flash Step", "light", 42, 10, 32, [st("blinded", 0.3, 1.5)]),
+  dash("psiBlink", "Psi Blink", "psychic", 40, 9, 30, [st("confused", 0.25, 2)]),
+  dash("riftDash", "Rift Dash", "void", 44, 9, 28, [st("softened", 0.3, 3)]),
 
   // ------------------------------------------------ control (W): stuns, binds, fear [P4-M6]
+  // A ZONE keeps re-applying its FIRST target status to whoever stands in it (battle.ts spawnZone), so
+  // a zone lists a soft status (slowed, wet, softened) first and its stun / freeze second: the cast can
+  // interrupt, the lingering field cannot stun-lock (measured: frost / stun fields carried ice, water
+  // and void to 60-70 % on their own).
   km("thunderClap", "Thunder Clap", "electric", "burst", 36, 0.97, 0, 3, 0, [st("stunned", 0.55, 1)], 2, S("aura", "control")),
   km("headbutt", "Headbutt", "neutral", "melee", 45, 0.93, 0, 0, 0, [st("stunned", 0.5, 0.8)], 1, P("mass", "control")),
-  km("shieldBash", "Shield Bash", "metal", "melee", 42, 0.94, 0, 0, 0, [st("stunned", 0.5, 1), kb(2)], 1, P("mass", "control")),
+  km("shieldBash", "Shield Bash", "metal", "melee", 40, 0.86, 0, 0, 0, [st("stunned", 0.5, 0.9), kb(2)], 1, P("mass", "control")),
   km("tailSweep", "Tail Sweep", "neutral", "burst", 38, 0.96, 0, 2, 0, [st("stunned", 0.45, 0.9), kb(2)], 1, P("tail", "control")),
   km("petrifyGaze", "Petrify Gaze", "earth", "beam", 30, 0.92, 11, 0, 0, [st("stunned", 0.55, 1.2)], 2, S("eyes", "control")),
-  km("frostBind", "Frost Bind", "ice", "zone", 30, 0.95, 10, 1.8, 14, [st("frozen", 0.55, 1.2)], 2, S("aura", "control")),
-  km("vineSnare", "Vine Snare", "plant", "zone", 28, 0.95, 10, 1.8, 14, [st("slowed", 0.8, 3), st("stunned", 0.5, 0.8)], 2, S("aura", "control")),
-  km("mindLock", "Mind Lock", "psychic", "beam", 25, 0.95, 11, 0, 0, [st("stunned", 0.55, 1.2)], 2, S("eyes", "control")),
+  km("frostBind", "Frost Bind", "ice", "zone", 30, 0.95, 10, 1.8, 14, [st("slowed", 0.6, 2), st("frozen", 0.55, 1.2)], 2, S("aura", "control")),
+  km("vineSnare", "Vine Snare", "plant", "zone", 32, 0.95, 10, 1.8, 14, [st("slowed", 0.8, 3), st("stunned", 0.5, 0.8)], 2, S("aura", "control")),
+  km("mindLock", "Mind Lock", "psychic", "beam", 25, 0.9, 11, 0, 0, [st("stunned", 0.55, 1.2)], 2, S("eyes", "control")),
   km("dreadHowl", "Dread Howl", "shadow", "burst", 25, 1, 0, 4, 0, [st("feared", 0.7, 3), st("stunned", 0.3, 0.8)], 2, S("mouth", "control")),
+  // Every element owns a W, so control is not a neutral Headbutt by default.
+  km("flareBurst", "Flare Burst", "fire", "burst", 34, 0.97, 0, 2.5, 0, [st("stunned", 0.5, 0.8), st("burn", 0.3, 3)], 2, S("aura", "control")),
+  km("whirlpool", "Whirlpool", "water", "zone", 30, 0.95, 10, 1.8, 14, [st("wet", 0.6, 4), st("stunned", 0.5, 0.8)], 2, S("aura", "control")),
+  km("downdraft", "Downdraft", "air", "zone", 30, 0.95, 11, 1.8, 18, [st("slowed", 0.5, 2), st("stunned", 0.5, 0.8), kb(3)], 2, S("aura", "control")),
+  km("nerveSpit", "Nerve Spit", "poison", "projectile", 36, 0.97, 10, 0, 18, [st("stunned", 0.5, 0.8), st("poisoned", 0.6, 4)], 1, S("mouth", "control")),
+  km("blindingFlash", "Blinding Flash", "light", "burst", 32, 1, 0, 3, 0, [st("stunned", 0.5, 0.8), st("blinded", 0.5, 2)], 2, S("eyes", "control")),
+  km("voidGrip", "Void Grip", "void", "zone", 30, 0.93, 11, 1.6, 0, [st("softened", 0.4, 3), st("stunned", 0.5, 0.8), pull(4)], 2, S("aura", "control")),
 
   // ------------------------------------------------ ultimates (R, tier 3, very long phases) [P4-M5]
   ult("meteor", "Meteor", "fire", "zone", 150, 0.9, 13, 2.4, 10, [st("burn", 0.6, 4), kb(4)], "special", "aura"),
   ult("tsunami", "Tsunami", "water", "zone", 135, 0.92, 12, 2.6, 0, [st("wet", 1, 6), kb(7)], "special", "aura"),
   ult("worldTree", "World Tree", "plant", "zone", 120, 0.95, 10, 2.6, 0, [st("slowed", 0.5, 3), st("regen", 1, 6, true)], "special", "aura"),
   ult("earthshatter", "Earthshatter", "earth", "burst", 150, 0.95, 0, 3.6, 0, [st("staggered", 0.6, 1.4)], "physical", "legs", ["ground"]),
-  ult("hurricane", "Hurricane", "air", "zone", 130, 0.9, 12, 2.6, 0, [kb(6), st("staggered", 0.4, 1)], "special", "aura"),
+  ult("hurricane", "Hurricane", "air", "zone", 130, 0.9, 12, 2.6, 0, [kb(6), st("slowed", 0.5, 2), st("staggered", 0.4, 1)], "special", "aura"),
   ult("stormLance", "Storm Lance", "electric", "beam", 145, 0.88, 16, 0, 0, [st("paralyzed", 0.5, 2)], "special", "aura"),
-  ult("avalanche", "Avalanche", "ice", "zone", 140, 0.9, 12, 2.4, 0, [st("frozen", 0.4, 1.6), st("slowed", 0.5, 3)], "special", "aura"),
+  ult("avalanche", "Avalanche", "ice", "zone", 140, 0.9, 12, 2.4, 0, [st("slowed", 0.5, 3), st("frozen", 0.4, 1.6)], "special", "aura"),
   ult("ironMaiden", "Iron Maiden", "metal", "burst", 130, 0.95, 0, 2.6, 0, [st("staggered", 0.5, 1.2), st("shielded", 1, 4, true)], "special", "aura"),
   ult("plague", "Plague", "poison", "zone", 125, 0.92, 11, 2.6, 0, [st("poisoned", 1, 6), st("softened", 0.4, 4)], "special", "aura"),
   ult("supernova", "Supernova", "light", "burst", 155, 0.95, 0, 3.6, 0, [st("blinded", 0.7, 3)], "special", "aura"),
   ult("eclipseFall", "Eclipse Fall", "shadow", "zone", 140, 0.9, 13, 2.4, 0, [st("feared", 0.5, 3)], "special", "aura"),
   ult("mindCrush", "Mind Crush", "psychic", "beam", 140, 0.9, 15, 0, 0, [st("confused", 0.5, 3), st("stunned", 0.3, 1)], "special", "eyes"),
-  ult("blackHole", "Black Hole", "void", "zone", 135, 0.9, 12, 2.6, 0, [pull(8), st("staggered", 0.4, 1)], "special", "aura"),
+  ult("blackHole", "Black Hole", "void", "zone", 135, 0.9, 12, 2.6, 0, [pull(8), st("slowed", 0.5, 2), st("staggered", 0.4, 1)], "special", "aura"),
   ult("titanSlam", "Titan Slam", "neutral", "burst", 160, 0.92, 0, 3, 0, [st("stunned", 0.4, 1.2), kb(6)], "physical", "mass", ["massScaled", "ground"]),
 ];
 

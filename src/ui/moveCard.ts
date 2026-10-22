@@ -6,6 +6,7 @@
  */
 import { ELEMENTS } from "../data/elements.ts";
 import { type KitSlot, type Move, type MoveCategory, type MoveEffect, moveCost } from "../combat/moves.ts";
+import { slotOf } from "../combat/kit.ts";
 import { h, hex } from "./dom.ts";
 import { elChip } from "./widgets.ts";
 
@@ -98,7 +99,8 @@ export function moveCard(m: Move, o: MoveCardOptions = {}): HTMLElement {
       elChip(m.element),
       h("span", { class: "mcard-tag" }, cat),
       part ? h("span", { class: "mcard-tag", title: "body part that delivers the move" }, part) : null,
-      key ? h("span", { class: "mcard-tag" }, SLOT_LABEL[key]) : null,
+      // The slot's role, or the move's own when a support took the slot (a weather call in E reads "utility").
+      key ? h("span", { class: "mcard-tag" }, slotOf(m) === "utility" ? "utility" : SLOT_LABEL[key]) : null,
       h("span", { class: "mcard-tag muted" }, m.shape)),
     h("div", { class: "mcard-stats" },
       h("span", { class: "mcard-pow", title: "power" }, m.power > 0 ? `⚡ ${m.power}` : "—"),

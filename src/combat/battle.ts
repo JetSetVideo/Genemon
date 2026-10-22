@@ -250,7 +250,7 @@ const REACTION_ZONE: Partial<Record<ReactionId, { frac: number; status: StatusId
  * actions per fighter. Tuned for a ~25 s median battle; measured by tools/balance.ts (corpus
  * duration) and tools/scenarios.ts (SC-06).
  */
-export const PACE = 0.5;
+export const PACE = 0.41;
 /** Extra distance a melee strike covers on its active phase (the lunge), metres. */
 export const MELEE_LUNGE = 0.9;
 /** Every heal a fighter casts in one battle restores HEAL_DECAY x the previous one (0.3, 0.18, 0.11 ...). */
