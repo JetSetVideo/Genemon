@@ -28,6 +28,11 @@ interface Focus {
 export class BattleCamera {
   mode: CameraMode = "auto";
   shakeScale = 1;
+  /** Director pace (cut frequency multiplier), base field of view, follow target, current subjects [P4-U3]. */
+  pace = 1;
+  baseFov = 48;
+  followIdx: number | null = null;
+  subjectIdx: number[] = [];
   private pos = new THREE.Vector3(0, 12, 26);
   private look = new THREE.Vector3();
   private side = 1;
@@ -76,7 +81,7 @@ export class BattleCamera {
     }
     if (!best || !best.move) return null;
     const left = Math.max(0, best.phaseDur - best.phaseT) + best.move.active + best.move.rest * 0.5;
-    return { a: best.idx, t: best.target, until: this.t + Math.max(1.4, left) };
+    return { a: best.idx, t: best.target, until: this.t + Math.max(1.4, left) / this.pace };
   }
 
   private occluded(b: Battle, p: THREE.Vector3): boolean {
@@ -99,6 +104,7 @@ export class BattleCamera {
     // Subjects: the action pair in AUTO when something is happening, otherwise everyone.
     this.focus = this.mode === "auto" ? this.chooseFocus(b) : null;
     const subjects = this.focus ? [b.fighters[this.focus.a], b.fighters[this.focus.t]] : alive;
+    this.subjectIdx = subjects.map((f) => f.idx);
     const pts: { p: THREE.Vector3; r: number; w: number }[] = subjects.map((f) => {
       const ds = displayScale(f.ph.heightM);
       return { p: at(f), r: Math.max(f.body.radius * ds, f.ph.heightM * ds * 0.6), w: 1 };
@@ -151,7 +157,7 @@ export class BattleCamera {
         dirH.applyAxisAngle(UP, 0.6);
         break;
       case "follow": {
-        const lead = alive.find((f) => f.team === 0) ?? alive[0];
+        const lead = (this.followIdx !== null ? alive.find((f) => f.idx === this.followIdx) : undefined) ?? alive.find((f) => f.team === 0) ?? alive[0];
         dirH = new THREE.Vector3(-Math.sin(lead.body.yaw), 0, -Math.cos(lead.body.yaw));
         elev = 0.32;
         center.lerp(new THREE.Vector3(lead.body.pos.x, lead.body.pos.y + lead.ph.heightM, lead.body.pos.z), 0.5);
@@ -159,7 +165,7 @@ export class BattleCamera {
       }
     }
     // Anticipation: a big charge narrows the lens on the attacker.
-    let fov = 48;
+    let fov = this.baseFov;
     if (this.focus) {
       const A = b.fighters[this.focus.a];
       if (A.phase === "charge" && A.move && A.move.power >= 70 && A.phaseT / Math.max(0.01, A.phaseDur) > 0.45) fov -= 5;

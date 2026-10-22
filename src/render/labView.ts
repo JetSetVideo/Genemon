@@ -7,6 +7,7 @@ import * as THREE from "../lib/three.ts";
 import { balanceOf, buildSkeleton, forwardKinematics, type Skeleton } from "../body/skeleton.ts";
 import type { Genemon } from "../genome/genemon.ts";
 import { phenotypeOf } from "../genome/genemon.ts";
+import { helixOf } from "../genome/helix.ts";
 import type { Move } from "../combat/moves.ts";
 import { ALL_MOVE_BY_ID as MOVE_BY_ID } from "../combat/kit.ts";
 import { hashSeed } from "../core/rng.ts";
@@ -66,8 +67,9 @@ export class LabView implements View {
     this.creature?.dispose();
     const ph = phenotypeOf(g);
     this.sk = buildSkeleton(ph);
-    this.creature = new CreatureView(ph, this.sk, hashSeed(g.genome.id, "skin"), { quality: "high", shadows: true });
-    this.animator = new Animator(this.sk, ph);
+    const helix = helixOf(g.genome, ph);
+    this.creature = new CreatureView(ph, this.sk, hashSeed(g.genome.id, "skin"), { quality: "high", shadows: true, helix });
+    this.animator = new Animator(this.sk, ph, helix);
     this.group.add(this.creature.root);
     this.frame(0.6, 0.3);
   }
@@ -126,7 +128,8 @@ export class LabView implements View {
       move: phase === "idle" ? null : m,
       speed: 0,
       maxSpeed: ph.stats.spd,
-      flying: false,
+      // Fliers spend every other demo cycle in the air so the wing beats can be inspected [P4-V3].
+      flying: ph.abilities.fly && Math.floor(this.demoT / total) % 2 === 1,
       burrowed: false,
       frozen: false,
       koT: 0,
@@ -145,6 +148,7 @@ export class LabView implements View {
     this.creature.pivot.position.y = out.lift;
     this.creature.setCharge(out.charge * (m ? Math.min(1.3, m.power / 60) : 0), m ? ELEMENTS[m.element].color : undefined);
     this.creature.setPupils(ph.psyche.emotions.fear, ph.psyche.emotions.anger);
+    this.creature.tick(dt);
     if (this.autoRotate) this.creature.root.rotation.y += dt * 0.25;
     this.stability = out.stability;
     this.strain = out.strain;

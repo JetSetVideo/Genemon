@@ -4,6 +4,7 @@
  */
 import * as THREE from "../lib/three.ts";
 import { OrbitControls } from "../lib/orbit.ts";
+import { PostFX, type PostSettings } from "./post.ts";
 
 export interface View {
   update(dt: number, t: number): void;
@@ -55,8 +56,26 @@ export class Stage {
     this.renderer.setAnimationLoop(() => this.frame());
   }
 
+  /** Post-processing (depth of field, bloom, vignette) [P4-V1]; null = plain render. */
+  post: PostFX | null = null;
+
+  setPost(s: PostSettings | null): void {
+    if (!s || !s.enabled) {
+      this.post?.dispose();
+      this.post = null;
+      return;
+    }
+    if (this.post) this.post.apply(s);
+    else {
+      this.post = new PostFX(this.renderer, this.scene, this.camera, s);
+      this.resize();
+    }
+  }
+
   applyQuality(q: Quality): void {
+    const pr0 = this.renderer.getPixelRatio();
     this.renderer.setPixelRatio(Math.min(globalThis.devicePixelRatio || 1, q.pixelRatio));
+    if (this.post && this.renderer.getPixelRatio() !== pr0) this.resize();
     this.renderer.shadowMap.enabled = q.shadows;
   }
 
@@ -66,6 +85,7 @@ export class Stage {
     this.renderer.setSize(w, h, false);
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
+    this.post?.setSize(w, h, this.renderer.getPixelRatio());
   }
 
   setView(v: View | null): void {
@@ -89,7 +109,8 @@ export class Stage {
     this.t += dt;
     if (this.controls.enabled) this.controls.update();
     this.view?.update(dt, this.t);
-    this.renderer.render(this.scene, this.camera);
+    if (this.post) this.post.render(raw);
+    else this.renderer.render(this.scene, this.camera);
     this.frameMs = performance.now() - t0;
     this.frames++;
     this.fpsT += raw;

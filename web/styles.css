@@ -392,3 +392,27 @@ details.glass > .body { padding: 0 12px 12px; }
 .mcard.locked { opacity: 0.72; }
 .mcard.locked .mcard-name { color: var(--text-3); }
 .mcard-lock { display: flex; flex-direction: column; gap: 2px; padding: 6px 8px; border-radius: 8px; font-size: 11px; color: var(--bad); background: color-mix(in srgb, var(--bad) 10%, transparent); border: 1px solid color-mix(in srgb, var(--bad) 40%, transparent); }
+
+/* Camera menu [P4-U3] - one collapsible glass panel (src/ui/cameraPanel.ts) */
+.campanel { pointer-events: auto; width: min(300px, calc(100vw - 20px)); max-height: min(70vh, 560px); overflow: hidden auto; border-radius: 14px; border: 1px solid color-mix(in srgb, var(--text) 14%, transparent); background: color-mix(in srgb, var(--hud) 82%, transparent); backdrop-filter: blur(14px) saturate(1.4); -webkit-backdrop-filter: blur(14px) saturate(1.4); box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28), inset 0 1px 0 color-mix(in srgb, #fff 10%, transparent); color: var(--text); font-size: 12px; }
+.campanel:not([open]) { width: auto; }
+.campanel-sum { list-style: none; cursor: pointer; padding: 7px 11px; font-weight: 600; white-space: nowrap; user-select: none; }
+.campanel-sum::-webkit-details-marker { display: none; }
+.campanel-sum::after { content: "▾"; margin-left: 6px; color: var(--text-3); }
+.campanel[open] > .campanel-sum::after { content: "▴"; }
+.campanel-sum:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 14px; }
+.campanel-mode { color: var(--accent); }
+.campanel-body { display: flex; flex-direction: column; gap: 7px; padding: 2px 11px 11px; border-top: 1px solid color-mix(in srgb, var(--text) 10%, transparent); }
+.campanel-h { margin: 6px 0 0; font-size: 10px; letter-spacing: 0.8px; text-transform: uppercase; color: var(--text-3); }
+.campanel-seg, .campanel-togs { display: flex; flex-wrap: wrap; gap: 4px; }
+.campanel-modes { display: grid; grid-template-columns: repeat(3, 1fr); padding-top: 8px; }
+.campanel-seg .btn, .campanel-togs .btn { flex: 1 1 auto; padding: 5px 7px; font-size: 11px; background: color-mix(in srgb, var(--bg-3) 70%, transparent); }
+.campanel .btn[disabled], .campanel input[disabled] { opacity: 0.45; cursor: not-allowed; }
+.campanel-kbd { margin-left: 5px; padding: 0 4px; border-radius: 4px; border: 1px solid var(--line); font: 10px var(--mono); color: var(--text-3); }
+.campanel-row { display: grid; grid-template-columns: 92px minmax(0, 1fr) 46px; align-items: center; gap: 8px; }
+.campanel-lbl { color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.campanel-val { text-align: right; color: var(--text-2); font-size: 11px; }
+.campanel-row select { grid-column: 2 / 4; min-width: 0; padding: 4px 6px; font-size: 12px; }
+.campanel-follow option { color: var(--c, var(--text)); }
+.campanel input[type="range"] { margin: 0; min-width: 0; }
+@media (max-width: 720px) { .campanel { width: min(280px, calc(100vw - 16px)); } .campanel-row { grid-template-columns: 78px minmax(0, 1fr) 40px; } .campanel-seg .btn { padding: 7px 8px; } }

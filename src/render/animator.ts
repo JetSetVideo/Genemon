@@ -13,6 +13,15 @@ import type { Move } from "../combat/moves.ts";
 import type { Phase } from "../combat/battle.ts";
 import type { Emotions, Phenotype } from "../genome/phenotype.ts";
 import { clamp } from "../core/math.ts";
+import type { AnimChannel, MorphHelix } from "../genome/morphTypes.ts";
+import { boundTrait } from "../genome/helix.ts";
+
+/**
+ * Reference amplitude of each channel in the pre-helix animator: a channel's envelope multiplies the
+ * motion by boundTrait(min gene, max gene, drive) / REF, so a creature without a helix animates exactly
+ * as before and a helix bounds every motion between its two genes [P4-V2].
+ */
+const REF: Record<AnimChannel, number> = { breath: 0.03, gait: 0.45, tail: 0.3, wingFlap: 0.85, headBob: 0.15, windup: 0.6, strike: 0.7, recoil: 0.3, squash: 0.35 };
 
 export interface AnimInput {
   dt: number;
@@ -74,7 +83,7 @@ export class Animator {
   /** Indices of ground-contact joints (feet, pods, serpent belly) for grounding. */
   private contacts: number[] = [];
 
-  constructor(readonly sk: Skeleton, readonly ph: Phenotype) {
+  constructor(readonly sk: Skeleton, readonly ph: Phenotype, readonly helix?: MorphHelix) {
     for (const j of sk.joints) this.roles.set(j.id, j.role);
     const hips = sk.joints.filter((j) => j.role === "hip" || (j.role === "shoulder" && j.chain.startsWith("leg")));
     hips.forEach((h) => {
@@ -96,6 +105,17 @@ export class Animator {
     this.segs = sk.joints.filter((j) => j.role === "segment").map((j) => j.id);
     this.pods = sk.joints.filter((j) => j.role === "pod").map((j) => j.id);
     sk.joints.forEach((j, idx) => j.contact && this.contacts.push(idx));
+  }
+
+  /** Envelope of a channel at a drive in [0, 1], relative to the legacy amplitude (1 = unchanged). */
+  env(ch: AnimChannel, drive: number): number {
+    if (!this.helix) return 1;
+    return boundTrait(this.helix.anim[ch], drive) / REF[ch];
+  }
+
+  /** Absolute wing-flap amplitude (rad) bounded by the min/max genes. */
+  flapAmp(drive: number): number {
+    return this.helix ? boundTrait(this.helix.anim.wingFlap, drive) : 0.85;
   }
 
   hit(strength: number, crit: boolean): void {
@@ -125,11 +145,12 @@ export class Animator {
 
     // Idle breathing and emotion posture.
     const br = Math.sin(i.t * (1.3 + 1.6 * arousal) * Math.PI);
-    for (const s of this.spine) add(s, br * 0.03 * (1 + arousal));
+    const eBreath = this.env("breath", clamp(0.3 + 0.5 * arousal, 0, 1));
+    for (const s of this.spine) add(s, br * 0.03 * (1 + arousal) * eBreath);
     add("neck0", -0.12 * e.joy + 0.3 * e.sadness + 0.15 * e.fear + 0.08 * e.anger);
     add("head", -0.1 * e.joy + 0.25 * e.sadness + 0.15 * e.fear, 0, Math.sin(i.t * 0.7) * 0.05 * e.surprise);
     for (const [k, t] of this.tail.entries()) {
-      const wag = Math.sin(i.t * (2 + 8 * e.joy) - k * 0.6) * (0.08 + 0.4 * e.joy);
+      const wag = Math.sin(i.t * (2 + 8 * e.joy) - k * 0.6) * (0.08 + 0.4 * e.joy) * this.env("tail", clamp(0.3 + 0.6 * e.joy, 0, 1));
       add(t, (0.35 * e.fear - 0.25 * e.anger - 0.1) / (k + 1), wag);
     }
     for (const lg of this.legs) add(lg.knee, 0.18 * e.fear + 0.1 * (1 - i.hp01));
@@ -143,9 +164,12 @@ export class Animator {
     const sp = clamp(i.speed / Math.max(0.5, i.maxSpeed), 0, 1.6);
     if (i.flying) {
       this.flap += i.dt * (2.2 + 2.5 * sp) * Math.PI * 2 / Math.sqrt(Math.max(0.5, H));
+      // Wing beats bounded by the wingFlap min/max genes: effort (speed, arousal, energy) drives them.
+      const flap = this.flapAmp(clamp(0.35 + 0.4 * sp + 0.2 * arousal, 0, 1) * (0.7 + 0.3 * i.energy01));
       for (const j of this.sk.joints) {
-        if (j.role === "wingRoot") add(j.id, 0, 0, j.side * Math.sin(this.flap) * 0.85 * amp);
-        if (j.role === "wingMid") add(j.id, 0, 0, j.side * Math.sin(this.flap - 0.6) * 0.5 * amp);
+        if (j.role === "wingRoot") add(j.id, 0, 0, j.side * Math.sin(this.flap) * flap);
+        if (j.role === "wingMid") add(j.id, 0, 0, j.side * Math.sin(this.flap - 0.6) * flap * 0.62);
+        if (j.role === "wingTip") add(j.id, 0, 0, j.side * Math.sin(this.flap - 1.1) * flap * 0.4);
       }
       for (const lg of this.legs) add(lg.hip, 0.7), add(lg.knee, 0.9);
       for (const t of this.tail) add(t, -0.1);
@@ -153,7 +177,7 @@ export class Animator {
       for (const s of this.spine) add(s, 0.2);
     } else {
       this.gait += i.dt * (i.speed / Math.max(0.2, legLen * 1.6)) * Math.PI * 2;
-      const A = clamp(0.2 + 0.45 * sp, 0, 0.75) * amp * (i.liquid ? 0.7 : 1);
+      const A = clamp(0.2 + 0.45 * sp, 0, 0.75) * amp * (i.liquid ? 0.7 : 1) * this.env("gait", clamp(sp, 0, 1));
       if (sp > 0.05) {
         for (const lg of this.legs) {
           const ph = this.gait + lg.offset;
@@ -192,7 +216,7 @@ export class Animator {
       const selfMove = !melee && !ranged && m.shape !== "burst";
       if (i.phase === "charge") {
         charge = p;
-        const w = Math.sin((Math.PI / 2) * p) * amp * weight;
+        const w = Math.sin((Math.PI / 2) * p) * amp * weight * this.env("windup", clamp(m.power / 140, 0, 1));
         for (const s of this.spine) add(s, -0.22 * w / Math.max(1, this.spine.length / 2));
         for (const lg of this.legs) add(lg.knee, 0.35 * w), add(lg.hip, (lg.front ? 0.15 : -0.1) * w);
         if (melee) add("neck0", 0.2 * w), add("head", -0.25 * w), add("jaw", 0.25 * w);
@@ -206,7 +230,7 @@ export class Animator {
         for (const t of this.tail) add(t, -0.25 * w);
         for (const [k, s] of this.segs.entries()) add(s, 0, Math.sin(k * 1.1) * 0.25 * w);
       } else if (i.phase === "active") {
-        const s = impulse(p, m.shape === "cone" ? 0.12 : 0.25) * amp * weight;
+        const s = impulse(p, m.shape === "cone" ? 0.12 : 0.25) * amp * weight * this.env("strike", clamp(m.power / 140, 0, 1));
         charge = 1 - p;
         if (melee) {
           for (const sp2 of this.spine) add(sp2, 0.3 * s / Math.max(1, this.spine.length / 2));
@@ -243,8 +267,9 @@ export class Animator {
     // Hit reaction, stagger, KO.
     this.hitK = Math.max(0, this.hitK - i.dt * 3);
     if (this.hitK > 0) {
-      for (const s of this.spine) add(s, -0.28 * this.hitK, 0, 0.18 * this.hitK * this.hitSide);
-      add("head", -0.4 * this.hitK, 0.2 * this.hitK * this.hitSide);
+      const rk = this.hitK * this.env("recoil", clamp(this.hitK / 1.6, 0, 1));
+      for (const s of this.spine) add(s, -0.28 * rk, 0, 0.18 * rk * this.hitSide);
+      add("head", -0.4 * rk, 0.2 * rk * this.hitSide);
     }
     if (i.stagger > 0) for (const s of this.spine) add(s, 0, 0, Math.sin(i.t * 16) * 0.15);
     let roll = 0;
@@ -267,7 +292,9 @@ export class Animator {
     const k = 60, damp = 6 - 4 * this.ph.elasticity;
     this.squashV += (-k * this.squash - damp * this.squashV) * i.dt;
     this.squash += this.squashV * i.dt;
-    const sq = clamp(this.squash, -0.35, 0.35);
+    // Squash is bounded by the squash min/max genes (an elastic body deforms more) [P4-V2].
+    const sqMax = this.helix ? boundTrait(this.helix.anim.squash, this.ph.elasticity) : 0.35;
+    const sq = clamp(this.squash, -sqMax, sqMax);
     // Grounding from forward kinematics: when knees bend the BODY lowers so the feet stay planted
     // (a crouch reads as a crouch, never as legs lifting off the floor). Standing uses the contact
     // joints; a knocked-out body uses every joint so nothing sinks below the ground.

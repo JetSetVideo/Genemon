@@ -19,6 +19,8 @@ import { BattleView, SIDE_COLORS } from "../render/battleView.ts";
 import { isRated, rankedConditions } from "../ladder/ranked.ts";
 import { getLadder, recordBattle } from "./ladderStore.ts";
 import { getProgress, resetProgress } from "./progressStore.ts";
+import { CAMERA_DEFAULTS, renderCameraPanel, syncCameraPanel } from "./cameraPanel.ts";
+import { clampPost, gatePost } from "../render/post.ts";
 import { battleLoot } from "../economy/loot.ts";
 import { addItems, bagOf } from "./bagStore.ts";
 import type { CameraMode } from "../render/battleCamera.ts";
@@ -82,6 +84,7 @@ export class App {
     this.applyTheme();
     this.stage = new Stage($("#scene") as HTMLCanvasElement, { pixelRatio: this.profile.settings.pixelRatio, shadows: this.profile.settings.shadows });
     this.rw.device.gpu = this.stage.gpuInfo().renderer;
+    this.applyPost();
     this.session = new Session(this.ledger, this.rw.device);
     this.ledger.emit({
       when: Date.now(),
@@ -150,15 +153,54 @@ export class App {
     return this.profile.settings.hourMode === "real" ? this.rw.hour : this.profile.settings.hour;
   }
 
+  private camFollow: number | null = null;
+  private tweakTimer: ReturnType<typeof setTimeout> | undefined = undefined;
+  private tweakKeys = new Set<string>();
+
+  private mobile(): boolean {
+    return this.rw.device.formFactor === "mobile";
+  }
+
+  /** Post-processing from the settings, gated by quality and device (phones lose depth of field). */
+  private applyPost(): void {
+    const s = this.profile.settings;
+    this.stage.setPost(s.quality === "low" ? null : gatePost(s.post, s.quality, this.mobile()));
+    this.battleView?.setFogMultiplier(clampPost(s.post).fogDensity);
+  }
+
+  private applyCam(): void {
+    const v = this.battleView, s = this.profile.settings;
+    if (!v) return;
+    v.cam.shakeScale = s.shake;
+    v.cam.pace = s.camPace ?? CAMERA_DEFAULTS.pace;
+    v.cam.baseFov = s.camFov ?? CAMERA_DEFAULTS.fov;
+    v.speed = s.speed;
+  }
+
+  /**
+   * Slider tweaks (camera menu): applied at once, saved and logged once the slider rests, so a drag
+   * is one ledger row instead of one per input event.
+   */
+  tweakSettings(patch: Partial<Settings>): void {
+    Object.assign(this.profile.settings, patch);
+    for (const k of Object.keys(patch)) this.tweakKeys.add(k);
+    this.applyCam();
+    if ("post" in patch) this.applyPost();
+    clearTimeout(this.tweakTimer);
+    this.tweakTimer = setTimeout(() => {
+      this.save();
+      this.log("ui.settings", "settings changed", [...this.tweakKeys].join(","), "camera menu");
+      this.tweakKeys.clear();
+    }, 450);
+  }
+
   updateSettings(patch: Partial<Settings>): void {
     Object.assign(this.profile.settings, patch);
     this.save();
     this.applyTheme();
     this.stage.applyQuality({ pixelRatio: this.profile.settings.pixelRatio, shadows: this.profile.settings.shadows });
-    if (this.battleView) {
-      this.battleView.cam.shakeScale = this.profile.settings.shake;
-      this.battleView.speed = this.profile.settings.speed;
-    }
+    this.applyCam();
+    if ("post" in patch || "quality" in patch) this.applyPost();
     if (this.labView) this.labView.showSkeleton = this.profile.settings.showSkeleton;
     this.log("ui.settings", "settings changed", Object.keys(patch).join(","), JSON.stringify(patch).slice(0, 120));
     if (this.screen === "settings" || "theme" in patch) this.render();
@@ -325,7 +367,9 @@ export class App {
     this.labView = null;
     this.genoView = null;
     const s = this.profile.settings;
-    this.battleView = new BattleView(this.stage, battle, { shadows: s.shadows, quality: s.quality, shake: s.shake, speed: s.speed, camera: s.camera });
+    this.battleView = new BattleView(this.stage, battle, { shadows: s.shadows, quality: s.quality, shake: s.shake, speed: s.speed, camera: s.camera, fog: clampPost(s.post).fogDensity });
+    this.camFollow = null;
+    this.applyCam();
     this.battleView.onEvents((ev) => this.onBattleEvents(ev));
     this.stage.setView(this.battleView);
     this.lastBattle = { opts: o, seed };
@@ -564,17 +608,52 @@ export class App {
     hud.append(h("div", { class: "hud-teams" }, side(0), side(1)), h("div", { class: "hud-bottom" }, h("div", { class: "hud-feed" }), h("div", { class: "hud-meta mono" })));
   }
 
+  /** Every camera / view option in ONE collapsible glass menu (src/ui/cameraPanel.ts) [P4-U3]. */
   private buildViewTools(): void {
+    const old = document.querySelector<HTMLDetailsElement>("#view-tools .campanel");
+    const open = old ? old.open : undefined;
     const tools = clear($("#view-tools"));
-    const modes: CameraMode[] = ["auto", "orbit", "top", "side", "low", "follow"];
-    for (const m of modes) {
-      tools.append(h("button", { class: `btn small ${this.profile.settings.camera === m ? "on" : ""}`, "data-cam": m, title: `Camera: ${m}`, onclick: () => {
+    const bv = this.battleView;
+    if (!bv) return;
+    const s = this.profile.settings;
+    tools.append(renderCameraPanel({
+      mode: s.camera,
+      follow: this.camFollow,
+      pace: s.camPace ?? CAMERA_DEFAULTS.pace,
+      fov: s.camFov ?? CAMERA_DEFAULTS.fov,
+      shake: s.shake,
+      post: clampPost(s.post),
+      speed: s.speed,
+      paused: this.stage.paused,
+      compact: this.mobile(),
+      open,
+      fighters: bv.battle.fighters.map((f) => ({ idx: f.idx, name: f.name, team: f.team, color: SIDE_COLORS[f.team], ko: f.ko })),
+      onMode: (m) => {
         this.battleView?.setCameraMode(m);
         this.updateSettings({ camera: m });
-        for (const b of tools.querySelectorAll<HTMLElement>("[data-cam]")) b.classList.toggle("on", b.dataset.cam === m);
-      } }, m));
-    }
-    tools.append(h("button", { class: "btn small", title: "Pause / resume (Space)", onclick: () => this.togglePause() }, "⏯"));
+      },
+      onFollow: (i) => {
+        this.camFollow = i;
+        if (this.battleView) this.battleView.cam.followIdx = i;
+      },
+      onPace: (v) => this.tweakSettings({ camPace: v }),
+      onFov: (v) => this.tweakSettings({ camFov: v }),
+      onShake: (v) => this.tweakSettings({ shake: v }),
+      onPost: (p) => this.tweakSettings({ post: clampPost({ ...clampPost(this.profile.settings.post), ...p }) }),
+      onSpeed: (v) => this.updateSettings({ speed: v }),
+      onPause: () => this.togglePause(),
+      onReset: () => {
+        this.camFollow = null;
+        const v = this.battleView;
+        if (v) {
+          v.cam.followIdx = null;
+          v.setCameraMode(CAMERA_DEFAULTS.mode);
+        }
+        this.updateSettings({ camera: CAMERA_DEFAULTS.mode, camPace: CAMERA_DEFAULTS.pace, camFov: CAMERA_DEFAULTS.fov, shake: CAMERA_DEFAULTS.shake });
+        if (v) v.cam.snap(v.battle);
+        this.buildViewTools();
+      },
+    }));
   }
 
   /**
@@ -596,6 +675,8 @@ export class App {
   togglePause(): void {
     this.stage.paused = !this.stage.paused;
     toast(this.stage.paused ? "Paused" : "Resumed", 900);
+    const cp = document.querySelector<HTMLElement>("#view-tools .campanel");
+    if (cp) syncCameraPanel(cp, { paused: this.stage.paused });
   }
 
   private hudLoop(): void {
@@ -645,6 +726,8 @@ export class App {
       const m = (["auto", "orbit", "top", "side", "low", "follow"] as CameraMode[])[idx];
       this.battleView.setCameraMode(m);
       this.updateSettings({ camera: m });
+      const cp = document.querySelector<HTMLElement>("#view-tools .campanel");
+      if (cp) syncCameraPanel(cp, { mode: m });
     }
   }
 

@@ -17,6 +17,8 @@ import { FxDirector } from "./fx.ts";
 import type { Stage, View } from "./stage.ts";
 import { textSprite } from "./textures.ts";
 import { displayScale } from "./display.ts";
+import { helixOf } from "../genome/helix.ts";
+import { atmosphere } from "./post.ts";
 
 /** Side colours: team 0 (you) sky blue, team 1 (rival) orange - shared by the 3D markers and the HUD. */
 export const SIDE_COLORS = ["#38bdf8", "#fb923c"] as const;
@@ -36,6 +38,8 @@ export interface BattleViewOptions {
   shake: number;
   speed: number;
   camera: CameraMode;
+  /** Fog density multiplier over the weather's own fog (camera menu) [P4-V1]. */
+  fog?: number;
 }
 
 export class BattleView implements View {
@@ -58,8 +62,23 @@ export class BattleView implements View {
   /** Display scale per fighter (small bodies drawn larger; physics untouched). */
   private ds: number[] = [];
 
+  private undoFog: (() => void) | null = null;
+  private fogBase = { color: 0xcfe8ff, density: 0 };
+  fogMult = 1;
+
+  setFogMultiplier(k: number): void {
+    this.fogMult = k;
+    this.applyFog();
+  }
+
+  private applyFog(): void {
+    this.undoFog?.();
+    this.undoFog = atmosphere(this.stage.scene, { color: this.fogBase.color, density: this.fogBase.density * this.fogMult });
+  }
+
   constructor(private stage: Stage, readonly battle: Battle, o: BattleViewOptions) {
     this.speed = o.speed;
+    this.fogMult = o.fog ?? 1;
     this.arenaView = new ArenaView(battle.arena, stage.scene, o.shadows);
     this.fx = new FxDirector(stage.scene);
     this.fx.onFlash = (s, c) => stage.flash(s, c);
@@ -69,13 +88,14 @@ export class BattleView implements View {
     stage.controls.enabled = o.camera === "orbit";
     for (const f of battle.fighters) {
       const sk = buildSkeleton(f.ph);
-      const cv = new CreatureView(f.ph, sk, hashSeed(f.genemon.genome.id, "skin"), { quality: o.quality, shadows: o.shadows });
+      const helix = helixOf(f.genemon.genome, f.ph);
+      const cv = new CreatureView(f.ph, sk, hashSeed(f.genemon.genome.id, "skin"), { quality: o.quality, shadows: o.shadows, helix });
       const ds = displayScale(f.ph.heightM);
       cv.root.scale.setScalar(ds);
       this.ds.push(ds);
       stage.scene.add(cv.root);
       this.creatures.push(cv);
-      this.animators.push(new Animator(sk, f.ph));
+      this.animators.push(new Animator(sk, f.ph, helix));
       this.strain.push(0);
       this.stability.push(1);
       this.markers.push(this.makeMarker(f.team, f.name, f.body.radius * ds));
@@ -157,11 +177,16 @@ export class BattleView implements View {
     if (b.weather !== this.weather) {
       this.weather = b.weather;
       this.arenaView.setConditions(b.weatherDef, b.setup.arena.hour);
+      const f = this.stage.scene.fog;
+      if (f instanceof THREE.FogExp2) this.fogBase = { color: f.color.getHex(), density: f.density };
+      this.applyFog();
     }
     this.syncCreatures(dt, t);
     this.fx.update(b, dt, t);
     this.arenaView.update(dt, b.weatherDef, t);
     this.cam.update(b, dt);
+    // Depth of field focuses on whoever the director frames.
+    this.stage.post?.setFocus(this.cam.subjectIdx.filter((i) => !b.fighters[i].ko && !b.fighters[i].benched).map((i) => this.headOf(i)));
   }
 
   private react(e: BattleEvent): void {
@@ -247,6 +272,7 @@ export class BattleView implements View {
       const chargeColor = f.move ? ELEMENTS[f.move.element].color : undefined;
       cv.setCharge(out.charge * (f.move ? Math.min(1.3, f.move.power / 60) : 0), chargeColor);
       cv.setPupils(f.emotions.fear, f.emotions.anger);
+      cv.tick(dt);
       cv.setTint(f.status.has("frozen"), f.ko ? Math.min(1, (b.t - f.koAt) / 1.5) : 0);
       this.strain[i] = out.strain;
       this.stability[i] = out.stability;
@@ -308,6 +334,7 @@ export class BattleView implements View {
       t: b.t,
       winner: b.winner,
       weather: b.weather,
+      post: this.stage.post?.snapshot() ?? null,
       arena: b.arena.spec.kind,
       viewPx: [W, H],
       camera: { mode: this.cam.mode, ...this.cam.debug, center: this.cam.debug.center.toArray() },
@@ -349,6 +376,8 @@ export class BattleView implements View {
       }
     }
     this.fx.dispose();
+    this.undoFog?.();
+    this.stage.post?.setFocus(null);
     this.arenaView.dispose();
     this.stage.controls.enabled = false;
   }

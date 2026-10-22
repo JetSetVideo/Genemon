@@ -9,6 +9,7 @@ import { autoTeam } from "../combat/team.ts";
 import type { CameraMode } from "../render/battleCamera.ts";
 import type { BodyKind } from "../genome/genome.ts";
 import type { AxisVector } from "../data/axes.ts";
+import type { PostSettings } from "../render/post.ts";
 import type { TeamPresets } from "./teamsStore.ts";
 import type { HatchRecord } from "./hatch.ts";
 
@@ -24,6 +25,11 @@ export interface Settings {
   hour: number;
   showSkeleton: boolean;
   units: "metric" | "imperial";
+  /** Post-processing (depth of field, bloom, fog, vignette); undefined = defaults (clampPost). */
+  post?: PostSettings;
+  /** Camera director pace and base field of view (camera menu). */
+  camPace?: number;
+  camFov?: number;
 }
 
 export interface BattleRecordLite {
