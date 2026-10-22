@@ -163,6 +163,8 @@ export function safeSection(sec: Section, radial: number): Section {
       lobes: cur.lobes?.map((l) => ({ angle: l.angle, amp: l.amp * 0.75, sharp: Math.max(1.5, l.sharp * 0.7) })),
     };
   }
+  // Last resort (pass 5: stacked morph ops on a flat section): the bare ellipse, which IS the reference.
+  if (maxRingTurn(sectionRing(cur, radial)) > limit) cur = { ...cur, exp: 2, lobes: [] };
   return cur;
 }
 

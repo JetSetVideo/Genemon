@@ -14,6 +14,9 @@
  * - fin: a rayed, scalloped fin on the root joint.
  * Surfaces use mats.membrane (double-sided) except feathers (closed lofts, accent/skin).
  *
+ * Fire [P5-V6]: a fire-primary creature (or one whose tail gene is "flame") grows flame tongues (accent
+ * material) off the trailing edge of membrane panels and off the primary-feather tips.
+ *
  * Built for the side +1 canon and mirrored, then scaled by the rare asymmetry ("wing" part).
  * perJoint keys are POSITIONS in the given joints array (0 root, 1 mid, 2 tip): the caller maps them.
  */
@@ -30,6 +33,7 @@ import {
   boneFrame,
   boneRings,
   clamp01,
+  cross3,
   curveRings,
   dot3,
   gridSurface,
@@ -63,8 +67,8 @@ function sample(f: (u: number) => V3, n: number, u0 = 0, u1 = 1): V3[] {
   return out;
 }
 
-/** A closed, flattened feather: rachis ridge, rounded vane, slight droop. */
-function feather(base: V3, dir: V3, len: number, width: number, res: Res): THREE.BufferGeometry {
+/** A closed, flattened feather: rachis ridge, rounded vane, slight droop (also the tail fan, body.ts). */
+export function feather(base: V3, dir: V3, len: number, width: number, res: Res): THREE.BufferGeometry {
   const n = res.limbStations > 5 ? 6 : 4;
   const pts = sample((u) => add3(add3(base, mul3(dir, len * u)), [0, -0.06 * len * u * u, 0]), n);
   const sec = (u: number): Section => {
@@ -72,6 +76,18 @@ function feather(base: V3, dir: V3, len: number, width: number, res: Res): THREE
     return { rx: w, ry: 0.06 * w + 0.001 * len, lobes: [{ angle: Math.PI / 2, amp: 0.8, sharp: 10 }, { angle: -Math.PI / 2, amp: 0.5, sharp: 10 }] };
   };
   return loftRings(curveRings(pts, sec, UP), { radial: res.limbStations > 5 ? 6 : 4, capRings: 1, capScale: [0.5, 1.5] });
+}
+
+/** A curved, wavy, tapering flame tongue rising from `base` along `dir` (rooted slightly inside the surface). */
+function flameTongue(base: V3, dir: V3, len: number, r: number, res: Res, phase: number): THREE.BufferGeometry {
+  const d = norm3(dir);
+  const side = norm3(cross3(d, UP));
+  const n = res.limbStations > 5 ? 6 : 4;
+  const pts = sample((u) => add3(add3(add3(base, mul3(d, len * (u - 0.1))), mul3(UP, len * 0.35 * u * u)), mul3(side, len * 0.12 * Math.sin(Math.PI * 2 * u + phase) * u)), n);
+  return loftRings(curveRings(pts, (u) => {
+    const rr = r * Math.pow(1 - u, 0.9) * (0.75 + 0.25 * Math.sin(Math.PI * Math.min(1, u * 2.5))) + r * 0.04;
+    return { rx: rr, ry: rr * 0.7 };
+  }, UP), { radial: Math.max(4, res.smallRadial - 2), capRings: 1, capScale: [0.5, 0.9] });
 }
 
 export function buildWing(
@@ -104,6 +120,7 @@ export function buildWing(
   const surf: Piece<Slot>[][] = [[], [], []];
   const [nu, nv] = res.grid;
   const rv = Math.max(0.003 * H, 0.006 * Rs);
+  const fire = ph.elements.primary === "fire" || helix.p5?.body.tail.shape === "flame";
 
   if (kind === "membrane") {
     const F = Math.max(2, Math.min(5, Math.round(helix.wings.fingers)));
@@ -139,6 +156,14 @@ export function buildWing(
       };
       surf[2].push({ geo: gridSurface(P, Math.max(3, Math.round(nu * 0.6)), nv), slots: ["membrane"] });
       if (detail > 0.5) bones[2].push({ geo: strip(sample((v) => add3(P(0.5, v), [0, rv * 0.6, 0]), 5, 0.12, 0.95), rv, rv * 0.5, res), slots: ["skin"] });
+    }
+    if (fire) {
+      for (let k = 0; k + 1 < F; k++) {
+        const e = mul3(lerp3(tips[k], tips[k + 1], 0.5), 1 - sc);
+        bones[2].push({ geo: flameTongue(e, add3(norm3(e), [0, 0, -0.6]), len3(e) * 0.32, len3(e) * 0.06, res, k), slots: ["accent"] });
+      }
+      const m = midP(0.55, 1);
+      bones[1].push({ geo: flameTongue(m, [0.3, 0, -1], len3(sub3(W, E)) * 0.4, len3(sub3(W, E)) * 0.07, res, 2), slots: ["accent"] });
     }
     if (detail > 0.5) {
       for (const u of [1 / 3, 2 / 3]) {
@@ -192,7 +217,9 @@ export function buildWing(
       const f = nP > 1 ? k / (nP - 1) : 0;
       const base = add3(mul3(d2, c2.length * (0.95 - 0.9 * f)), [0, -0.003 * k * H, 0]);
       const dir = norm3(rotate3(d2, UP, 0.12 + 1.15 * f));
-      surf[2].push({ geo: feather(base, dir, lenOuter + (Rs * 0.33 - lenOuter) * f, (c2.length / nP) * 1.8 + Rs * 0.04, res), slots: ["accent"] });
+      const fl = lenOuter + (Rs * 0.33 - lenOuter) * f;
+      surf[2].push({ geo: feather(base, dir, fl, (c2.length / nP) * 1.8 + Rs * 0.04, res), slots: ["accent"] });
+      if (fire && k % 2 === 0) bones[2].push({ geo: flameTongue(add3(base, mul3(dir, fl * 0.92)), dir, fl * 0.3, fl * 0.05, res, k), slots: ["accent"] });
     }
     bones[0].push(...limbPieces(c0, c1, "wing", ph, helix, res));
     bones[1].push(...limbPieces(c1, c2, "wing", ph, helix, res));

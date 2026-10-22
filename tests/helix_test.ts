@@ -109,16 +109,20 @@ Deno.test("[SPEC V3] asymmetry is RARE: 5 % .. 11 % of 2000 genomes, magnitude 0
   assert(r(chaotic) > r(ordered), `chaos ${r(chaotic)} vs order ${r(ordered)}`);
 });
 
-Deno.test("[SPEC V3] manga eyes: all 8 styles, >= 85 % two eyes, pupil follows style, aura none >= 60 %", () => {
+Deno.test("[SPEC V3] manga eyes: all 8 styles, ~80 % two eyes, pupil follows style, aura none >= 60 %", () => {
   const styles = new Set<EyeStyle>(sample.map((s) => s.h.eyes.style));
   for (
     const st of ["round", "sparkle", "ring", "blank", "slit", "sharp", "sleepy", "compound"] as EyeStyle[]
   ) {
     assert(styles.has(st), `eye style ${st} never appears`);
   }
+  // Pass 5: 1..8 eyes, two stay the norm (~80 %); the full distribution is pinned in helix_p5_test.ts.
   const two = sample.filter((s) => s.h.eyes.count === 2).length / N;
-  assert(two >= 0.85, `two eyes ${two}`);
-  for (const { h } of sample) assert(h.eyes.count >= 1 && h.eyes.count <= 4);
+  assert(two >= 0.74 && two <= 0.86, `two eyes ${two}`);
+  for (const { h } of sample) {
+    assert(h.eyes.count >= 1 && h.eyes.count <= 8);
+    assertEquals(h.eyes.count, h.p5!.eyes.count, "EyeGenes.count mirrors p5.eyes.count");
+  }
   const none = sample.filter((s) => s.h.eyes.aura === "none").length / N;
   assert(none >= 0.6, `aura none ${none}`);
   const pupil: Record<string, string> = {

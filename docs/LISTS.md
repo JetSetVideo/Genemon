@@ -437,26 +437,26 @@ Weather and terrain moves are learnable only by Genemon whose primary or seconda
 <!-- GEN:statuses -->
 | status | applied by (target) | applied by (self) | # moves |
 |---|---|---|---|
-| `burn` | emberBite, cinderSpit, flameLance, scorchField, infernoBurst, fireBreath, steamBreath, flameDash, flareBurst, meteor | - | 10 |
-| `wet` | tideSlam, waterJet, hydroBeam, riptide, geyser, steamBreath, aquaJet, whirlpool, tsunami | - | 9 |
-| `frozen` | frostFang, cryoBeam, frostBreath, frostBind, avalanche | - | 5 |
+| `burn` | emberBite, cinderSpit, flameLance, scorchField, infernoBurst, fireBreath, flameDash, meteor | - | 8 |
+| `wet` | tideSlam, waterJet, hydroBeam, riptide, steamBreath, aquaJet, tsunami | - | 7 |
+| `frozen` | frostFang, cryoBeam, frostBind | - | 3 |
 | `paralyzed` | staticFang, sparkBolt, thunderBeam, discharge, sparkBreath, voltRush, stormLance | - | 7 |
-| `poisoned` | venomFang, toxicSpit, miasma, corrosion, plagueBurst, toxicBreath, venomLunge, nerveSpit, plague | - | 9 |
-| `slowed` | riptide, rootSnare, tornado, hailBurst, magnetPull, frostBreath, iceSlide, thornRush, frostBind, vineSnare, downdraft, worldTree, hurricane, avalanche, blackHole | - | 15 |
-| `blinded` | radiantStrike, dazzle, prismRay, umbralLance, sandBreath, flashStep, blindingFlash, supernova | - | 8 |
+| `poisoned` | venomFang, toxicSpit, miasma, corrosion, plagueBurst, toxicBreath, venomLunge, plague | - | 8 |
+| `slowed` | rootSnare, hailBurst, frostBreath, iceSlide, thornRush, avalanche | - | 6 |
+| `blinded` | radiantStrike, dazzle, prismRay, umbralLance, sandBreath, flashStep, supernova | - | 7 |
 | `feared` | roar, dreadGaze, nightfall, shadowMist, dreadHowl, eclipseFall | - | 6 |
 | `confused` | psiBeam, psyStorm, psychicWave, psiBlink, mindCrush | - | 5 |
-| `staggered` | bodySlam, stomp, boulderCrush, quake, tornado, magnetPull, hornGore, crushingWeight, rollingCharge, earthshatter, hurricane, ironMaiden, blackHole | - | 13 |
-| `shielded` | - | stoneWall, ironShell, ironMaiden | 3 |
+| `staggered` | stomp, quake, crushingWeight, earthshatter, ironMaiden | - | 5 |
+| `shielded` | - | stoneWall, ironShell | 2 |
 | `hasted` | - | tailwind | 1 |
 | `evasive` | - | nightVeil, phaseOut, shadowStep | 3 |
 | `focused` | - | calmMind | 1 |
-| `softened` | thornSpray, corrosion, nullBite, crunch, rendingClaws, riftDash, voidGrip, plague | - | 8 |
+| `softened` | thornSpray, nullBite, crunch, rendingClaws, riftDash | - | 5 |
 | `airborne` | - | takeFlight | 1 |
 | `burrowed` | - | burrow | 1 |
 | `liquid` | - | meltForm | 1 |
 | `regen` | - | seedShot, sapMend, overgrowth, worldTree | 4 |
-| `stunned` | hornCharge, thunderClap, headbutt, shieldBash, tailSweep, petrifyGaze, vineSnare, mindLock, dreadHowl, flareBurst, whirlpool, downdraft, nerveSpit, blindingFlash, voidGrip, mindCrush, titanSlam | - | 17 |
+| `stunned` | thunderClap, headbutt, shieldBash, tailSweep, petrifyGaze, vineSnare, mindLock, flareBurst, whirlpool, downdraft, nerveSpit, blindingFlash, voidGrip | - | 13 |
 <!-- /GEN:statuses -->
 
 **Expand.** `STATUS_IDS` + at least one move that applies it + engine semantics + its weight in `moveCostBreakdown` (9 x chance x duration / 3, x1.2 on self).
@@ -498,149 +498,149 @@ Weather and terrain moves are learnable only by Genemon whose primary or seconda
 | id | element | shape | category | part | slot | power | acc | range | area | speed | charge/active/rest s | cycle s | tier (lvl) | cost | power/cost | dmg/s | effects | requires |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | `tackle` | neutral | melee | physical | mass | basic | 40 | 0.97 | 0 | 0 | 0 | 0.396/0.176/0.429 | 1.00 | 1 (1) | 16 | 2.50 | 38.8 | knockback 2 | - |
-| `bodySlam` | neutral | melee | physical | mass | basic | 60 | 0.9 | 0 | 0 | 0 | 0.648/0.27/0.648 | 1.57 | 2 (12) | 25 | 2.40 | 34.5 | knockback 5; staggered 25%/1s | - |
-| `stomp` | neutral | burst | physical | mass | control | 45 | 0.95 | 0 | 2.2 | 0 | 0.482/0.209/0.508 | 1.20 | 1 (1) | 21 | 2.14 | 35.7 | staggered 30%/1s | - |
-| `roar` | neutral | burst | status | mouth | control | 0 | 1 | 0 | 4.5 | 0 | 0.6/0.4/0.6 | 1.60 | 1 (1) | 4 | - | - | feared 60%/3s | - |
+| `bodySlam` | neutral | melee | physical | mass | basic | 60 | 0.9 | 0 | 0 | 0 | 0.624/0.26/0.624 | 1.51 | 2 (12) | 25 | 2.40 | 35.8 | knockback 5 | - |
+| `stomp` | neutral | burst | physical | mass | basic | 45 | 0.95 | 0 | 2.2 | 0 | 0.482/0.209/0.508 | 1.20 | 1 (1) | 21 | 2.14 | 35.7 | staggered 24%/1s | - |
+| `roar` | neutral | burst | status | mouth | control | 0 | 1 | 0 | 4.5 | 0 | 0.6/0.4/0.6 | 1.60 | 1 (1) | 4 | - | - | feared 48%/3s | - |
 | `rest` | neutral | heal | status | aura | utility | 0 | 1 | 0 | 0 | 0 | 0.4/1.2/0.6 | 2.20 | 1 (1) | 16 | - | - | heal 0.3 | - |
 | `meltForm` | neutral | phase | status | aura | utility | 0 | 1 | 0 | 0 | 0 | 0.5/0.4/0.4 | 1.30 | 1 (1) | 17 | - | - | self liquid 100%/6s | phaseShift |
-| `emberBite` | fire | melee | physical | jaw | basic | 55 | 0.95 | 0 | 0 | 0 | 0.567/0.239/0.575 | 1.38 | 1 (1) | 23 | 2.39 | 37.8 | burn 35%/3s | - |
-| `cinderSpit` | fire | projectile | special | mouth | basic | 45 | 0.9 | 12 | 0 | 16 | 0.453/0.197/0.478 | 1.13 | 1 (1) | 22 | 2.05 | 35.9 | burn 30%/3s | - |
-| `flameLance` | fire | beam | special | aura | basic | 76 | 0.88 | 14 | 0 | 0 | 0.957/0.385/0.894 | 2.24 | 2 (12) | 38 | 2 | 29.9 | burn 35%/3s | - |
-| `scorchField` | fire | zone | special | aura | basic | 38 | 0.95 | 10 | 2.6 | 12 | 0.402/0.18/0.44 | 1.02 | 2 (12) | 32 | 1.19 | 35.3 | burn 40%/3s | - |
-| `infernoBurst` | fire | burst | special | aura | ultimate | 135 | 0.95 | 0 | 3.2 | 0 | 2.675/1.007/2.242 | 5.92 | 3 (30) | 62 | 2.18 | 21.6 | burn 30%/3s; knockback 4 | - |
+| `emberBite` | fire | melee | physical | jaw | basic | 55 | 0.95 | 0 | 0 | 0 | 0.567/0.239/0.575 | 1.38 | 1 (1) | 22 | 2.50 | 37.8 | burn 28%/3s | - |
+| `cinderSpit` | fire | projectile | special | mouth | basic | 45 | 0.9 | 12 | 0 | 16 | 0.453/0.197/0.478 | 1.13 | 1 (1) | 21 | 2.14 | 35.9 | burn 24%/3s | - |
+| `flameLance` | fire | beam | special | aura | basic | 76 | 0.88 | 14 | 0 | 0 | 0.957/0.385/0.894 | 2.24 | 2 (12) | 37 | 2.05 | 29.9 | burn 28%/3s | - |
+| `scorchField` | fire | zone | special | aura | basic | 38 | 0.95 | 10 | 2.6 | 12 | 0.402/0.18/0.44 | 1.02 | 2 (12) | 31 | 1.23 | 35.3 | burn 32%/3s | - |
+| `infernoBurst` | fire | burst | special | aura | ultimate | 135 | 0.95 | 0 | 3.2 | 0 | 2.584/0.973/2.166 | 5.72 | 3 (30) | 56 | 2.41 | 22.4 | burn 24%/3s | - |
 | `heatwaveCall` | fire | weather | status | aura | utility | 0 | 1 | 0 | 0 | 0 | 1.4/0.3/1.2 | 2.90 | 2 (12) | 16 | - | - | weather heatwave | weatherShaper |
-| `tideSlam` | water | melee | physical | mass | basic | 55 | 0.95 | 0 | 0 | 0 | 0.589/0.248/0.597 | 1.43 | 1 (1) | 26 | 2.12 | 36.4 | knockback 3; wet 60%/5s | - |
-| `waterJet` | water | projectile | special | mouth | basic | 45 | 0.92 | 12 | 0 | 20 | 0.453/0.197/0.478 | 1.13 | 1 (1) | 23 | 1.96 | 36.7 | wet 70%/5s | - |
-| `hydroBeam` | water | beam | special | aura | basic | 72 | 0.88 | 14 | 0 | 0 | 0.907/0.367/0.859 | 2.13 | 2 (12) | 40 | 1.80 | 29.7 | wet 80%/5s; knockback 2 | - |
-| `riptide` | water | burst | special | aura | basic | 52 | 0.95 | 0 | 3 | 0 | 0.6/0.254/0.614 | 1.47 | 2 (12) | 33 | 1.58 | 33.7 | wet 90%/5s; slowed 30%/3s | - |
-| `geyser` | water | zone | special | aura | ultimate | 125 | 0.9 | 11 | 2.2 | 0 | 2.321/0.881/1.97 | 5.17 | 3 (30) | 74 | 1.69 | 21.8 | knockback 5; wet 100%/6s | - |
+| `tideSlam` | water | melee | physical | mass | basic | 55 | 0.95 | 0 | 0 | 0 | 0.567/0.239/0.575 | 1.38 | 1 (1) | 22 | 2.50 | 37.8 | wet 48%/5s | - |
+| `waterJet` | water | projectile | special | mouth | basic | 45 | 0.92 | 12 | 0 | 20 | 0.453/0.197/0.478 | 1.13 | 1 (1) | 22 | 2.05 | 36.7 | wet 56%/5s | - |
+| `hydroBeam` | water | beam | special | aura | basic | 72 | 0.88 | 14 | 0 | 0 | 0.874/0.354/0.827 | 2.05 | 2 (12) | 37 | 1.95 | 30.8 | wet 64%/5s | - |
+| `riptide` | water | burst | special | aura | basic | 52 | 0.95 | 0 | 3 | 0 | 0.579/0.246/0.593 | 1.42 | 2 (12) | 30 | 1.73 | 34.8 | wet 72%/5s | - |
+| `geyser` | water | zone | special | aura | ultimate | 125 | 0.9 | 11 | 2.2 | 0 | 2.24/0.85/1.901 | 4.99 | 3 (30) | 68 | 1.84 | 22.5 | knockback 5 | - |
 | `rainCall` | water | weather | status | aura | utility | 0 | 1 | 0 | 0 | 0 | 1.4/0.3/1.2 | 2.90 | 2 (12) | 16 | - | - | weather rain | weatherShaper |
 | `vineLash` | plant | melee | physical | mass | basic | 54 | 0.98 | 2.5 | 0 | 0 | 0.556/0.235/0.566 | 1.36 | 1 (1) | 24 | 2.25 | 39.0 | pull 3 | - |
 | `seedShot` | plant | projectile | special | aura | basic | 52 | 0.97 | 12 | 0 | 18 | 0.533/0.226/0.546 | 1.31 | 1 (1) | 28 | 1.86 | 38.7 | self regen 40%/4s | - |
-| `thornSpray` | plant | burst | special | eyes | basic | 68 | 0.95 | 0 | 2.8 | 0 | 0.854/0.348/0.821 | 2.02 | 2 (12) | 36 | 1.89 | 31.9 | softened 40%/4s | - |
-| `rootSnare` | plant | zone | special | aura | basic | 38 | 0.95 | 10 | 2.4 | 0 | 0.4/0.179/0.438 | 1.02 | 2 (12) | 32 | 1.19 | 35.5 | slowed 80%/3s | - |
+| `thornSpray` | plant | burst | special | eyes | basic | 68 | 0.95 | 0 | 2.8 | 0 | 0.854/0.348/0.821 | 2.02 | 2 (12) | 35 | 1.94 | 31.9 | softened 32%/4s | - |
+| `rootSnare` | plant | zone | special | aura | basic | 38 | 0.95 | 10 | 2.4 | 0 | 0.4/0.179/0.438 | 1.02 | 2 (12) | 31 | 1.23 | 35.5 | slowed 64%/3s | - |
 | `sapMend` | plant | heal | status | aura | utility | 0 | 1 | 0 | 0 | 0 | 0.6/0.8/0.5 | 1.90 | 1 (1) | 33 | - | - | heal 0.25; self regen 100%/5s | - |
 | `overgrowth` | plant | terrain | status | aura | utility | 20 | 1 | 8 | 4 | 0 | 1/0.4/0.8 | 2.20 | 2 (12) | 46 | 0.43 | 9.1 | ground grass; self regen 100%/6s | terraformer |
 | `solarBloom` | plant | beam | special | aura | ultimate | 130 | 0.9 | 15 | 0 | 0 | 2.15/0.813/1.813 | 4.78 | 3 (30) | 51 | 2.55 | 24.5 | - | - |
-| `boulderCrush` | earth | melee | physical | mass | control | 65 | 0.9 | 0 | 0 | 0 | 0.756/0.311/0.736 | 1.80 | 1 (1) | 29 | 2.24 | 32.4 | knockback 5; staggered 30%/1s | - |
+| `boulderCrush` | earth | melee | physical | mass | basic | 65 | 0.9 | 0 | 0 | 0 | 0.728/0.299/0.709 | 1.74 | 1 (1) | 29 | 2.24 | 33.7 | knockback 5 | - |
 | `rockToss` | earth | projectile | special | aura | basic | 55 | 0.88 | 11 | 0 | 14 | 0.567/0.239/0.575 | 1.38 | 1 (1) | 25 | 2.20 | 35.0 | knockback 2 | - |
-| `quake` | earth | burst | physical | mass | ultimate | 135 | 0.95 | 0 | 4 | 0 | 2.639/0.993/2.211 | 5.84 | 3 (30) | 60 | 2.25 | 21.9 | staggered 50%/1s | - |
+| `quake` | earth | burst | physical | mass | ultimate | 135 | 0.95 | 0 | 4 | 0 | 2.639/0.993/2.211 | 5.84 | 3 (30) | 60 | 2.25 | 21.9 | staggered 40%/1s | - |
 | `burrow` | earth | dig | physical | legs | mobility | 60 | 0.95 | 0 | 0 | 0 | 0.6/2.2/0.6 | 3.40 | 1 (1) | 37 | 1.62 | 16.8 | self burrowed 100%/2.2s; knockback 4 | dig |
 | `stoneWall` | earth | terrain | status | aura | utility | 15 | 1 | 6 | 3.5 | 0 | 0.9/0.4/0.7 | 2 | 2 (12) | 37 | 0.41 | 7.5 | ground stone; self shielded 100%/5s | terraformer |
 | `sandstormCall` | earth | weather | status | aura | utility | 0 | 1 | 0 | 0 | 0 | 1.4/0.3/1.2 | 2.90 | 2 (12) | 16 | - | - | weather sandstorm | weatherShaper |
 | `galeSlash` | air | melee | physical | claws | basic | 48 | 0.96 | 0.5 | 0 | 0 | 0.469/0.201/0.488 | 1.16 | 1 (1) | 18 | 2.67 | 39.8 | - | - |
 | `airCutter` | air | projectile | special | aura | basic | 45 | 0.92 | 13 | 0 | 26 | 0.436/0.189/0.459 | 1.08 | 1 (1) | 20 | 2.25 | 38.2 | - | - |
 | `jetStream` | air | beam | special | mouth | basic | 68 | 0.9 | 14 | 0 | 0 | 0.79/0.322/0.759 | 1.87 | 2 (12) | 37 | 1.84 | 32.7 | knockback 3 | - |
-| `tornado` | air | zone | special | aura | ultimate | 120 | 0.9 | 11 | 2.8 | 0 | 2.288/0.873/1.957 | 5.12 | 3 (30) | 74 | 1.62 | 21.1 | knockback 4; slowed 50%/2s; staggered 40%/1s | - |
+| `tornado` | air | zone | special | aura | ultimate | 120 | 0.9 | 11 | 2.8 | 0 | 2.136/0.815/1.827 | 4.78 | 3 (30) | 71 | 1.69 | 22.6 | knockback 4 | - |
 | `takeFlight` | air | fly | status | wings | mobility | 0 | 1 | 0 | 0 | 0 | 0.5/0.3/0.3 | 1.10 | 1 (1) | 20 | - | - | self airborne 100%/8s | fly |
 | `tailwind` | air | buff | status | aura | utility | 0 | 1 | 0 | 0 | 0 | 0.5/0.3/0.4 | 1.20 | 2 (12) | 19 | - | - | self hasted 100%/6s | - |
 | `galeCall` | air | weather | status | aura | utility | 0 | 1 | 0 | 0 | 0 | 1.4/0.3/1.2 | 2.90 | 2 (12) | 16 | - | - | weather wind | weatherShaper |
-| `staticFang` | electric | melee | physical | jaw | control | 50 | 0.95 | 0 | 0 | 0 | 0.51/0.218/0.527 | 1.25 | 1 (1) | 20 | 2.50 | 37.8 | paralyzed 30%/2s | - |
-| `sparkBolt` | electric | projectile | special | aura | basic | 48 | 0.92 | 13 | 0 | 30 | 0.488/0.209/0.507 | 1.20 | 1 (1) | 23 | 2.09 | 36.7 | paralyzed 25%/2s | - |
-| `thunderBeam` | electric | beam | special | aura | basic | 75 | 0.86 | 14 | 0 | 0 | 0.936/0.377/0.878 | 2.19 | 2 (12) | 36 | 2.08 | 29.4 | paralyzed 25%/2s | - |
-| `discharge` | electric | burst | special | aura | ultimate | 130 | 0.95 | 0 | 3.2 | 0 | 2.442/0.923/2.059 | 5.42 | 3 (30) | 54 | 2.41 | 22.8 | paralyzed 30%/2s | - |
+| `staticFang` | electric | melee | physical | jaw | basic | 50 | 0.95 | 0 | 0 | 0 | 0.51/0.218/0.527 | 1.25 | 1 (1) | 20 | 2.50 | 37.8 | paralyzed 24%/2s | - |
+| `sparkBolt` | electric | projectile | special | aura | basic | 48 | 0.92 | 13 | 0 | 30 | 0.488/0.209/0.507 | 1.20 | 1 (1) | 22 | 2.18 | 36.7 | paralyzed 20%/2s | - |
+| `thunderBeam` | electric | beam | special | aura | basic | 75 | 0.86 | 14 | 0 | 0 | 0.936/0.377/0.878 | 2.19 | 2 (12) | 36 | 2.08 | 29.4 | paralyzed 20%/2s | - |
+| `discharge` | electric | burst | special | aura | ultimate | 130 | 0.95 | 0 | 3.2 | 0 | 2.442/0.923/2.059 | 5.42 | 3 (30) | 54 | 2.41 | 22.8 | paralyzed 24%/2s | - |
 | `stormCall` | electric | weather | status | aura | utility | 0 | 1 | 0 | 0 | 0 | 1.4/0.3/1.2 | 2.90 | 2 (12) | 16 | - | - | weather storm | weatherShaper |
-| `frostFang` | ice | melee | physical | jaw | basic | 50 | 0.95 | 0 | 0 | 0 | 0.51/0.218/0.527 | 1.25 | 1 (1) | 19 | 2.63 | 37.8 | frozen 15%/1.5s | - |
+| `frostFang` | ice | melee | physical | jaw | basic | 50 | 0.95 | 0 | 0 | 0 | 0.51/0.218/0.527 | 1.25 | 1 (1) | 19 | 2.63 | 37.8 | frozen 12%/1.5s | - |
 | `iceShard` | ice | projectile | special | aura | basic | 42 | 0.93 | 12 | 0 | 24 | 0.403/0.177/0.431 | 1.01 | 1 (1) | 19 | 2.21 | 38.6 | - | - |
-| `cryoBeam` | ice | beam | special | aura | basic | 68 | 0.88 | 14 | 0 | 0 | 0.79/0.322/0.759 | 1.87 | 2 (12) | 34 | 2 | 32.0 | frozen 20%/1.5s | - |
-| `hailBurst` | ice | burst | special | aura | ultimate | 125 | 0.95 | 0 | 3 | 0 | 2.288/0.869/1.942 | 5.10 | 3 (30) | 51 | 2.45 | 23.3 | slowed 40%/3s | - |
+| `cryoBeam` | ice | beam | special | aura | basic | 68 | 0.88 | 14 | 0 | 0 | 0.79/0.322/0.759 | 1.87 | 2 (12) | 34 | 2 | 32.0 | frozen 16%/1.5s | - |
+| `hailBurst` | ice | burst | special | aura | ultimate | 125 | 0.95 | 0 | 3 | 0 | 2.288/0.869/1.942 | 5.10 | 3 (30) | 51 | 2.45 | 23.3 | slowed 32%/3s | - |
 | `frostGround` | ice | terrain | status | aura | utility | 15 | 1 | 8 | 4 | 0 | 0.9/0.4/0.7 | 2 | 2 (12) | 21 | 0.71 | 7.5 | ground ice | terraformer |
 | `snowCall` | ice | weather | status | aura | utility | 0 | 1 | 0 | 0 | 0 | 1.4/0.3/1.2 | 2.90 | 2 (12) | 16 | - | - | weather snow | weatherShaper |
 | `ironRam` | metal | melee | physical | horns | basic | 56 | 0.86 | 0 | 0 | 0 | 0.578/0.243/0.585 | 1.41 | 1 (1) | 27 | 2.07 | 34.3 | knockback 6 | - |
 | `steelSpike` | metal | projectile | special | aura | basic | 40 | 0.8 | 12 | 0 | 22 | 0.381/0.169/0.413 | 0.96 | 1 (1) | 17 | 2.35 | 33.2 | - | - |
-| `magnetPull` | metal | zone | special | aura | control | 30 | 0.95 | 12 | 1.5 | 0 | 0.317/0.149/0.371 | 0.84 | 2 (12) | 30 | 1 | 34.1 | pull 6; slowed 40%/2s; staggered 30%/1s | - |
+| `magnetPull` | metal | zone | special | aura | basic | 30 | 0.95 | 12 | 1.5 | 0 | 0.295/0.139/0.346 | 0.78 | 2 (12) | 28 | 1.07 | 36.5 | pull 6 | - |
 | `ironShell` | metal | buff | status | aura | utility | 0 | 1 | 0 | 0 | 0 | 0.5/0.3/0.4 | 1.20 | 1 (1) | 22 | - | - | self shielded 100%/6s | - |
 | `shrapnel` | metal | burst | special | aura | ultimate | 135 | 0.93 | 0 | 3 | 0 | 2.48/0.933/2.078 | 5.49 | 3 (30) | 52 | 2.60 | 22.9 | - | - |
-| `venomFang` | poison | melee | physical | jaw | basic | 54 | 0.95 | 0 | 0 | 0 | 0.556/0.235/0.566 | 1.36 | 1 (1) | 28 | 1.93 | 37.8 | poisoned 60%/5s | - |
-| `toxicSpit` | poison | projectile | special | mouth | basic | 52 | 0.96 | 11 | 0 | 16 | 0.533/0.226/0.546 | 1.31 | 1 (1) | 31 | 1.68 | 38.3 | poisoned 60%/5s | - |
-| `miasma` | poison | zone | special | aura | basic | 48 | 1 | 10 | 3 | 0 | 0.53/0.227/0.551 | 1.31 | 2 (12) | 52 | 0.92 | 36.7 | poisoned 100%/5s | - |
-| `corrosion` | poison | beam | special | aura | basic | 80 | 0.93 | 13 | 0 | 0 | 1.08/0.432/0.999 | 2.51 | 2 (12) | 45 | 1.78 | 29.6 | softened 40%/4s; poisoned 40%/5s | - |
-| `plagueBurst` | poison | burst | special | aura | ultimate | 125 | 0.95 | 0 | 3.2 | 0 | 2.3/0.873/1.953 | 5.13 | 3 (30) | 59 | 2.12 | 23.2 | poisoned 60%/5s | - |
+| `venomFang` | poison | melee | physical | jaw | basic | 54 | 0.95 | 0 | 0 | 0 | 0.556/0.235/0.566 | 1.36 | 1 (1) | 26 | 2.08 | 37.8 | poisoned 48%/5s | - |
+| `toxicSpit` | poison | projectile | special | mouth | basic | 52 | 0.96 | 11 | 0 | 16 | 0.533/0.226/0.546 | 1.31 | 1 (1) | 29 | 1.79 | 38.3 | poisoned 48%/5s | - |
+| `miasma` | poison | zone | special | aura | basic | 48 | 1 | 10 | 3 | 0 | 0.53/0.227/0.551 | 1.31 | 2 (12) | 49 | 0.98 | 36.7 | poisoned 80%/5s | - |
+| `corrosion` | poison | beam | special | aura | basic | 80 | 0.93 | 13 | 0 | 0 | 1.04/0.416/0.962 | 2.42 | 2 (12) | 41 | 1.95 | 30.8 | poisoned 32%/5s | - |
+| `plagueBurst` | poison | burst | special | aura | ultimate | 125 | 0.95 | 0 | 3.2 | 0 | 2.3/0.873/1.953 | 5.13 | 3 (30) | 57 | 2.19 | 23.2 | poisoned 48%/5s | - |
 | `acidRainCall` | poison | weather | status | aura | utility | 0 | 1 | 0 | 0 | 0 | 1.4/0.3/1.2 | 2.90 | 2 (12) | 16 | - | - | weather acidRain | weatherShaper |
-| `radiantStrike` | light | melee | physical | aura | basic | 56 | 0.96 | 0 | 0 | 0 | 0.578/0.243/0.585 | 1.41 | 1 (1) | 23 | 2.43 | 38.2 | blinded 25%/2s | - |
+| `radiantStrike` | light | melee | physical | aura | basic | 56 | 0.96 | 0 | 0 | 0 | 0.578/0.243/0.585 | 1.41 | 1 (1) | 23 | 2.43 | 38.2 | blinded 20%/2s | - |
 | `photonDart` | light | projectile | special | aura | basic | 46 | 0.98 | 15 | 0 | 40 | 0.447/0.193/0.469 | 1.11 | 1 (1) | 24 | 1.92 | 40.6 | - | - |
-| `dazzle` | light | burst | special | aura | basic | 30 | 1 | 0 | 3.5 | 0 | 0.311/0.147/0.365 | 0.82 | 2 (12) | 25 | 1.20 | 36.5 | blinded 70%/2.5s | - |
-| `prismRay` | light | beam | special | eyes | basic | 80 | 0.92 | 14 | 0 | 0 | 1.04/0.416/0.962 | 2.42 | 2 (12) | 42 | 1.90 | 30.4 | blinded 35%/2s | - |
+| `dazzle` | light | burst | special | aura | basic | 30 | 1 | 0 | 3.5 | 0 | 0.311/0.147/0.365 | 0.82 | 2 (12) | 24 | 1.25 | 36.5 | blinded 56%/2.5s | - |
+| `prismRay` | light | beam | special | eyes | basic | 80 | 0.92 | 14 | 0 | 0 | 1.04/0.416/0.962 | 2.42 | 2 (12) | 41 | 1.95 | 30.4 | blinded 28%/2s | - |
 | `solarBeam` | light | beam | special | eyes | ultimate | 140 | 0.9 | 16 | 0 | 0 | 2.4/0.9/2 | 5.30 | 3 (30) | 61 | 2.30 | 23.8 | - | - |
 | `auroraCall` | light | weather | status | aura | utility | 0 | 1 | 0 | 0 | 0 | 1.4/0.3/1.2 | 2.90 | 2 (12) | 17 | - | - | weather aurora | weatherShaper |
 | `shadowClaw` | shadow | melee | physical | claws | basic | 56 | 0.94 | 0 | 0 | 0 | 0.556/0.234/0.563 | 1.35 | 1 (1) | 21 | 2.67 | 38.9 | - | - |
 | `umbraOrb` | shadow | projectile | special | aura | basic | 50 | 0.9 | 12 | 0 | 15 | 0.491/0.209/0.506 | 1.21 | 1 (1) | 22 | 2.27 | 37.3 | - | - |
-| `dreadGaze` | shadow | beam | special | eyes | control | 30 | 0.95 | 12 | 0 | 0 | 0.283/0.133/0.331 | 0.75 | 2 (12) | 23 | 1.30 | 38.2 | feared 70%/3s | - |
-| `umbralLance` | shadow | beam | special | aura | basic | 72 | 0.88 | 14 | 0 | 0 | 0.874/0.354/0.827 | 2.05 | 2 (12) | 37 | 1.95 | 30.8 | blinded 20%/2s | - |
-| `nightfall` | shadow | burst | special | aura | ultimate | 130 | 0.95 | 0 | 3.3 | 0 | 2.449/0.925/2.064 | 5.44 | 3 (30) | 58 | 2.24 | 22.7 | feared 35%/2.5s | - |
+| `dreadGaze` | shadow | beam | special | eyes | control | 30 | 0.95 | 12 | 0 | 0 | 0.283/0.133/0.331 | 0.75 | 2 (12) | 22 | 1.36 | 38.2 | feared 56%/3s | - |
+| `umbralLance` | shadow | beam | special | aura | basic | 72 | 0.88 | 14 | 0 | 0 | 0.874/0.354/0.827 | 2.05 | 2 (12) | 37 | 1.95 | 30.8 | blinded 16%/2s | - |
+| `nightfall` | shadow | burst | special | aura | ultimate | 130 | 0.95 | 0 | 3.3 | 0 | 2.449/0.925/2.064 | 5.44 | 3 (30) | 57 | 2.28 | 22.7 | feared 28%/2.5s | - |
 | `nightVeil` | shadow | buff | status | aura | utility | 0 | 1 | 0 | 0 | 0 | 0.5/0.3/0.4 | 1.20 | 2 (12) | 23 | - | - | self evasive 100%/6s | - |
 | `eclipseCall` | shadow | weather | status | aura | utility | 0 | 1 | 0 | 0 | 0 | 1.4/0.3/1.2 | 2.90 | 2 (12) | 17 | - | - | weather eclipse | weatherShaper |
 | `mindSpike` | psychic | projectile | special | aura | basic | 50 | 0.92 | 14 | 0 | 34 | 0.491/0.209/0.506 | 1.21 | 1 (1) | 24 | 2.08 | 38.1 | - | - |
-| `psiBeam` | psychic | beam | special | eyes | basic | 70 | 0.9 | 14 | 0 | 0 | 0.832/0.338/0.793 | 1.96 | 2 (12) | 37 | 1.89 | 32.1 | confused 20%/2s | - |
+| `psiBeam` | psychic | beam | special | eyes | basic | 70 | 0.9 | 14 | 0 | 0 | 0.832/0.338/0.793 | 1.96 | 2 (12) | 37 | 1.89 | 32.1 | confused 16%/2s | - |
 | `telekinesis` | psychic | zone | special | aura | basic | 45 | 0.92 | 12 | 1.5 | 0 | 0.473/0.205/0.498 | 1.18 | 2 (12) | 40 | 1.13 | 35.2 | knockback 7 | - |
 | `calmMind` | psychic | buff | status | aura | utility | 0 | 1 | 0 | 0 | 0 | 0.5/0.4/0.4 | 1.30 | 1 (1) | 24 | - | - | self focused 100%/8s | - |
-| `psyStorm` | psychic | burst | special | aura | ultimate | 130 | 0.95 | 0 | 3.2 | 0 | 2.442/0.923/2.059 | 5.42 | 3 (30) | 57 | 2.28 | 22.8 | confused 30%/2s | - |
-| `nullBite` | void | melee | physical | jaw | basic | 54 | 0.94 | 0 | 0 | 0 | 0.556/0.235/0.566 | 1.36 | 1 (1) | 23 | 2.35 | 37.4 | softened 25%/4s | - |
+| `psyStorm` | psychic | burst | special | aura | ultimate | 130 | 0.95 | 0 | 3.2 | 0 | 2.442/0.923/2.059 | 5.42 | 3 (30) | 56 | 2.32 | 22.8 | confused 24%/2s | - |
+| `nullBite` | void | melee | physical | jaw | basic | 54 | 0.94 | 0 | 0 | 0 | 0.556/0.235/0.566 | 1.36 | 1 (1) | 23 | 2.35 | 37.4 | softened 20%/4s | - |
 | `voidOrb` | void | projectile | special | aura | basic | 48 | 0.9 | 12 | 0 | 15 | 0.469/0.201/0.488 | 1.16 | 1 (1) | 22 | 2.18 | 37.3 | - | - |
 | `phaseOut` | void | buff | status | aura | utility | 0 | 1 | 0 | 0 | 0 | 0.4/0.3/0.4 | 1.10 | 2 (12) | 12 | - | - | self evasive 100%/3s | - |
 | `collapse` | void | burst | special | aura | ultimate | 125 | 0.93 | 0 | 3.4 | 0 | 2.313/0.878/1.963 | 5.15 | 3 (30) | 62 | 2.02 | 22.6 | pull 5 | - |
-| `fireBreath` | fire | cone | special | mouth | basic | 56 | 0.95 | 6 | 1.3 | 0 | 0.6/0.252/0.607 | 1.46 | 1 (1) | 31 | 1.81 | 36.5 | burn 35%/3s | - |
-| `frostBreath` | ice | cone | special | mouth | basic | 54 | 0.95 | 5.5 | 1.1 | 0 | 0.595/0.251/0.605 | 1.45 | 1 (1) | 29 | 1.86 | 35.4 | slowed 40%/2.5s; frozen 15%/1.2s | - |
-| `toxicBreath` | poison | cone | special | mouth | basic | 48 | 0.95 | 5 | 1.2 | 0 | 0.504/0.217/0.525 | 1.25 | 1 (1) | 33 | 1.45 | 36.6 | poisoned 60%/5s | - |
-| `steamBreath` | water | cone | special | mouth | basic | 58 | 0.95 | 5 | 1.2 | 0 | 0.645/0.27/0.649 | 1.56 | 2 (12) | 32 | 1.81 | 35.2 | burn 25%/3s; wet 70%/4s | - |
-| `sandBreath` | earth | cone | special | mouth | basic | 46 | 0.95 | 5 | 1.3 | 0 | 0.482/0.208/0.506 | 1.20 | 1 (1) | 27 | 1.70 | 36.5 | blinded 50%/2.5s | - |
-| `sparkBreath` | electric | cone | special | mouth | basic | 52 | 0.95 | 6 | 1.2 | 0 | 0.551/0.234/0.565 | 1.35 | 1 (1) | 28 | 1.86 | 36.6 | paralyzed 25%/2s | - |
-| `shadowMist` | shadow | cone | special | mouth | basic | 44 | 0.95 | 4.5 | 1.3 | 0 | 0.459/0.2/0.486 | 1.15 | 2 (12) | 26 | 1.69 | 36.5 | feared 45%/2.5s | - |
-| `psychicWave` | psychic | cone | special | eyes | basic | 52 | 0.95 | 7 | 1.5 | 0 | 0.556/0.236/0.57 | 1.36 | 2 (12) | 32 | 1.63 | 36.3 | confused 35%/2s | - |
+| `fireBreath` | fire | cone | special | mouth | basic | 56 | 0.95 | 6 | 1.3 | 0 | 0.6/0.252/0.607 | 1.46 | 1 (1) | 31 | 1.81 | 36.5 | burn 28%/3s | - |
+| `frostBreath` | ice | cone | special | mouth | basic | 54 | 0.95 | 5.5 | 1.1 | 0 | 0.573/0.242/0.583 | 1.40 | 1 (1) | 28 | 1.93 | 36.7 | slowed 32%/2.5s | - |
+| `toxicBreath` | poison | cone | special | mouth | basic | 48 | 0.95 | 5 | 1.2 | 0 | 0.504/0.217/0.525 | 1.25 | 1 (1) | 31 | 1.55 | 36.6 | poisoned 48%/5s | - |
+| `steamBreath` | water | cone | special | mouth | basic | 58 | 0.95 | 5 | 1.2 | 0 | 0.622/0.26/0.625 | 1.51 | 2 (12) | 30 | 1.93 | 36.6 | wet 56%/4s | - |
+| `sandBreath` | earth | cone | special | mouth | basic | 46 | 0.95 | 5 | 1.3 | 0 | 0.482/0.208/0.506 | 1.20 | 1 (1) | 26 | 1.77 | 36.5 | blinded 40%/2.5s | - |
+| `sparkBreath` | electric | cone | special | mouth | basic | 52 | 0.95 | 6 | 1.2 | 0 | 0.551/0.234/0.565 | 1.35 | 1 (1) | 27 | 1.93 | 36.6 | paralyzed 20%/2s | - |
+| `shadowMist` | shadow | cone | special | mouth | basic | 44 | 0.95 | 4.5 | 1.3 | 0 | 0.459/0.2/0.486 | 1.15 | 2 (12) | 26 | 1.69 | 36.5 | feared 36%/2.5s | - |
+| `psychicWave` | psychic | cone | special | eyes | basic | 52 | 0.95 | 7 | 1.5 | 0 | 0.556/0.236/0.57 | 1.36 | 2 (12) | 32 | 1.63 | 36.3 | confused 28%/2s | - |
 | `slice` | neutral | melee | physical | claws | basic | 32 | 0.98 | 0.3 | 0 | 0 | 0.294/0.136/0.337 | 0.77 | 1 (1) | 11 | 2.91 | 40.9 | - | - |
-| `crunch` | neutral | melee | physical | jaw | basic | 46 | 0.95 | 0 | 0 | 0 | 0.465/0.201/0.488 | 1.15 | 1 (1) | 16 | 2.88 | 37.9 | softened 20%/3s | - |
-| `rendingClaws` | shadow | melee | physical | claws | basic | 58 | 0.93 | 0.3 | 0 | 0 | 0.601/0.252/0.605 | 1.46 | 2 (12) | 24 | 2.42 | 37.0 | softened 30%/3s | - |
-| `hornGore` | neutral | melee | physical | horns | basic | 62 | 0.9 | 0.4 | 0 | 0 | 0.691/0.286/0.683 | 1.66 | 2 (12) | 23 | 2.70 | 33.6 | knockback 3; staggered 25%/1s | - |
+| `crunch` | neutral | melee | physical | jaw | basic | 46 | 0.95 | 0 | 0 | 0 | 0.465/0.201/0.488 | 1.15 | 1 (1) | 16 | 2.88 | 37.9 | softened 16%/3s | - |
+| `rendingClaws` | shadow | melee | physical | claws | basic | 58 | 0.93 | 0.3 | 0 | 0 | 0.601/0.252/0.605 | 1.46 | 2 (12) | 23 | 2.52 | 37.0 | softened 24%/3s | - |
+| `hornGore` | neutral | melee | physical | horns | basic | 62 | 0.9 | 0.4 | 0 | 0 | 0.666/0.276/0.658 | 1.60 | 2 (12) | 23 | 2.70 | 34.9 | knockback 3 | - |
 | `tailWhip` | neutral | melee | physical | tail | basic | 40 | 0.96 | 1.2 | 0 | 0 | 0.396/0.176/0.429 | 1.00 | 1 (1) | 18 | 2.22 | 38.4 | knockback 4 | - |
 | `wingBuffet` | air | burst | physical | wings | basic | 42 | 0.97 | 0 | 2.2 | 0 | 0.446/0.196/0.477 | 1.12 | 1 (1) | 25 | 1.68 | 36.4 | knockback 3 | - |
-| `crushingWeight` | neutral | melee | physical | mass | basic | 76 | 0.88 | 0 | 0 | 0 | 0.957/0.385/0.894 | 2.24 | 2 (12) | 22 | 3.45 | 29.9 | staggered 35%/1.2s | - |
+| `crushingWeight` | neutral | melee | physical | mass | basic | 76 | 0.88 | 0 | 0 | 0 | 0.957/0.385/0.894 | 2.24 | 2 (12) | 22 | 3.45 | 29.9 | staggered 28%/1.2s | - |
 | `quickDash` | neutral | dash | physical | legs | mobility | 30 | 0.95 | 7 | 0 | 18 | 0.272/0.128/0.319 | 0.72 | 1 (1) | 11 | 2.73 | 39.6 | - | - |
-| `flameDash` | fire | dash | physical | legs | mobility | 52 | 0.95 | 8 | 0 | 16 | 0.533/0.226/0.546 | 1.31 | 1 (1) | 24 | 2.17 | 37.9 | burn 35%/3s | - |
-| `aquaJet` | water | dash | physical | legs | mobility | 44 | 0.95 | 8 | 0 | 20 | 0.442/0.192/0.468 | 1.10 | 1 (1) | 20 | 2.20 | 37.9 | wet 50%/4s | - |
-| `voltRush` | electric | dash | physical | legs | mobility | 46 | 0.95 | 9 | 0 | 24 | 0.465/0.201/0.488 | 1.15 | 1 (1) | 20 | 2.30 | 37.9 | paralyzed 20%/1.5s | - |
+| `flameDash` | fire | dash | physical | legs | mobility | 52 | 0.95 | 8 | 0 | 16 | 0.533/0.226/0.546 | 1.31 | 1 (1) | 23 | 2.26 | 37.9 | burn 28%/3s | - |
+| `aquaJet` | water | dash | physical | legs | mobility | 44 | 0.95 | 8 | 0 | 20 | 0.442/0.192/0.468 | 1.10 | 1 (1) | 19 | 2.32 | 37.9 | wet 40%/4s | - |
+| `voltRush` | electric | dash | physical | legs | mobility | 46 | 0.95 | 9 | 0 | 24 | 0.465/0.201/0.488 | 1.15 | 1 (1) | 20 | 2.30 | 37.9 | paralyzed 16%/1.5s | - |
 | `galeDash` | air | dash | physical | legs | mobility | 42 | 0.95 | 10 | 0 | 22 | 0.419/0.184/0.449 | 1.05 | 1 (1) | 21 | 2 | 37.9 | knockback 2 | - |
-| `iceSlide` | ice | dash | physical | legs | mobility | 44 | 0.95 | 9 | 0 | 20 | 0.442/0.192/0.468 | 1.10 | 1 (1) | 19 | 2.32 | 37.9 | slowed 30%/2s | - |
+| `iceSlide` | ice | dash | physical | legs | mobility | 44 | 0.95 | 9 | 0 | 20 | 0.442/0.192/0.468 | 1.10 | 1 (1) | 19 | 2.32 | 37.9 | slowed 24%/2s | - |
 | `shadowStep` | shadow | dash | physical | legs | mobility | 46 | 0.95 | 9 | 0 | 30 | 0.465/0.201/0.488 | 1.15 | 2 (12) | 26 | 1.77 | 37.9 | self evasive 100%/1.5s | - |
-| `hornCharge` | neutral | dash | physical | horns | mobility | 54 | 0.95 | 8 | 0 | 15 | 0.577/0.244/0.587 | 1.41 | 2 (12) | 25 | 2.16 | 36.4 | knockback 4; stunned 30%/1s | - |
-| `rollingCharge` | neutral | dash | physical | mass | mobility | 56 | 0.95 | 9 | 0 | 13 | 0.601/0.252/0.608 | 1.46 | 2 (12) | 27 | 2.07 | 36.4 | knockback 5; staggered 30%/1s | - |
-| `thornRush` | plant | dash | physical | legs | mobility | 44 | 0.95 | 8 | 0 | 16 | 0.442/0.192/0.468 | 1.10 | 1 (1) | 19 | 2.32 | 37.9 | slowed 30%/2s | - |
+| `hornCharge` | neutral | dash | physical | horns | mobility | 54 | 0.95 | 8 | 0 | 15 | 0.556/0.235/0.566 | 1.36 | 2 (12) | 24 | 2.25 | 37.8 | knockback 4 | - |
+| `rollingCharge` | neutral | dash | physical | mass | mobility | 56 | 0.95 | 9 | 0 | 13 | 0.578/0.243/0.585 | 1.41 | 2 (12) | 26 | 2.15 | 37.8 | knockback 5 | - |
+| `thornRush` | plant | dash | physical | legs | mobility | 44 | 0.95 | 8 | 0 | 16 | 0.442/0.192/0.468 | 1.10 | 1 (1) | 19 | 2.32 | 37.9 | slowed 24%/2s | - |
 | `steelCharge` | metal | dash | physical | mass | mobility | 40 | 0.95 | 8 | 0 | 15 | 0.396/0.176/0.429 | 1.00 | 1 (1) | 22 | 1.82 | 38.0 | knockback 4 | - |
-| `venomLunge` | poison | dash | physical | jaw | mobility | 42 | 0.95 | 8 | 0 | 20 | 0.419/0.184/0.449 | 1.05 | 1 (1) | 24 | 1.75 | 37.9 | poisoned 60%/4s | - |
-| `flashStep` | light | dash | physical | legs | mobility | 42 | 0.95 | 10 | 0 | 32 | 0.419/0.184/0.449 | 1.05 | 1 (1) | 21 | 2 | 37.9 | blinded 30%/1.5s | - |
-| `psiBlink` | psychic | dash | physical | legs | mobility | 40 | 0.95 | 9 | 0 | 30 | 0.396/0.176/0.429 | 1.00 | 1 (1) | 19 | 2.11 | 38.0 | confused 25%/2s | - |
-| `riftDash` | void | dash | physical | legs | mobility | 44 | 0.95 | 9 | 0 | 28 | 0.442/0.192/0.468 | 1.10 | 1 (1) | 22 | 2 | 37.9 | softened 30%/3s | - |
+| `venomLunge` | poison | dash | physical | jaw | mobility | 42 | 0.95 | 8 | 0 | 20 | 0.419/0.184/0.449 | 1.05 | 1 (1) | 23 | 1.83 | 37.9 | poisoned 48%/4s | - |
+| `flashStep` | light | dash | physical | legs | mobility | 42 | 0.95 | 10 | 0 | 32 | 0.419/0.184/0.449 | 1.05 | 1 (1) | 20 | 2.10 | 37.9 | blinded 24%/1.5s | - |
+| `psiBlink` | psychic | dash | physical | legs | mobility | 40 | 0.95 | 9 | 0 | 30 | 0.396/0.176/0.429 | 1.00 | 1 (1) | 19 | 2.11 | 38.0 | confused 20%/2s | - |
+| `riftDash` | void | dash | physical | legs | mobility | 44 | 0.95 | 9 | 0 | 28 | 0.442/0.192/0.468 | 1.10 | 1 (1) | 21 | 2.10 | 37.9 | softened 24%/3s | - |
 | `thunderClap` | electric | burst | special | aura | control | 36 | 0.97 | 0 | 3 | 0 | 0.381/0.172/0.424 | 0.98 | 2 (12) | 23 | 1.57 | 35.7 | stunned 55%/1s | - |
 | `headbutt` | neutral | melee | physical | mass | control | 45 | 0.93 | 0 | 0 | 0 | 0.453/0.197/0.478 | 1.13 | 1 (1) | 17 | 2.65 | 37.1 | stunned 50%/0.8s | - |
-| `shieldBash` | metal | melee | physical | mass | control | 40 | 0.86 | 0 | 0 | 0 | 0.412/0.182/0.446 | 1.04 | 1 (1) | 19 | 2.11 | 33.1 | stunned 50%/0.9s; knockback 2 | - |
-| `tailSweep` | neutral | burst | physical | tail | control | 38 | 0.96 | 0 | 2 | 0 | 0.41/0.183/0.449 | 1.04 | 1 (1) | 21 | 1.81 | 35.0 | stunned 45%/0.9s; knockback 2 | - |
+| `shieldBash` | metal | melee | physical | mass | control | 40 | 0.86 | 0 | 0 | 0 | 0.396/0.176/0.429 | 1.00 | 1 (1) | 17 | 2.35 | 34.4 | stunned 50%/0.9s | - |
+| `tailSweep` | neutral | burst | physical | tail | control | 38 | 0.96 | 0 | 2 | 0 | 0.395/0.177/0.433 | 1.01 | 1 (1) | 18 | 2.11 | 36.3 | stunned 36%/0.9s | - |
 | `petrifyGaze` | earth | beam | special | eyes | control | 30 | 0.92 | 11 | 0 | 0 | 0.283/0.133/0.331 | 0.75 | 2 (12) | 19 | 1.58 | 36.9 | stunned 55%/1.2s | - |
-| `frostBind` | ice | zone | special | aura | control | 30 | 0.95 | 10 | 1.8 | 14 | 0.308/0.145/0.361 | 0.81 | 2 (12) | 25 | 1.20 | 35.0 | slowed 60%/2s; frozen 55%/1.2s | - |
-| `vineSnare` | plant | zone | special | aura | control | 32 | 0.95 | 10 | 1.8 | 14 | 0.333/0.155/0.383 | 0.87 | 2 (12) | 28 | 1.14 | 34.9 | slowed 80%/3s; stunned 50%/0.8s | - |
+| `frostBind` | ice | zone | special | aura | control | 30 | 0.95 | 10 | 1.8 | 14 | 0.297/0.14/0.349 | 0.79 | 2 (12) | 23 | 1.30 | 36.3 | frozen 55%/1.2s | - |
+| `vineSnare` | plant | zone | special | aura | control | 32 | 0.95 | 10 | 1.8 | 14 | 0.321/0.149/0.369 | 0.84 | 2 (12) | 23 | 1.39 | 36.2 | stunned 50%/0.8s | - |
 | `mindLock` | psychic | beam | special | eyes | control | 25 | 0.9 | 11 | 0 | 0 | 0.257/0.123/0.306 | 0.69 | 2 (12) | 18 | 1.39 | 32.8 | stunned 55%/1.2s | - |
-| `dreadHowl` | shadow | burst | special | mouth | control | 25 | 1 | 0 | 4 | 0 | 0.296/0.141/0.354 | 0.79 | 2 (12) | 24 | 1.04 | 31.6 | feared 70%/3s; stunned 30%/0.8s | - |
-| `flareBurst` | fire | burst | special | aura | control | 34 | 0.97 | 0 | 2.5 | 0 | 0.365/0.167/0.411 | 0.94 | 2 (12) | 23 | 1.48 | 35.0 | stunned 50%/0.8s; burn 30%/3s | - |
-| `whirlpool` | water | zone | special | aura | control | 30 | 0.95 | 10 | 1.8 | 14 | 0.308/0.145/0.361 | 0.81 | 2 (12) | 24 | 1.25 | 35.0 | wet 60%/4s; stunned 50%/0.8s | - |
-| `downdraft` | air | zone | special | aura | control | 30 | 0.95 | 11 | 1.8 | 18 | 0.319/0.15/0.374 | 0.84 | 2 (12) | 29 | 1.03 | 33.8 | slowed 50%/2s; stunned 50%/0.8s; knockback 3 | - |
-| `nerveSpit` | poison | projectile | special | mouth | control | 36 | 0.97 | 10 | 0 | 18 | 0.365/0.165/0.405 | 0.94 | 1 (1) | 25 | 1.44 | 37.3 | stunned 50%/0.8s; poisoned 60%/4s | - |
-| `blindingFlash` | light | burst | special | eyes | control | 32 | 1 | 0 | 3 | 0 | 0.344/0.159/0.395 | 0.90 | 2 (12) | 25 | 1.28 | 35.6 | stunned 50%/0.8s; blinded 50%/2s | - |
-| `voidGrip` | void | zone | special | aura | control | 30 | 0.93 | 11 | 1.6 | 0 | 0.318/0.15/0.372 | 0.84 | 2 (12) | 32 | 0.94 | 33.2 | softened 40%/3s; stunned 50%/0.8s; pull 4 | - |
-| `meteor` | fire | zone | special | aura | ultimate | 150 | 0.9 | 13 | 2.4 | 10 | 2.822/1.071/2.35 | 6.24 | 3 (30) | 92 | 1.63 | 21.6 | burn 60%/4s; knockback 4 | - |
-| `tsunami` | water | zone | special | aura | ultimate | 135 | 0.92 | 12 | 2.6 | 0 | 2.634/0.992/2.207 | 5.83 | 3 (30) | 88 | 1.53 | 21.3 | wet 100%/6s; knockback 7 | - |
-| `worldTree` | plant | zone | special | aura | ultimate | 120 | 0.95 | 10 | 2.6 | 0 | 2.2/0.84/1.882 | 4.92 | 3 (30) | 88 | 1.36 | 23.2 | slowed 50%/3s; self regen 100%/6s | - |
-| `earthshatter` | earth | burst | physical | legs | ultimate | 150 | 0.95 | 0 | 3.6 | 0 | 2.813/1.068/2.342 | 6.22 | 3 (30) | 65 | 2.31 | 22.9 | staggered 60%/1.4s | - |
-| `hurricane` | air | zone | special | aura | ultimate | 130 | 0.9 | 12 | 2.6 | 0 | 2.576/0.973/2.171 | 5.72 | 3 (30) | 81 | 1.60 | 20.5 | knockback 6; slowed 50%/2s; staggered 40%/1s | - |
-| `stormLance` | electric | beam | special | aura | ultimate | 145 | 0.88 | 16 | 0 | 0 | 2.522/0.952/2.101 | 5.57 | 3 (30) | 61 | 2.38 | 22.9 | paralyzed 50%/2s | - |
-| `avalanche` | ice | zone | special | aura | ultimate | 140 | 0.9 | 12 | 2.4 | 0 | 2.765/1.037/2.304 | 6.11 | 3 (30) | 79 | 1.77 | 20.6 | slowed 50%/3s; frozen 40%/1.6s | - |
-| `ironMaiden` | metal | burst | special | aura | ultimate | 130 | 0.95 | 0 | 2.6 | 0 | 2.49/0.941/2.099 | 5.53 | 3 (30) | 65 | 2 | 22.3 | staggered 50%/1.2s; self shielded 100%/4s | - |
-| `plague` | poison | zone | special | aura | ultimate | 125 | 0.92 | 11 | 2.6 | 0 | 2.345/0.89/1.99 | 5.23 | 3 (30) | 88 | 1.42 | 22.0 | poisoned 100%/6s; softened 40%/4s | - |
-| `supernova` | light | burst | special | aura | ultimate | 155 | 0.95 | 0 | 3.6 | 0 | 2.841/1.085/2.365 | 6.29 | 3 (30) | 76 | 2.04 | 23.4 | blinded 70%/3s | - |
-| `eclipseFall` | shadow | zone | special | aura | ultimate | 140 | 0.9 | 13 | 2.4 | 0 | 2.669/1.001/2.224 | 5.89 | 3 (30) | 82 | 1.71 | 21.4 | feared 50%/3s | - |
-| `mindCrush` | psychic | beam | special | eyes | ultimate | 140 | 0.9 | 15 | 0 | 0 | 2.592/0.972/2.16 | 5.72 | 3 (30) | 65 | 2.15 | 22.0 | confused 50%/3s; stunned 30%/1s | - |
-| `blackHole` | void | zone | special | aura | ultimate | 135 | 0.9 | 12 | 2.6 | 0 | 2.725/1.026/2.284 | 6.04 | 3 (30) | 94 | 1.44 | 20.1 | pull 8; slowed 50%/2s; staggered 40%/1s | - |
-| `titanSlam` | neutral | burst | physical | mass | ultimate | 160 | 0.92 | 0 | 3 | 0 | 2.925/1.123/2.434 | 6.48 | 3 (30) | 65 | 2.46 | 22.7 | stunned 40%/1.2s; knockback 6 | - |
+| `dreadHowl` | shadow | burst | special | mouth | control | 25 | 1 | 0 | 4 | 0 | 0.286/0.137/0.342 | 0.77 | 2 (12) | 21 | 1.19 | 32.7 | feared 56%/3s | - |
+| `flareBurst` | fire | burst | special | aura | control | 34 | 0.97 | 0 | 2.5 | 0 | 0.352/0.161/0.397 | 0.91 | 2 (12) | 20 | 1.70 | 36.2 | stunned 50%/0.8s | - |
+| `whirlpool` | water | zone | special | aura | control | 30 | 0.95 | 10 | 1.8 | 14 | 0.297/0.14/0.349 | 0.79 | 2 (12) | 22 | 1.36 | 36.3 | stunned 50%/0.8s | - |
+| `downdraft` | air | zone | special | aura | control | 30 | 0.95 | 11 | 1.8 | 18 | 0.297/0.14/0.349 | 0.79 | 2 (12) | 22 | 1.36 | 36.3 | stunned 50%/0.8s | - |
+| `nerveSpit` | poison | projectile | special | mouth | control | 36 | 0.97 | 10 | 0 | 18 | 0.351/0.159/0.39 | 0.90 | 1 (1) | 18 | 2 | 38.8 | stunned 50%/0.8s | - |
+| `blindingFlash` | light | burst | special | eyes | control | 32 | 1 | 0 | 3 | 0 | 0.332/0.154/0.381 | 0.87 | 2 (12) | 22 | 1.45 | 36.9 | stunned 50%/0.8s | - |
+| `voidGrip` | void | zone | special | aura | control | 30 | 0.93 | 11 | 1.6 | 0 | 0.296/0.139/0.347 | 0.78 | 2 (12) | 23 | 1.30 | 35.7 | stunned 50%/0.8s | - |
+| `meteor` | fire | zone | special | aura | ultimate | 150 | 0.9 | 13 | 2.4 | 10 | 2.724/1.034/2.268 | 6.03 | 3 (30) | 85 | 1.76 | 22.4 | burn 48%/4s | - |
+| `tsunami` | water | zone | special | aura | ultimate | 135 | 0.92 | 12 | 2.6 | 0 | 2.543/0.957/2.131 | 5.63 | 3 (30) | 77 | 1.75 | 22.1 | wet 80%/6s | - |
+| `worldTree` | plant | zone | special | aura | ultimate | 120 | 0.95 | 10 | 2.6 | 0 | 2.124/0.811/1.817 | 4.75 | 3 (30) | 85 | 1.41 | 24.0 | self regen 100%/6s | - |
+| `earthshatter` | earth | burst | physical | legs | ultimate | 150 | 0.95 | 0 | 3.6 | 0 | 2.813/1.068/2.342 | 6.22 | 3 (30) | 65 | 2.31 | 22.9 | staggered 48%/1.4s | - |
+| `hurricane` | air | zone | special | aura | ultimate | 130 | 0.9 | 12 | 2.6 | 0 | 2.404/0.908/2.026 | 5.34 | 3 (30) | 78 | 1.67 | 21.9 | knockback 6 | - |
+| `stormLance` | electric | beam | special | aura | ultimate | 145 | 0.88 | 16 | 0 | 0 | 2.522/0.952/2.101 | 5.57 | 3 (30) | 61 | 2.38 | 22.9 | paralyzed 40%/2s | - |
+| `avalanche` | ice | zone | special | aura | ultimate | 140 | 0.9 | 12 | 2.4 | 0 | 2.669/1.001/2.224 | 5.89 | 3 (30) | 75 | 1.87 | 21.4 | slowed 40%/3s | - |
+| `ironMaiden` | metal | burst | special | aura | ultimate | 130 | 0.95 | 0 | 2.6 | 0 | 2.404/0.908/2.026 | 5.34 | 3 (30) | 50 | 2.60 | 23.1 | staggered 40%/1.2s | - |
+| `plague` | poison | zone | special | aura | ultimate | 125 | 0.92 | 11 | 2.6 | 0 | 2.264/0.859/1.922 | 5.04 | 3 (30) | 81 | 1.54 | 22.8 | poisoned 80%/6s | - |
+| `supernova` | light | burst | special | aura | ultimate | 155 | 0.95 | 0 | 3.6 | 0 | 2.841/1.085/2.365 | 6.29 | 3 (30) | 75 | 2.07 | 23.4 | blinded 56%/3s | - |
+| `eclipseFall` | shadow | zone | special | aura | ultimate | 140 | 0.9 | 13 | 2.4 | 0 | 2.669/1.001/2.224 | 5.89 | 3 (30) | 82 | 1.71 | 21.4 | feared 40%/3s | - |
+| `mindCrush` | psychic | beam | special | eyes | ultimate | 140 | 0.9 | 15 | 0 | 0 | 2.496/0.936/2.08 | 5.51 | 3 (30) | 62 | 2.26 | 22.9 | confused 40%/3s | - |
+| `blackHole` | void | zone | special | aura | ultimate | 135 | 0.9 | 12 | 2.6 | 0 | 2.543/0.957/2.131 | 5.63 | 3 (30) | 90 | 1.50 | 21.6 | pull 8 | - |
+| `titanSlam` | neutral | burst | physical | mass | ultimate | 160 | 0.92 | 0 | 3 | 0 | 2.825/1.085/2.35 | 6.26 | 3 (30) | 63 | 2.54 | 23.5 | knockback 6 | - |
 
-Damaging moves: 122/141. power/cost mean 1.92 sd 0.51; top: crushingWeight 3.45, slice 2.91, crunch 2.88, quickDash 2.73, hornGore 2.70; bottom: voidGrip 0.94, miasma 0.92, frostGround 0.71, overgrowth 0.43, stoneWall 0.41.
-dmg/s (power x acc / cycle) mean 32.1; top: slice 40.9, photonDart 40.6, galeSlash 39.8, quickDash 39.6, vineLash 39.0; bottom: blackHole 20.1, burrow 16.8, overgrowth 9.1, frostGround 7.5, stoneWall 7.5.
+Damaging moves: 122/141. power/cost mean 1.99 sd 0.49; top: crushingWeight 3.45, slice 2.91, crunch 2.88, quickDash 2.73, hornGore 2.70; bottom: magnetPull 1.07, miasma 0.98, frostGround 0.71, overgrowth 0.43, stoneWall 0.41.
+dmg/s (power x acc / cycle) mean 32.4; top: slice 40.9, photonDart 40.6, galeSlash 39.8, quickDash 39.6, vineLash 39.0; bottom: eclipseFall 21.4, burrow 16.8, overgrowth 9.1, frostGround 7.5, stoneWall 7.5.
 <!-- /GEN:moves -->
 
 **Expand.** One `mv(...)` row in `src/combat/moves.ts`; check it is learnable (element = primary, secondary or neutral; tier level; required ability), keep power/cost inside the band above, tag it (`contact` is automatic for melee; `ground`, `massScaled`, `highCrit`), and add a scenario if it introduces an interaction.
@@ -665,6 +665,10 @@ Achievements, quest steps and quest-giver arcs are all `Trigger { what, count, w
 | `genemon.evolve` | **emitted** | src/genome/genemon.ts | physical/virtual/lab | fromStage:number, growth:number, level:number | toStage:number, height:number, sizeClass:sizeClass | 3 (3) | stages 1 Hatchling, 2 Juvenile, 3 Adult, 4 Ascended (STAGE_NAMES) |
 | `genemon.specialize` | **emitted** | src/genome/genemon.ts | physical/virtual/lab | primary:element, secondary:elementOrNone | primary:element, secondary:elementOrNone | 1 (1) | entries = types before, exits = types after: always filter with an explicit exits. scope |
 | `genemon.feed` | **emitted** | src/genome/genemon.ts | physical/virtual/lab | food:food, units:number | hunger:number, bond:number | 8 (8) | feed(); units = portions |
+| `genemon.feed.refused` | **emitted** | src/genome/genemon.ts | physical/virtual/lab | food:food, units:number | fullness:number, capacity:number | 0 (0) | feedLife(); the stomach was full (pass-5 digestion) |
+| `genemon.life` | **emitted** | src/genome/lifeclock.ts | physical/virtual/lab | elapsedDays:number, timeScale:number, hour:hour, altitudeM:number, phaseBefore:text, hungerBefore:number | ageDays:number, phase:text, phaseChanged:boolean, hunger:number, absorbed:number, stomach:number, bloat:number, fatigue:number, alertness:number, asleep:boolean, acclimatisedM:number, events:text | 0 (0) | tickLife() via liveTick(); one row per life-clock tick (offline catch-up capped at 30 days) |
+| `genemon.scar` | **emitted** | src/genome/genemon.ts | physical/virtual/lab/arena | part:text, from:text, damage:number | severity:number, scars:number | 0 (0) | scarHit(); heavy hits (>= 25 % max HP) may scar, seeded |
+| `genemon.imprint` | **emitted** | src/genome/genemon.ts | physical/virtual/lab | item:text | trait:text, strength:number, generation:number | 0 (0) | imprintItem(); an object bends a trait |
 | `genemon.experience` | **emitted** | src/genome/genemon.ts | physical/virtual/lab | experience:experience, units:number, physical:boolean | xp:number | 46 (46) | live(); units = sessions or km; physical-only experiences are refused when physical === false |
 | `genemon.experience.denied` | **emitted** | src/genome/genemon.ts | physical/virtual/lab | experience:experience | reason:text | 0 (0) | a physical-only experience attempted from the sofa |
 | `genemon.exposure` | **emitted** | src/genome/genemon.ts | physical/virtual/lab | ground:ground, hours:number | totalHours:number | 2 (2) | expose(); one row per session |
@@ -677,7 +681,7 @@ Achievements, quest steps and quest-giver arcs are all `Trigger { what, count, w
 | `genemon.fuse` | proposed | src/genome/breeding.ts caller (lab) | lab | a:text, b:text | child:text, generation:number, sizeClass:sizeClass, primary:element | 5 (0) | fuse(): the stronger pole wins per axis, the body grows |
 | `dex.register` | proposed | src/ui (collection) | virtual | primary:element, kind:bodyKind, pattern:pattern, sizeClass:sizeClass | - | 2 (0) | first time this player owns this element x kind x pattern x size combination |
 | `battle.start` | **emitted** | src/combat/battle.ts | arena | seed:number, arena:arenaKind, weather:weather, hour:hour, teamA:text, teamB:text, +mode:battleMode | synergiesA:text, synergiesB:text, fighters:number, field:number | 0 (0) | teams locked in; who = system, from/to = the two owners; field = fighters per side on the field (0 = brawl, everyone) |
-| `battle.decide` | **emitted** | src/combat/battle.ts | arena | options:number, hp:number, energy:number, fear:number, anger:number | move:move, target:text, utility:number, second:number | 2 (2) | a fighter commits to a move; exits.move = the move it starts charging |
+| `battle.decide` | **emitted** | src/combat/battle.ts | arena | options:number, hp:number, energy:number, fear:number, anger:number, perceived:number | move:move, target:text, utility:number, second:number, intent:text, drive:number | 2 (2) | a fighter commits to a move; exits.move = the move it starts charging; exits.intent = the brain's intent (aggress\|kite\|flank\|guard\|interrupt\|finish\|retreat\|regroup) and exits.drive its activation 0..1; entries.perceived = enemies it sees, hears or remembers |
 | `battle.hit` | **emitted** | src/combat/battle.ts | arena | move:move, power:number, atk:number, def:number, type:number, stab:number, weather:number, ground:number, conduction:number, size:number, emotion:number, team:number, rhythm:number, reaction:number, category:text, body:number, crit:boolean, +element:element, +contact:boolean, +targetGround:ground, +targetElement:element, +attackerSize:sizeClass, +targetSize:sizeClass, +weatherId:weather | damage:number, hp:number, hpFrac:number | 8 (3) | landed hit with every damage factor: type = typeMultiplier(); weather, ground, conduction... are multipliers, not ids |
 | `battle.miss` | **emitted** | src/combat/battle.ts | arena | move:move | hp:number, +reason:dodgeReason | 4 (0) | an attack that did not land (why = the roll) |
 | `battle.fail` | **emitted** | src/combat/battle.ts | arena | move:move | reason:text | 1 (1) | a move the world refused, e.g. Burrow on undiggable ground |
@@ -712,7 +716,7 @@ Achievements, quest steps and quest-giver arcs are all `Trigger { what, count, w
 | `quest.complete` | **emitted** | src/ui/progressStore.ts | virtual/physical | quest:text, kind:questKind, giver:text, physical:boolean | - | 8 (8) | quest finished |
 | `achievement.unlock` | **emitted** | src/ui/progressStore.ts | ui | achievement:text, category:achievementCategory, tier:number | - | 1 (1) | achievement unlocked |
 
-51 events: 38 emitted today, 13 proposed. Keys marked + are requested from the emitter (25): `battle.start.mode`, `battle.hit.element`, `battle.hit.contact`, `battle.hit.targetGround`, `battle.hit.targetElement`, `battle.hit.attackerSize`, `battle.hit.targetSize`, `battle.hit.weatherId`, `battle.miss.reason`, `battle.reaction.ground`, `battle.reaction.weather`, `battle.reaction.allies`, `battle.ko.move`, `battle.ko.element`, `battle.ko.attackerSize`, `battle.ko.targetSize`, `battle.ko.targetElement`, `battle.ko.ground`, `battle.ko.weather`, `battle.ko.night`, `battle.ko.mult`, `market.post.generation`, `market.post.sizeClass`, `market.sold.generation`, `market.sold.sizeClass`. 194 of 315 triggers can progress on today's rows. Declared but used by no trigger: `genemon.xp`, `genemon.experience.denied`, `gauntlet.start`, `gauntlet.round`, `gauntlet.end`, `genemon.release`, `battle.start`, `battle.switch`, `battle.interrupt`, `battle.end`, `battle.loss`, `bag.loot`, `market.buyout`.
+55 events: 42 emitted today, 13 proposed. Keys marked + are requested from the emitter (25): `battle.start.mode`, `battle.hit.element`, `battle.hit.contact`, `battle.hit.targetGround`, `battle.hit.targetElement`, `battle.hit.attackerSize`, `battle.hit.targetSize`, `battle.hit.weatherId`, `battle.miss.reason`, `battle.reaction.ground`, `battle.reaction.weather`, `battle.reaction.allies`, `battle.ko.move`, `battle.ko.element`, `battle.ko.attackerSize`, `battle.ko.targetSize`, `battle.ko.targetElement`, `battle.ko.ground`, `battle.ko.weather`, `battle.ko.night`, `battle.ko.mult`, `market.post.generation`, `market.post.sizeClass`, `market.sold.generation`, `market.sold.sizeClass`. 194 of 315 triggers can progress on today's rows. Declared but used by no trigger: `genemon.xp`, `genemon.feed.refused`, `genemon.life`, `genemon.scar`, `genemon.imprint`, `genemon.experience.denied`, `gauntlet.start`, `gauntlet.round`, `gauntlet.end`, `genemon.release`, `battle.start`, `battle.switch`, `battle.interrupt`, `battle.end`, `battle.loss`, `bag.loot`, `market.buyout`.
 <!-- /GEN:events -->
 
 Vocabularies introduced by content (proposals for the world, battle, ladder and economy owners):

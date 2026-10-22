@@ -551,3 +551,49 @@ Deno.test("[WORLD-JSON] toJSON/fromJSON round-trips the whole world and fails cl
   assertThrows(() => WorldMap.fromJSON({ ...good, territories: [{ ...good.territories[0], influence: { lava: 1 } }] }), "element");
   assertThrows(() => WorldMap.fromJSON(null), "null");
 });
+
+Deno.test("[P5-W1] coverAt: deterministic density layer, follows places (forest = trees/scrub, built-up = none)", () => {
+  const home: V3 = { x: 420, y: 0, z: -310 };
+  const w = new WorldMap({ seed: 2026, origin: PARIS });
+  const places = w.generateNeighbourhood("ana", home);
+  const w2 = new WorldMap({ seed: 2026, origin: PARIS });
+  w2.generateNeighbourhood("ana", home);
+  const counts: Record<string, number> = { trees: 0, rocks: 0, scrub: 0, none: 0 };
+  for (let j = -30; j <= 30; j++) {
+    for (let i = -30; i <= 30; i++) {
+      const x = home.x + i * 100, z = home.z + j * 100;
+      const c = w.coverAt(x, z);
+      assertEquals(w2.coverAt(x, z), c, "deterministic");
+      counts[c ?? "none"]++;
+    }
+  }
+  for (const k of ["trees", "rocks", "scrub", "none"]) assert(counts[k] > 0, `${k}: ${JSON.stringify(counts)}`);
+  const forest = places.find((p) => p.kind === "forest")!;
+  const shop = places.find((p) => p.kind === "supermarket")!;
+  for (let k = 0; k < 12; k++) {
+    const t = (k / 12) * Math.PI * 2, r = forest.radius * 0.6;
+    const c = w.coverAt(forest.pos.x + Math.cos(t) * r, forest.pos.z + Math.sin(t) * r);
+    assert(c === "trees" || c === "scrub", `forest cover ${c}`);
+  }
+  assertEquals(w.coverAt(shop.pos.x, shop.pos.z), null, "no trees inside a supermarket");
+});
+
+Deno.test("[P5-W1] reliefMarks: spread local maxima / minima, peaks above hollows, sorted", () => {
+  const w = new WorldMap({ seed: 2026, origin: PARIS });
+  const c: V3 = { x: 420, y: 0, z: -310 };
+  const m = w.reliefMarks(c, 3000, 5);
+  assert(m.peaks.length >= 2 && m.peaks.length <= 5, `peaks ${m.peaks.length}`);
+  assert(m.lows.length >= 2 && m.lows.length <= 5, `lows ${m.lows.length}`);
+  for (let i = 1; i < m.peaks.length; i++) assert(m.peaks[i - 1].y >= m.peaks[i].y, "peaks sorted");
+  for (let i = 1; i < m.lows.length; i++) assert(m.lows[i - 1].y <= m.lows[i].y, "lows sorted");
+  assert(m.peaks[0].y > m.lows[0].y, "highest peak above the lowest hollow");
+  for (const list of [m.peaks, m.lows]) {
+    for (const p of list) {
+      assertAlmostEquals(p.y, w.heightAt(p.x, p.z), 1e-9);
+      for (const q of list) if (p !== q) assert(Math.hypot(p.x - q.x, p.z - q.z) >= 1000 - 1e-6, "spread");
+    }
+  }
+  const step = 6000 / 40;
+  for (const p of m.peaks) for (const [dx, dz] of [[step, 0], [-step, 0], [0, step], [0, -step]]) assert(w.heightAt(p.x + dx, p.z + dz) < p.y, "a peak is a local maximum");
+  assertEquals(JSON.stringify(w.reliefMarks(c, 3000, 5)), JSON.stringify(m), "deterministic");
+});

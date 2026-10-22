@@ -1,8 +1,14 @@
 /**
  * Battle engine (pure, deterministic, fixed dt). Teams fight simultaneously on a physical arena.
  * Every move runs 3 phases: CHARGE (gather, slow, readable tell) -> ACTIVE (strike resolves at its
- * start) -> REST (recovery, vulnerable). Fighters choose (move, target) with a utility AI shaped by
- * their psyche (temper, reach, wisdom, chaos/order, fear) and their learned type knowledge.
+ * start) -> REST (recovery, vulnerable), all stretched by the battle TEMPO [P5-A1]. Fighters choose
+ * (move, target) with a utility AI shaped by their psyche (temper, reach, wisdom, chaos/order, fear)
+ * and their learned type knowledge, biased by a small neural-shaped BRAIN (./brain.ts: features ->
+ * 8 named neurons -> an intent: aggress, kite, flank, guard, interrupt, finish, retreat, regroup)
+ * [P5-B1]. Fighters PERCEIVE: a field of view around their body yaw, a vision range and a hearing
+ * range; unseen-and-unheard enemies are poor targets, blind-side attacks land better and make the
+ * victim turn [P5-B2]. Fewer powers [P5-B1]: one rider per move, at most STATUS_CAP harmful statuses
+ * per fighter, at most MAX_ZONES zones, control zones are snaps.
  * Space matters: projectiles fly and can CLASH mid-air (fire vs water -> smoke), reactions leave
  * zones, attacks transform the ground (freeze, melt, burn, mud), electricity conducts through
  * water/wet bodies (and allies!), flyers dodge ground moves, diggers need diggable ground, weather
@@ -15,14 +21,35 @@ import { type ElementId, ELEMENTS, type ReactionId, reactionBetween, typeMultipl
 import { GROUNDS, type GroundId } from "../data/grounds.ts";
 import { type WeatherId, WEATHERS } from "../data/weather.ts";
 import { type Genemon, phenotypeOf } from "../genome/genemon.ts";
+import { helixOf } from "../genome/helix.ts";
+import type { SenseProfile } from "../genome/lifeTypes.ts";
+import { senseDamageMult, sensesOf } from "../genome/senses.ts";
 import type { Emotions, Phenotype, Stats } from "../genome/phenotype.ts";
 import { EVASION_CAP } from "../genome/phenotype.ts";
 import { noteActivity } from "../genome/epigenetics.ts";
-import { type Arena, type ArenaSpec, generateArena } from "../world/arena.ts";
+import { type Arena, type ArenaSpec, generateArena, spawnAnchor } from "../world/arena.ts";
 import { applyImpulse, type Body, makeBody, stepPhysics } from "../world/physics.ts";
 import { isDamaging, type MetaUsage, type Move, moveCost, type StatusId } from "./moves.ts";
 import { type Synergy, synergies, type Team } from "./team.ts";
-import { ALL_MOVE_BY_ID, bodyFactor, counterValue } from "./kit.ts";
+import { ALL_MOVE_BY_ID, bodyFactor, counterValue, fieldStatus, HARD_STATUS, interrupts } from "./kit.ts";
+import {
+  angleDiff,
+  bearing,
+  type BrainFeatures,
+  type BrainState,
+  type Intent,
+  inFov,
+  facingScore,
+  MEMORY_S,
+  moveBias,
+  type MoveTraits,
+  type Perception,
+  type PerceptionProvider,
+  psycheOf,
+  targetBias,
+  think,
+  UNPERCEIVED_K,
+} from "./brain.ts";
 
 export type Phase = "idle" | "charge" | "active" | "rest";
 
@@ -35,6 +62,17 @@ export interface FighterTally {
   crits: number;
   reactions: number;
   casts: number;
+}
+
+/** Senses of a fighter, derived once per battle (body + life: scars, imprints) [P5-G1]. */
+const SENSES = new WeakMap<object, SenseProfile>();
+export function fighterSenses(f: { ph: Phenotype; genemon: Genemon }): SenseProfile {
+  let s = SENSES.get(f);
+  if (!s) {
+    s = sensesOf(f.ph, helixOf(f.genemon.genome, f.ph), f.genemon.life);
+    SENSES.set(f, s);
+  }
+  return s;
 }
 
 export interface Fighter {
@@ -82,6 +120,16 @@ export interface Fighter {
   dash: { from: V3; to: V3; t0: number; dur: number } | null;
   /** Times this fighter was interrupted (a stun or freeze landed on its charge). */
   interrupted: number;
+  /** What it can perceive [P5-B2] (setup.perception, else the genome's senses: sensesOf). */
+  perception: Perception;
+  /** Fighter idx -> battle time it was last seen or heard (or hit me) [P5-B2]. */
+  known: Map<number, number>;
+  /** Fighter idxs currently inside its field of view and vision range (render: view cones). */
+  sees: number[];
+  /** The last brain pass [P5-B1]: intent + neuron activations (UI / debug), null before the first decision. */
+  brain: BrainState | null;
+  /** Turning toward an attacker that hit it from its blind side, until `until`. */
+  turnTo: { idx: number; until: number } | null;
 }
 
 export interface Projectile {
@@ -134,6 +182,8 @@ export type BattleEventType =
   | "physics"
   | "switch"
   | "interrupt"
+  /** An attack landed from the target's blind side (outside its field of view) [P5-B2]. */
+  | "flank"
   | "end";
 
 export interface BattleEvent {
@@ -174,6 +224,14 @@ export interface BattleSetup {
   script?: SwitchOrder[];
   /** Side 1's trainer AI may switch (default true when field is set). */
   aiSwitch?: boolean;
+  /** Start slot [P5-W1] (SPAWN_SLOTS index, default 0 = the legacy start line): side 0 opens on
+   *  arena.spawns.side0[spawn], side 1 on its symmetric image arena.spawns.side1[spawn]. */
+  spawn?: number;
+  /**
+   * Perception per fighter [P5-B2]: vision range, field of view, hearing range. Default
+   * `defaultPerception(ph)` (brain.ts); the genetics lane's `sensesOf(ph, helix)` fits this slot.
+   */
+  perception?: PerceptionProvider;
 }
 
 /** One trainer switch: fighter `out` goes to the bench, `in` is thrown into the field. */
@@ -247,10 +305,32 @@ const REACTION_ZONE: Partial<Record<ReactionId, { frac: number; status: StatusId
  * Battle PACE: every change of HP - direct hits, conduction, damage over time, hazards, zones, heals
  * and regeneration - is multiplied by PACE, so the whole fight is time-stretched uniformly while
  * actions (charges, cooldowns, energy) keep their real-time rate. Lower = longer battles with more
- * actions per fighter. Tuned for a ~25 s median battle; measured by tools/balance.ts (corpus
- * duration) and tools/scenarios.ts (SC-06).
+ * actions per fighter. Measured by tools/balance.ts (corpus duration) and tools/scenarios.ts (SC-06).
  */
 export const PACE = 0.41;
+/**
+ * Battle TEMPO [P5-A1]: every ACTION is stretched by TEMPO - charge, active and rest phases, the
+ * pause between two moves, status durations, buffs, weather calls and move fields - while every
+ * per-second rate (energy regeneration, flight drain, damage / healing over time, zone damage) is
+ * divided by it. A fight keeps its shape (the same hits, statuses and energy per action) but runs
+ * ~TEMPO x longer and reads at a calmer rhythm. Pass 4 (TEMPO 1) measured a 24.8 s median.
+ */
+export const TEMPO = 1.85;
+/** Per-second rates scale: 1 / TEMPO. */
+export const RATE_K = 1 / TEMPO;
+/** Walking / flying speed multiplier on the phenotype speed [P5-A1]: bodies move more slowly. */
+export const MOVE_K = 0.8;
+/** Default battle length cap, seconds (pass 4: 90 s at TEMPO 1). */
+export const MAX_TIME = 150;
+/** Harmful statuses a fighter can carry at once [P5-B1]; the newest replaces the oldest ("wet" is a state, not counted). */
+export const STATUS_CAP = 2;
+/** Zones alive at once on the field [P5-B1]; a new one retires the oldest. */
+export const MAX_ZONES = 4;
+/** Attacks from the target's blind side: hit chance x BLIND_HIT, its dodge halved, crit chance + BLIND_CRIT [P5-B2]. */
+export const BLIND_HIT = 1.1;
+export const BLIND_CRIT = 0.06;
+/** Seconds (x TEMPO) a fighter hit from its blind side spends turning to face the attacker. */
+export const TURN_S = 0.6;
 /** Extra distance a melee strike covers on its active phase (the lunge), metres. */
 export const MELEE_LUNGE = 0.9;
 /** Every heal a fighter casts in one battle restores HEAL_DECAY x the previous one (0.3, 0.18, 0.11 ...). */
@@ -258,6 +338,10 @@ export const HEAL_DECAY = 0.6;
 
 /** Statuses that hurt their bearer (tenacity applies to these only). */
 const HARMFUL = new Set<StatusId>(["burn", "wet", "frozen", "paralyzed", "poisoned", "slowed", "blinded", "feared", "confused", "staggered", "softened", "stunned"]);
+/** Harmful statuses that count toward STATUS_CAP (wet is weather / water, a state of the body). */
+const CAPPED = new Set<StatusId>([...HARMFUL].filter((s) => s !== "wet"));
+/** Shapes that strike along the attacker's facing (it must look at its target to aim). */
+const FRONTAL = new Set<string>(["melee", "beam", "cone", "projectile", "dash"]);
 /** Statuses that cancel a charge they land on (the counter to long wind-ups) [P4-M6]. */
 const INTERRUPTING = new Set<StatusId>(["stunned", "frozen"]);
 
@@ -279,12 +363,6 @@ const IMMUNE: Partial<Record<StatusId, ElementId[]>> = {
   wet: ["fire"],
 };
 
-function angleDiff(a: number, b: number): number {
-  let d = a - b;
-  while (d > Math.PI) d -= Math.PI * 2;
-  while (d < -Math.PI) d += Math.PI * 2;
-  return d;
-}
 
 const f2 = (x: number) => Math.round(x * 100) / 100;
 
@@ -318,7 +396,7 @@ export class Battle {
   private moveUses: Record<string, number> = {};
   private lastTarget: [number, number] = [-1, -1];
   private lastTargetAt: [number, number] = [-9, -9];
-  private lightningT = 3;
+  private lightningT = 3 * TEMPO;
   private switches: SwitchOrder[] = [];
   private pendingSwitches: SwitchOrder[] = [];
   private switchCd: [number, number] = [0, 0];
@@ -327,7 +405,7 @@ export class Battle {
   constructor(setup: BattleSetup) {
     this.setup = setup;
     this.dt = setup.dt ?? 1 / 30;
-    this.maxTime = setup.maxTime ?? 90;
+    this.maxTime = setup.maxTime ?? MAX_TIME;
     this.arena = generateArena(setup.arena);
     this.weather = setup.arena.weather;
     this.rng = new Rng(hashSeed(setup.seed, "battle"));
@@ -357,14 +435,15 @@ export class Battle {
         }
         const slot = benched ? 0 : i;
         const row = slot < front ? 0 : 1, inRow = row === 0 ? front : n - front, k = row === 0 ? slot : slot - front;
-        const x = (ti === 0 ? -1 : 1) * (halfGap + row * rowGap), z = (k - (inRow - 1) / 2) * Math.max(1.3, 0.9 + 1.4 * ph.heightM);
+        const anchor = spawnAnchor(this.arena, ti as 0 | 1, setup.spawn ?? 0, halfGap);
+        const x = anchor.x + (ti === 0 ? -1 : 1) * row * rowGap, z = anchor.z + (k - (inRow - 1) / 2) * Math.max(1.3, 0.9 + 1.4 * ph.heightM);
         const body = makeBody(g.id, {
           mass: Math.max(0.5, ph.massKg),
           radius: bodyRadius(ph),
           height: ph.heightM,
           elasticity: ph.elasticity,
           balance: stats.balance,
-          maxSpeed: stats.spd,
+          maxSpeed: stats.spd * MOVE_K,
           mobility: ph.mobility,
           swimmer: ph.abilities.swim,
           yaw: ti === 0 ? Math.PI / 2 : -Math.PI / 2,
@@ -396,7 +475,7 @@ export class Battle {
           move: null,
           target: -1,
           aim: null,
-          cooldown: 0.5 + i * 0.35,
+          cooldown: (0.5 + i * 0.35) * TEMPO,
           status: new Map(),
           emotions: { ...ph.psyche.emotions },
           ko: false,
@@ -413,6 +492,11 @@ export class Battle {
           benched,
           dash: null,
           interrupted: 0,
+          perception: (setup.perception ?? ((gg: Genemon, p: Phenotype) => sensesOf(p, helixOf(gg.genome, p), gg.life)))(g, ph),
+          known: new Map(),
+          sees: [],
+          brain: null,
+          turnTo: null,
         });
       });
     });
@@ -430,6 +514,7 @@ export class Battle {
       field: Number.isFinite(field) ? field : 0,
     }, true);
     if (setup.script) this.pendingSwitches = setup.script.slice().sort((a, b) => a.t - b.t);
+    this.perceive();
   }
 
   // ------------------------------------------------------------------ logging
@@ -591,27 +676,174 @@ export class Battle {
     let ev = t.stats.evasion * (t.status.has("evasive") ? 1.6 : 1) + (t.status.has("evasive") ? 0.06 : 0);
     if (t.phase === "rest") ev *= 0.5;
     if (t.status.has("frozen") || t.status.has("staggered") || t.status.has("stunned")) ev = 0;
+    // Awareness [P5-B2]: a strike from the target's blind side (outside its field of view) lands more
+    // often and is dodged half as well; a frontal strike needs the attacker to face its target (a
+    // slow-turning body aims late: up to -25 % beyond ~57 degrees off its facing).
+    if (t !== f && this.blindSide(t, f)) {
+      ev *= 0.5;
+      p *= BLIND_HIT;
+    }
+    if (FRONTAL.has(m.shape) && t !== f) {
+      const off = Math.abs(angleDiff(bearing(f.body.pos.x, f.body.pos.z, t.body.pos.x, t.body.pos.z), f.body.yaw));
+      p *= 1 - 0.25 * clamp((off - 1) / 1.2, 0, 1);
+    }
     // A body in the middle of a dash is hard to pin down: the dash is the dodge [P4-M6].
     const dashing = t.dash && m.shape !== "burst" && m.shape !== "zone" ? 0.45 : 1;
     return clamp(p * (1 - Math.min(EVASION_CAP, ev)) * dashing, 0.05, 0.99);
+  }
+
+  // ------------------------------------------------------------------ perception [P5-B2]
+  /** Vision range now: weather visibility (fog, storm, sandstorm) shortens it. */
+  private visionRange(f: Fighter): number {
+    return f.perception.visionRange * Math.max(0.35, this.weatherDef.visibility);
+  }
+
+  /** Does `f` see `o` right now (inside its field of view around its body yaw, within its vision range)? */
+  canSee(f: Fighter, o: Fighter): boolean {
+    if (o.status.has("burrowed")) return false;
+    const d = distXZ(f.body.pos, o.body.pos) - o.body.radius;
+    return d <= this.visionRange(f) && inFov(f.body.yaw, f.perception.fovHalf, f.body.pos.x, f.body.pos.z, o.body.pos.x, o.body.pos.z);
+  }
+
+  /** Does `f` hear `o` (all around; a body that runs or casts is louder, a still one quieter, a burrowed one rumbles)? */
+  canHear(f: Fighter, o: Fighter): boolean {
+    const moving = Math.hypot(o.body.vel.x, o.body.vel.z) > 1 || o.phase === "charge" || o.phase === "active";
+    const loud = o.status.has("burrowed") ? 0.5 : moving ? 1 : 0.6;
+    return distXZ(f.body.pos, o.body.pos) - o.body.radius <= f.perception.hearingRange * loud;
+  }
+
+  /** Is `from` on the blind side of `t` (outside its field of view, by angle)? */
+  blindSide(t: Fighter, from: Fighter): boolean {
+    return !inFov(t.body.yaw, t.perception.fovHalf, t.body.pos.x, t.body.pos.z, from.body.pos.x, from.body.pos.z);
+  }
+
+  /** Does `f` know where `o` is (seen, heard or hit by it within MEMORY_S x TEMPO seconds)? */
+  knows(f: Fighter, o: Fighter): boolean {
+    const at = f.known.get(o.idx);
+    return at !== undefined && this.t - at <= MEMORY_S * TEMPO;
+  }
+
+  /** Refresh who sees / hears whom (every 3 ticks and at the start). */
+  private perceive(): void {
+    for (const f of this.fighters) {
+      if (!this.live(f)) {
+        f.sees = [];
+        continue;
+      }
+      const sees: number[] = [];
+      for (const o of this.fighters) {
+        if (o === f || !this.live(o)) continue;
+        const seen = this.canSee(f, o);
+        if (seen) sees.push(o.idx);
+        if (seen || this.canHear(f, o)) f.known.set(o.idx, this.t);
+      }
+      f.sees = sees;
+    }
+  }
+
+  private speedOf(f: Fighter): number {
+    return f.stats.spd * MOVE_K;
+  }
+
+  // ------------------------------------------------------------------ brain [P5-B1]
+  /** Focus enemy: the current target if it is a live, known enemy; else the nearest known enemy; else the nearest. */
+  private focusOf(f: Fighter, enemies: Fighter[]): Fighter {
+    const cur = this.fighters[f.target];
+    if (cur && cur.team !== f.team && this.live(cur) && this.knows(f, cur)) return cur;
+    const known = enemies.filter((e) => this.knows(f, e));
+    const list = known.length ? known : enemies;
+    return list.reduce((a, c) => (distXZ(c.body.pos, f.body.pos) < distXZ(a.body.pos, f.body.pos) ? c : a));
+  }
+
+  /** The brain's feature vector, read on the focus enemy `e` (see FEATURES in brain.ts). */
+  private brainFeatures(f: Fighter, e: Fighter, enemies: Fighter[], fear: number): BrainFeatures {
+    const gap = distXZ(f.body.pos, e.body.pos) - f.body.radius - e.body.radius;
+    const close = clamp(1 - (gap - 1) / 1.5, 0, 1), far = clamp((gap - 5) / 4, 0, 1);
+    let threat = 0;
+    for (const o of enemies) {
+      if (o.phase !== "charge" || o.target !== f.idx || !o.move || !this.knows(f, o)) continue;
+      threat = Math.max(threat, clamp(o.move.power / 140, 0.2, 1) * (0.5 + 0.5 * clamp(o.phaseT / Math.max(0.01, o.phaseDur), 0, 1)));
+    }
+    const allies = this.fighters.filter((o) => o.team === f.team && o !== f && this.live(o));
+    const nearAllies = allies.filter((o) => distXZ(o.body.pos, f.body.pos) < 5).length;
+    const nearestAlly = allies.reduce((m, o) => Math.min(m, distXZ(o.body.pos, f.body.pos)), Infinity);
+    let ranged = 0, dmgN = 0, best = 0, canGuard = 0, canInterrupt = 0;
+    f.moves.forEach((m, i) => {
+      if (isDamaging(m)) {
+        dmgN++;
+        if (m.shape === "projectile" || m.shape === "beam" || m.shape === "zone") ranged++;
+        best = Math.max(best, this.knownType(f, m.element, e));
+      }
+      if (f.energy < f.costs[i]) return;
+      if (m.shape === "buff" || m.shape === "heal" || m.shape === "phase" || m.shape === "fly") canGuard = 1;
+      if (interrupts(m)) canInterrupt = 1;
+    });
+    return {
+      hp: f.hp / f.maxHp,
+      energy: f.energy / f.stats.energy,
+      close,
+      mid: Math.max(0, 1 - close - far),
+      far,
+      threat,
+      enemyResting: e.phase === "rest" ? 1 : 0,
+      enemyFacingMe: facingScore(e.body.yaw, e.body.pos.x, e.body.pos.z, f.body.pos.x, f.body.pos.z),
+      seen: enemies.some((o) => o.sees.includes(f.idx)) ? 1 : 0,
+      allies: clamp(nearAllies / 3, 0, 1),
+      alone: allies.length > 0 ? clamp((nearestAlly - 5) / 5, 0, 1) : 0,
+      typeAdv: best > 0 ? clamp(Math.log2(best), -1, 1) : 0,
+      targetLow: 1 - e.hp / e.maxHp,
+      ranged: dmgN ? ranged / dmgN : 0,
+      canGuard,
+      canInterrupt,
+      temper: u01(f.ph.axes.temper),
+      wisdom: u01(f.ph.axes.wisdom),
+      fear,
+    };
+  }
+
+  /** One forward pass of the fighter's brain; stores and returns its state (fighter.brain). */
+  private runBrain(f: Fighter, enemies: Fighter[], fear: number): BrainState {
+    const focus = this.focusOf(f, enemies);
+    f.brain = think(this.brainFeatures(f, focus, enemies, fear), psycheOf(f.ph, fear), f.rng, f.brain?.intent ?? null, this.t, focus.idx);
+    return f.brain;
+  }
+
+  /** What the brain's biases need to know about a move (charge in battle seconds). */
+  private traits(m: Move, f: Fighter): MoveTraits {
+    return {
+      damaging: isDamaging(m),
+      ranged: m.shape === "projectile" || m.shape === "beam" || m.shape === "zone",
+      close: m.shape === "melee" || m.shape === "dash" || m.shape === "burst" || m.shape === "cone" || m.shape === "dig",
+      interrupt: interrupts(m),
+      protect: m.shape === "buff" || m.shape === "phase" || m.shape === "fly",
+      heal: m.shape === "heal",
+      power: m.power,
+      charge: (m.charge * TEMPO) / Math.max(0.3, f.stats.rate),
+    };
   }
 
   private decide(f: Fighter): void {
     const enemies = this.enemiesOf(f);
     if (enemies.length === 0) return;
     if (f.status.has("paralyzed") && f.rng.chance(0.3)) {
-      f.cooldown = 0.6;
+      f.cooldown = 0.6 * TEMPO;
       return;
     }
     const temper = u01(f.ph.axes.temper), far = u01(f.ph.axes.reach), wise = u01(f.ph.axes.wisdom);
     const fear = Math.max(f.emotions.fear, f.status.has("feared") ? 0.8 : 0);
     const hpF = f.hp / f.maxHp;
+    // The brain [P5-B1]: one forward pass on what this fighter perceives -> an INTENT that biases the
+    // utilities below (moveBias, targetBias) and the movement (steer).
+    const brain = this.runBrain(f, enemies, fear);
+    const intent: Intent = brain.intent;
     type Opt = { m: Move; t: number; u: number; cost: number };
     const opts: Opt[] = [];
     const relative: { m: Move; t: number; k: number; cost: number }[] = [];
     f.moves.forEach((m, mi) => {
       const cost = f.costs[mi];
       if (f.energy < cost) return;
+      const tr = this.traits(m, f);
+      const mb = moveBias(intent, tr);
       if (isDamaging(m) || m.shape === "dig") {
         if (m.shape === "dig" && (!GROUNDS[f.body.groundId].diggable || f.body.mode !== "ground")) return;
         for (const e of enemies) {
@@ -619,17 +851,17 @@ export class Battle {
           const d = distXZ(f.body.pos, e.body.pos);
           // Melee and burst only resolve at strike time: skip options the fighter cannot close in
           // during the charge (it approaches first and re-decides) instead of whiffing from afar.
-          if (m.shape === "cone" && d - e.body.radius > m.range + f.body.radius + f.stats.spd * m.charge * 0.35) continue;
+          if (m.shape === "cone" && d - e.body.radius > m.range + f.body.radius + this.speedOf(f) * tr.charge * 0.35) continue;
           if (m.shape === "dash" && d - f.body.radius - e.body.radius > m.range + f.stats.reach + MELEE_LUNGE) continue;
           if (m.shape === "melee" || m.shape === "burst") {
             const short = m.shape === "melee" ? d - f.body.radius - e.body.radius - (f.stats.reach + m.range + MELEE_LUNGE) : d - e.body.radius - m.area;
-            const closing = f.stats.spd * (m.charge / Math.max(0.3, f.stats.rate)) * (m.shape === "melee" ? 0.95 : 0.35) * 0.8;
+            const closing = this.speedOf(f) * tr.charge * (m.shape === "melee" ? 0.95 : 0.35) * 0.8;
             if (short > closing) continue;
           }
           const r = this.reach(f, m);
-          const travel = Math.max(0, d - r) / Math.max(0.5, f.stats.spd);
+          const travel = Math.max(0, d - r) / Math.max(0.5, this.speedOf(f));
           let u = this.estimate(f, e, m) * this.hitChance(f, e, m) / (cost + 12);
-          u *= Math.exp(-travel / (1.2 + 2 * temper));
+          u *= Math.exp(-travel / ((1.2 + 2 * temper) * TEMPO));
           if (this.estimate(f, e, m) >= e.hp) u *= 1.5;
           if (m.area > 0) {
             const others = enemies.filter((o) => o !== e && distXZ(o.body.pos, e.body.pos) < m.area).length;
@@ -657,13 +889,16 @@ export class Battle {
           // An interrupt only counts if it lands before the enemy's charge ends.
           {
             const left = Math.max(0, e.phaseDur - e.phaseT);
-            const travel = m.shape === "projectile" && m.speed > 0 ? d / m.speed : 0;
-            const inTime = e.phase !== "charge" || left > m.charge / Math.max(0.3, f.stats.rate) + travel;
-            if (inTime) u *= counterValue(m, e.move, e.phase, e.phaseDur > 0 ? e.phaseT / e.phaseDur : 0, left);
+            const flight = m.shape === "projectile" && m.speed > 0 ? d / m.speed : 0;
+            const inTime = e.phase !== "charge" || left > tr.charge + flight;
+            if (inTime) u *= counterValue(m, e.move, e.phase, e.phaseDur > 0 ? e.phaseT / e.phaseDur : 0, left, TEMPO);
           }
           u *= 1 + 0.25 * temper * (m.power / 70);
-          const sameTarget = this.lastTarget[f.team] === e.idx && this.t - this.lastTargetAt[f.team] < 2.5;
+          const sameTarget = this.lastTarget[f.team] === e.idx && this.t - this.lastTargetAt[f.team] < 2.5 * TEMPO;
           if (sameTarget) u *= 1.15 + this.synergies[f.team].reduce((s, x) => s + (x.combo ?? 0), 0);
+          // Awareness [P5-B2]: an enemy it neither sees, hears nor remembers is a poor target.
+          if (!this.knows(f, e)) u *= UNPERCEIVED_K;
+          u *= mb * targetBias(intent, tr, { hp: e.hp / e.maxHp, charging: e.phase === "charge", blindSide: this.blindSide(e, f) });
           opts.push({ m, t: e.idx, u, cost });
         }
       } else {
@@ -692,7 +927,7 @@ export class Battle {
                 if (mm.tags.includes("ground") || mm.shape === "melee") dodged++;
               }
             }
-            if (dodged > 0) relative.push({ m, t: enemies[0].idx, k: 1.6 * (dodged / total), cost });
+            if (dodged > 0) relative.push({ m, t: enemies[0].idx, k: 1.6 * (dodged / total) * mb, cost });
             break;
           }
           case "phase":
@@ -708,7 +943,7 @@ export class Battle {
               const gain = (team: 0 | 1) =>
                 this.fighters.filter((o) => o.team === team && this.live(o)).reduce((s, o) => s + (WEATHERS[w].elementMult[o.types[0]] ?? 1) - (this.weatherDef.elementMult[o.types[0]] ?? 1), 0);
               const net = gain(f.team) - gain(f.team === 0 ? 1 : 0);
-              if (net > 0) relative.push({ m, t: enemies[0].idx, k: net * ((fx?.duration ?? 14) / 2.5) * 0.35 * (0.6 + 0.8 * wise), cost });
+              if (net > 0) relative.push({ m, t: enemies[0].idx, k: net * ((fx?.duration ?? 14) / 2.5) * 0.35 * (0.6 + 0.8 * wise) * mb, cost });
             }
             break;
           }
@@ -721,7 +956,7 @@ export class Battle {
             const selfSt = m.effects.find((e) => e.status && e.self)?.status;
             const fresh = selfSt !== undefined && !f.status.has(selfSt);
             const wet = gnd === "ice" ? enemies.filter((e) => this.inWater(e)).length : 0;
-            const k = (already ? 0 : 0.3 + 0.35 * wise) + (fresh ? 0.25 : 0) + 0.6 * wet;
+            const k = ((already ? 0 : 0.3 + 0.35 * wise) + (fresh ? 0.25 : 0) + 0.6 * wet) * mb;
             if (k > 0) relative.push({ m, t: enemies[0].idx, k, cost });
             break;
           }
@@ -735,7 +970,7 @@ export class Battle {
             break;
           }
         }
-        if (u > 0) opts.push({ m, t: enemies[0].idx, u, cost });
+        if (u > 0) opts.push({ m, t: enemies[0].idx, u: u * mb, cost });
       }
     });
     // Resolve relative options against the best damaging option available right now.
@@ -761,13 +996,14 @@ export class Battle {
       this.lastTargetAt[f.team] = this.t;
     }
     const sorted = opts.slice().sort((a, b) => b.u - a.u);
-    this.log("battle.decide", f.id, `utility ${r3(pick.u)} (best ${r3(sorted[0].u)}, ${opts.length} options, tau ${r3(tau)})`, f.id, this.fighters[target].id, f.body.pos, {
+    this.log("battle.decide", f.id, `utility ${r3(pick.u)} (best ${r3(sorted[0].u)}, ${opts.length} options, tau ${r3(tau)}, intent ${intent})`, f.id, this.fighters[target].id, f.body.pos, {
       options: opts.length,
       hp: r3(hpF),
       energy: Math.round(f.energy),
       fear: r3(fear),
       anger: r3(f.emotions.anger),
-    }, { move: pick.m.id, target: this.fighters[target].id, utility: r3(pick.u), second: r3(sorted[1]?.u ?? 0) });
+      perceived: enemies.filter((e) => this.knows(f, e)).length,
+    }, { move: pick.m.id, target: this.fighters[target].id, utility: r3(pick.u), second: r3(sorted[1]?.u ?? 0), intent, drive: brain.neurons[intent] });
   }
 
   private startMove(f: Fighter, m: Move, target: number): void {
@@ -778,10 +1014,10 @@ export class Battle {
     f.phase = "charge";
     f.phaseT = 0;
     const speed = f.stats.rate * (f.status.has("hasted") ? 1.33 : 1) * (f.status.has("slowed") ? 0.87 : 1) * (f.status.has("paralyzed") ? 0.7 : 1);
-    f.phaseDur = m.charge / speed;
+    f.phaseDur = (m.charge * TEMPO) / speed;
     // A flyer's melee is a DIVE: it comes down for the whole move plus a recovery beat, and ground
     // brawlers can hit it back meanwhile (X7: no free melee from out of reach).
-    if (f.body.mode === "fly" && m.shape === "melee") f.swoopUntil = this.t + (m.charge + m.active + m.rest) / speed + 0.8;
+    if (f.body.mode === "fly" && m.shape === "melee") f.swoopUntil = this.t + ((m.charge + m.active + m.rest) * TEMPO) / speed + 0.8;
     f.tally.casts++;
     this.moveUses[m.id] = (this.moveUses[m.id] ?? 0) + 1;
     f.elementsUsed[m.element] = (f.elementsUsed[m.element] ?? 0) + 1;
@@ -878,12 +1114,20 @@ export class Battle {
       }
       case "zone": {
         const at = this.leadAim(f, t, 18);
-        const z = this.spawnZone("field", m.element, at, m.area, 3 + m.area, f, m);
+        // Fewer zones [P5-B1]: a control zone (its rider is a stun / freeze) is a SNAP - the rider lands
+        // with the cast and nothing lingers; any other zone leaves a field, at most one per caster.
+        const lingers = !m.effects.some((e) => e.kind === "status" && !e.self && e.status !== undefined && HARD_STATUS.has(e.status));
+        if (lingers) {
+          for (const o of this.zones) if (o.kind === "field" && o.owner === f.idx) o.ttl = 0;
+          const z = this.spawnZone("field", m.element, at, m.area, (3 + m.area) * TEMPO, f, m);
+          this.emit({ type: "zone", a: f.idx, value: z.id, element: m.element, pos: at, move: m.id });
+        }
         for (const o of this.enemiesOf(f)) {
-          if (distXZ(o.body.pos, at) < m.area + o.body.radius && this.canReach(f, o, m)) this.hit(f, o, m, 0.65, "zone", o.body.pos);
+          // A snap lands whole (scale 1); a lingering zone splits its power between the cast (0.65) and the field.
+          if (distXZ(o.body.pos, at) < m.area + o.body.radius && this.canReach(f, o, m)) this.hit(f, o, m, lingers ? 0.65 : 1, "zone", o.body.pos);
         }
         this.groundImpact(f, m, at, m.area * 0.8);
-        this.emit({ type: "zone", a: f.idx, value: z.id, element: m.element, pos: at, move: m.id });
+        if (!lingers) this.emit({ type: "phase", a: f.idx, b: t.idx, label: "snap", move: m.id, element: m.element, pos: { ...at }, value: m.area });
         break;
       }
       case "cone": {
@@ -915,7 +1159,7 @@ export class Battle {
         const dx = t.body.pos.x - fp.x, dz = t.body.pos.z - fp.z, dl = Math.hypot(dx, dz) || 1;
         const go = clamp(dl - f.body.radius - t.body.radius - 0.15, 0, m.range);
         const to = v3(fp.x + (dx / dl) * go, fp.y, fp.z + (dz / dl) * go);
-        f.dash = { from: { ...fp }, to, t0: this.t, dur: Math.max(0.12, m.active) };
+        f.dash = { from: { ...fp }, to, t0: this.t, dur: Math.max(0.12, m.active * TEMPO) };
         this.emit({ type: "phase", a: f.idx, b: t.idx, label: "dash", move: m.id, element: m.element, pos: { ...to }, value: go });
         break;
       }
@@ -925,7 +1169,7 @@ export class Battle {
           this.log("battle.fail", f.id, "dig needs diggable ground", f.id, f.body.groundId, fp, { move: m.id }, { reason: `${f.body.groundId} not diggable` });
           break;
         }
-        f.status.set("burrowed", m.active);
+        f.status.set("burrowed", m.active * TEMPO);
         f.body.mode = "burrow";
         this.emit({ type: "status", a: f.idx, label: "burrowed", move: m.id, pos: fp });
         break;
@@ -951,7 +1195,7 @@ export class Battle {
         f.heals++;
         this.emit({ type: "status", a: f.idx, label: "heal", value: f.hp - before, pos: f.body.pos });
       }
-      if (e.kind === "weather" && e.weather) this.setWeather(e.weather, e.duration ?? 14, f);
+      if (e.kind === "weather" && e.weather) this.setWeather(e.weather, (e.duration ?? 14) * TEMPO, f);
       if (e.kind === "ground" && e.ground) {
         const t = this.fighters[f.target];
         const at = m.range > 0 && t ? t.body.pos : f.body.pos;
@@ -994,7 +1238,8 @@ export class Battle {
     if (!r) return 1;
     this.reactions[r.id] = (this.reactions[r.id] ?? 0) + 1;
     if (f) f.tally.reactions++;
-    if (r.zone && !this.zones.some((z) => z.kind === r.id && distXZ(z.pos, at) < z.radius * 0.6)) {
+    // One cloud per place [P5-B1]: no new reaction zone where one of the same kind already lies.
+    if (r.zone && !this.zones.some((z) => z.kind === r.id && distXZ(z.pos, at) < z.radius + r.zone!.radius * 0.5)) {
       this.spawnZone(r.id, a, at, r.zone.radius, r.zone.ttl, f, undefined);
     }
     if (r.id === "freeze") this.arena.setGround(at.x, at.z, 2.2, "ice");
@@ -1025,11 +1270,15 @@ export class Battle {
       team: kind === "field" ? (f?.team ?? -1) : spec?.allies === false ? (f?.team ?? -1) : -1,
       dps: m ? m.power * 0.16 * ((f?.stats.atk ?? 40) / 40) : 0,
       frac: spec?.frac ?? 0,
-      status: m ? (m.effects.find((e) => e.status && !e.self)?.status ?? null) : (spec?.status ?? null),
+      // A move's field re-applies only a SOFT rider (kit.ts fieldStatus): never a stun / freeze lock.
+      status: m ? fieldStatus(m) : (spec?.status ?? null),
       accuracyMult: spec?.acc ?? 1,
       regen: spec?.regen ?? 0,
       move: m,
     };
+    // Fewer zones [P5-B1]: at most MAX_ZONES alive; a new one retires the oldest still standing.
+    const alive = this.zones.filter((o) => o.ttl > 0);
+    if (alive.length >= MAX_ZONES) alive[0].ttl = 0;
     this.zones.push(z);
     this.emit({ type: "zone", a: f?.idx, value: z.id, label: kind, element: el, pos: { ...at } });
     return z;
@@ -1037,10 +1286,17 @@ export class Battle {
 
   private addStatus(t: Fighter, s: StatusId, dur: number, by: Fighter | null): void {
     if (IMMUNE[s]?.some((e) => t.types.includes(e))) return;
+    // Durations are written in action time: the battle TEMPO stretches them like the move phases.
+    dur *= TEMPO;
     // Tenacity: big bodies shake off harmful statuses faster (XL x0.63, L x0.71, M x0.83). Without
     // it, damage-over-time scales with the VICTIM's max HP while a swarm applies it N times as often.
     if (by !== t && HARMFUL.has(s)) dur /= 1 + 0.2 * (t.ph.slots - 1);
     const had = t.status.has(s);
+    // Fewer simultaneous statuses [P5-B1]: at most STATUS_CAP harmful ones; the newest replaces the oldest.
+    if (!had && CAPPED.has(s)) {
+      const cur = [...t.status.keys()].filter((k) => CAPPED.has(k));
+      if (cur.length >= STATUS_CAP) this.dropStatus(t, cur[0]);
+    }
     t.status.set(s, Math.max(t.status.get(s) ?? 0, dur));
     if (s === "frozen") t.body.mode = "frozen";
     if (s === "staggered") t.body.stagger = Math.max(t.body.stagger, dur);
@@ -1055,6 +1311,13 @@ export class Battle {
     }
   }
 
+  /** Remove a status early (replaced under STATUS_CAP), with the same side effects as its expiry. */
+  private dropStatus(f: Fighter, s: StatusId): void {
+    f.status.delete(s);
+    if (s === "frozen" && f.body.mode === "frozen") f.body.mode = "ground";
+    this.emit({ type: "status", a: f.idx, label: `${s}-end` });
+  }
+
   private miss(f: Fighter, t: Fighter, m: Move, why: string): void {
     f.tally.misses++;
     this.emit({ type: "miss", a: f.idx, b: t.idx, move: m.id, element: m.element, pos: { ...t.body.pos }, label: why });
@@ -1065,6 +1328,10 @@ export class Battle {
   private hit(f: Fighter, t: Fighter, m: Move, scale: number, source: string, at: V3): void {
     if (t.ko) return;
     const p = this.hitChance(f, t, m);
+    // Struck from its blind side [P5-B2]: the target now knows where the attacker is and turns to face it.
+    const blind = t !== f && t.team !== f.team && this.blindSide(t, f);
+    if (t.team !== f.team) t.known.set(f.idx, this.t);
+    if (blind) t.turnTo = { idx: f.idx, until: this.t + TURN_S * TEMPO };
     const roll = f.rng.next();
     if (roll > p) {
       this.miss(f, t, m, `roll ${r3(roll)} > p ${r3(p)}`);
@@ -1117,12 +1384,14 @@ export class Battle {
     const liquidK = t.status.has("liquid") ? (contact ? 0.5 : m.element === "electric" ? 1.25 : 1) : 1;
     const frozenK = t.status.has("frozen") ? 1.15 : 1;
     const wetFire = m.element === "fire" && t.status.has("wet") ? 0.8 : 1;
-    let critP = f.stats.crit * (m.tags.includes("highCrit") ? 2 : 1) * (f.status.has("focused") ? 1.6 : 1) * (1 + 0.3 * f.emotions.joy);
+    let critP = f.stats.crit * (m.tags.includes("highCrit") ? 2 : 1) * (f.status.has("focused") ? 1.6 : 1) * (1 + 0.3 * f.emotions.joy) + (blind ? BLIND_CRIT : 0);
     critP = clamp(critP, 0, 0.5);
     const crit = f.rng.chance(critP);
     const spread = f.rng.range(0.88, 1.12);
     const body = bodyFactor(m, f.ph);
-    const dmg = Math.max(1, PACE * m.power * body * atkF * defF * typeK * stab * wx * gAff * cond * size * prox * emo * team * rhythm * liquidK * frozenK * wetFire * reactK * scale * spread * (crit ? 1.6 : 1));
+    // Double-edged senses [P5-G2]: the target's organ resonates with the move's channel (big ears take more from a roar); half weight, 0.85 .. 1.225.
+    const senseK = senseDamageMult(fighterSenses(t), m);
+    const dmg = Math.max(1, PACE * m.power * senseK * body * atkF * defF * typeK * stab * wx * gAff * cond * size * prox * emo * team * rhythm * liquidK * frozenK * wetFire * reactK * scale * spread * (crit ? 1.6 : 1));
     t.hp = Math.max(0, t.hp - dmg);
     f.tally.dealt += dmg;
     f.tally.hits++;
@@ -1139,6 +1408,7 @@ export class Battle {
     const rate = 0.2 + 0.6 * u01(f.ph.axes.wisdom);
     f.memory[key] = r3((f.memory[key] ?? 1) * (1 - rate) + typeMultiplier(m.element, [t.types[0]]) * rate);
     this.emit({ type: "hit", a: f.idx, b: t.idx, move: m.id, element: m.element, value: dmg, crit, pos: { ...at }, label: source });
+    if (blind) this.emit({ type: "flank", a: f.idx, b: t.idx, move: m.id, pos: { ...at }, label: "blind side" });
     this.log("battle.hit", f.id, `${m.name} (${source})`, f.id, t.id, at, {
       move: m.id,
       power: m.power,
@@ -1269,7 +1539,7 @@ export class Battle {
     if (this.weather === "storm") {
       this.lightningT -= dt;
       if (this.lightningT <= 0) {
-        this.lightningT = 3 + this.rng.range(0, 3);
+        this.lightningT = (3 + this.rng.range(0, 3)) * TEMPO;
         const alive = this.fighters.filter((o) => this.live(o));
         if (alive.length) {
           const wts = alive.map((o) => 1 + (o.status.has("wet") ? 1 : 0) + (o.types.includes("metal") ? 1.5 : 0) + (o.body.mode === "fly" ? 1 : 0));
@@ -1297,7 +1567,7 @@ export class Battle {
       if (f.ko || f.benched) continue;
       this.tickStatuses(f, dt, W.wetness, W.id);
       if (f.ko) continue;
-      f.energy = Math.min(f.stats.energy, f.energy + f.stats.regen * dt * (f.phase === "rest" ? 1.5 : 1) - (f.body.mode === "fly" ? 1.5 * dt : 0));
+      f.energy = Math.min(f.stats.energy, f.energy + RATE_K * (f.stats.regen * dt * (f.phase === "rest" ? 1.5 : 1) - (f.body.mode === "fly" ? 1.5 * dt : 0)));
       if (f.body.mode === "fly" && f.energy <= 1) {
         f.status.delete("airborne");
         f.body.mode = "ground";
@@ -1321,7 +1591,9 @@ export class Battle {
     this.updateProjectiles(dt);
     this.updateZones(dt);
     const physEv = stepPhysics(this.fighters.filter((f) => this.live(f)).map((f) => f.body), this.arena, W, dt);
+    for (const f of this.fighters) if (this.live(f) && f.body.mode === "ground") this.arena.collideProps(f.body);
     for (const f of this.fighters) if (f.dash && this.live(f)) this.dashStep(f);
+    if (this.tick % 3 === 0) this.perceive();
     for (const e of physEv) {
       if (e.kind === "bump" || e.kind === "land" || e.kind === "splash") {
         const f = this.fighters.find((x) => x.id === e.a);
@@ -1347,7 +1619,7 @@ export class Battle {
       const enemyZone = z.team === -1 || z.team !== f.team;
       if (z.kind === "field") {
         if (z.team !== f.team && z.move && (!z.move.tags.includes("ground") || f.body.mode !== "fly")) {
-          const dmgPs = PACE * z.dps * (100 / (100 + f.stats.def)) * typeMultiplier(z.element, f.types);
+          const dmgPs = PACE * RATE_K * z.dps * (100 / (100 + f.stats.def)) * typeMultiplier(z.element, f.types);
           f.hp -= dmgPs * dt;
           f.tally.taken += dmgPs * dt;
           if (z.owner >= 0) this.fighters[z.owner].tally.dealt += dmgPs * dt;
@@ -1363,8 +1635,8 @@ export class Battle {
       if (enemyZone && z.status && this.tick % 10 === 0) this.addStatus(f, z.status, 1, null);
     }
     if (dot > 0 || heal > 0) {
-      f.hp = clamp(f.hp + PACE * (heal - dot) * f.maxHp * dt, 0, f.maxHp);
-      if (dot > 0) f.tally.taken += PACE * dot * f.maxHp * dt;
+      f.hp = clamp(f.hp + PACE * RATE_K * (heal - dot) * f.maxHp * dt, 0, f.maxHp);
+      if (dot > 0) f.tally.taken += PACE * RATE_K * dot * f.maxHp * dt;
     }
     for (const [s, left] of f.status) {
       const nl = left - dt;
@@ -1385,7 +1657,7 @@ export class Battle {
     t.phase = "idle";
     t.move = null;
     t.phaseT = 0;
-    t.cooldown = 0.25;
+    t.cooldown = 0.25 * TEMPO;
     t.interrupted++;
     this.interruptCount++;
     this.emit({ type: "interrupt", a: by.idx, b: t.idx, move: m.id, element: m.element, label: s, pos: { ...t.body.pos } });
@@ -1491,8 +1763,8 @@ export class Battle {
     if (f.phase === "charge") {
       f.phase = "active";
       f.phaseT = 0;
-      f.phaseDur = m.active;
-      this.emit({ type: "phase", a: f.idx, b: f.target, label: "active", move: m.id, element: m.element, value: m.active });
+      f.phaseDur = m.active * TEMPO;
+      this.emit({ type: "phase", a: f.idx, b: f.target, label: "active", move: m.id, element: m.element, value: f.phaseDur });
       if (this.fighters[f.target]?.ko && f.target !== f.idx) {
         const alt = this.enemiesOf(f).sort((a, b) => distXZ(a.body.pos, f.body.pos) - distXZ(b.body.pos, f.body.pos))[0];
         if (alt) f.target = alt.idx;
@@ -1502,17 +1774,23 @@ export class Battle {
       if (m.shape === "dash") this.dashArrive(f, m);
       f.phase = "rest";
       f.phaseT = 0;
-      f.phaseDur = m.rest / speed;
+      f.phaseDur = (m.rest * TEMPO) / speed;
       this.emit({ type: "phase", a: f.idx, label: "rest", move: m.id, value: f.phaseDur });
     } else if (f.phase === "rest") {
       f.phase = "idle";
       f.move = null;
-      f.cooldown = 0.12 + f.rng.next() * 0.25;
+      f.cooldown = (0.12 + f.rng.next() * 0.25) * TEMPO;
       this.emit({ type: "phase", a: f.idx, label: "idle" });
     }
   }
 
-  /** Movement intent: approach to the move's range, kite if ranged, retreat when afraid. */
+  /**
+   * Movement intent [P5-B1]: the brain's intent shapes it - aggress / interrupt / finish close to the
+   * planned move's range, kite keeps a ranged distance, flank goes round to the target's back (outside
+   * its field of view), guard circles at range, retreat disengages toward the allies, regroup rejoins
+   * them; fear still makes it run. A fighter faces its target, or the attacker that just hit it from
+   * its blind side (turnTo) [P5-B2].
+   */
   private steer(f: Fighter): void {
     const b = f.body;
     const enemies = this.enemiesOf(f);
@@ -1520,10 +1798,11 @@ export class Battle {
       b.intent = { x: 0, z: 0, speed: 0 };
       return;
     }
-    const t = this.fighters[f.target] && !this.fighters[f.target].ko && this.fighters[f.target].team !== f.team
-      ? this.fighters[f.target]
-      : enemies.reduce((a, c) => (distXZ(c.body.pos, b.pos) < distXZ(a.body.pos, b.pos) ? c : a));
-    b.face = t.body.pos;
+    const cur = this.fighters[f.target];
+    const t = cur && !cur.ko && !cur.benched && cur.team !== f.team ? cur : this.focusOf(f, enemies);
+    const turn = f.turnTo && this.t < f.turnTo.until ? this.fighters[f.turnTo.idx] : null;
+    if (f.turnTo && !turn) f.turnTo = null;
+    b.face = turn && this.live(turn) && f.phase !== "active" ? turn.body.pos : t.body.pos;
     const dx = t.body.pos.x - b.pos.x, dz = t.body.pos.z - b.pos.z;
     const d = Math.hypot(dx, dz) || 1;
     const ux = dx / d, uz = dz / d;
@@ -1531,24 +1810,56 @@ export class Battle {
     const far = u01(f.ph.axes.reach);
     const want = planned ? (planned.shape === "melee" ? f.stats.reach + t.body.radius + b.radius * 0.6 : planned.shape === "burst" ? planned.area * 0.7 : Math.min(planned.range * 0.7, 6 + 6 * far)) : 4;
     const afraid = f.status.has("feared") || (f.emotions.fear > 0.6 && f.hp / f.maxHp < 0.35);
+    const intent: Intent = f.brain?.intent ?? "aggress";
+    const side = f.idx % 2 ? 1 : -1;
+    const strafe = (k: number): [number, number, number] => [-uz * side, ux * side, k];
+    const allies = this.fighters.filter((o) => o.team === f.team && o !== f && this.live(o));
     let ix = 0, iz = 0, sp = 0;
-    if (afraid) {
-      ix = -ux;
-      iz = -uz;
-      sp = 1;
-    } else if (d > want + 0.4) {
-      ix = ux;
-      iz = uz;
-      sp = 1;
-    } else if (d < want - 1.6 && planned && planned.shape !== "melee") {
-      ix = -ux;
-      iz = -uz;
-      sp = 0.7;
-    } else {
-      const side = f.idx % 2 ? 1 : -1;
-      ix = -uz * side;
-      iz = ux * side;
-      sp = 0.25 + 0.2 * u01(f.ph.axes.tempo);
+    const approach = (): void => {
+      if (d > want + 0.4) [ix, iz, sp] = [ux, uz, 1];
+      else if (d < want - 1.6 && planned && planned.shape !== "melee") [ix, iz, sp] = [-ux, -uz, 0.7];
+      else [ix, iz, sp] = strafe(0.25 + 0.2 * u01(f.ph.axes.tempo));
+    };
+    if (afraid || intent === "retreat") {
+      // Disengage: away from the threat, bending toward the allies when there are some.
+      [ix, iz, sp] = [-ux, -uz, afraid ? 1 : d > want + 3 ? 0.35 : 0.9];
+      if (allies.length) {
+        const cx = allies.reduce((s, o) => s + o.body.pos.x, 0) / allies.length - b.pos.x, cz = allies.reduce((s, o) => s + o.body.pos.z, 0) / allies.length - b.pos.z;
+        const cl = Math.hypot(cx, cz) || 1;
+        ix += 0.6 * cx / cl;
+        iz += 0.6 * cz / cl;
+      }
+    } else if (intent === "kite") {
+      const keep = Math.max(want, 5 + 3 * far);
+      if (d < keep - 0.8) [ix, iz, sp] = [-ux, -uz, 0.85];
+      else if (d > keep + 0.8) [ix, iz, sp] = [ux, uz, 1];
+      else [ix, iz, sp] = strafe(0.35);
+    } else if (intent === "flank" && planned && planned.shape !== "projectile" && planned.shape !== "beam" && planned.shape !== "zone") {
+      // Go round to the target's back: aim at a point behind it, plus a sideways orbit so the path
+      // does not run through its front.
+      const behind = Math.abs(angleDiff(bearing(t.body.pos.x, t.body.pos.z, b.pos.x, b.pos.z), t.body.yaw)) > Math.min(Math.PI - 0.3, t.perception.fovHalf + 0.2);
+      if (behind) approach();
+      else {
+        const r = Math.max(want, 1.2);
+        const gx = t.body.pos.x - Math.sin(t.body.yaw) * r - b.pos.x, gz = t.body.pos.z - Math.cos(t.body.yaw) * r - b.pos.z;
+        const gl = Math.hypot(gx, gz) || 1;
+        const [sx, sz] = strafe(0);
+        [ix, iz, sp] = [gx / gl + 0.5 * sx, gz / gl + 0.5 * sz, 1];
+      }
+    } else if (intent === "guard") {
+      if (d < want - 1) [ix, iz, sp] = [-ux, -uz, 0.5];
+      else [ix, iz, sp] = strafe(0.4);
+    } else if (intent === "regroup" && allies.length) {
+      const cx = allies.reduce((s, o) => s + o.body.pos.x, 0) / allies.length - b.pos.x, cz = allies.reduce((s, o) => s + o.body.pos.z, 0) / allies.length - b.pos.z;
+      const cl = Math.hypot(cx, cz);
+      if (cl > 3) [ix, iz, sp] = [cx / cl, cz / cl, 0.9];
+      else approach();
+    } else approach();
+    // Keep off the arena wall when backing away (no cornering into the rope).
+    const rr = Math.hypot(b.pos.x, b.pos.z), lim = this.arena.radius - 2 - b.radius;
+    if (rr > lim && ix * b.pos.x + iz * b.pos.z > 0) {
+      ix -= (b.pos.x / rr) * 0.9;
+      iz -= (b.pos.z / rr) * 0.9;
     }
     // Avoid hostile zones and (for non-swimmers) deep water.
     for (const z of this.zones) {

@@ -18,6 +18,7 @@ Status: `DONE` · `NEXT` (ready) · `LATER` (blocked by a dependency) · `IDEA`.
 | Q5 | Render: creatures from skeletons, animator through constraints, arena view (ground recolouring, sky by hour/weather, particles), FX, broadcast camera, lab + genospace views | pass 1 |
 | Q6 | UI: screens tree, HUD, dark/light themes, profiles (Max + Claude), settings saved per profile, Data screen (ledger feed/export, charts, genospace, hardware, session) | pass 1 |
 | Q8 | Tools: scenarios, capture (multi-angle, devices, offline proof), balance harness | pass 1 |
+| P5 | Pass 5: icons, drag-to-feed with effects, profile sheet, shaded panels, auction outcomes; egg + fetal spiral + growth bands + operators + viability; faces with sockets and 1-8 eyes, beaks, tongues; coats, countershading, cel, scars; slower fights, neural-shaped brain, perception; senses + resonance, digestion, circadian, aging, retirement, imprints; home platform with graduations; species Dex; test-demo controls; symmetric ranked maps + start slots; batch lab | EVIDENCE pass 5; SPEC section P5 |
 | P4 | Pass 4: Q/W/E/R kits (physical/special, body-part power, phase law, counters), bench formats + switching, gauntlet, Collection screen (team presets, Dex, Hatch), arena preview + dossier, morph helix, fused anatomy + manga faces + skin shaders, depth of field + camera menu, hybrids + strong foods + loot bag | EVIDENCE pass 4; SPEC section P4 |
 
 ## Next
@@ -40,6 +41,12 @@ Status: `DONE` · `NEXT` (ready) · `LATER` (blocked by a dependency) · `IDEA`.
 | P4-1 | Show learn-lock reasons in the Lab / Collection move list (`learnCheck` -> `moveCard({ learn })`) and let the player swap a kit slot among learnable moves | every locked move shows its reasons; a swap is saved and logged | - |
 | P4-2 | Gauntlet boss rounds and investments in the world (`rotation.ts` investmentReturn on World places) | a capture shows a round-5 boss; investing credits pays items back over days | - |
 | P4-3 | Anatomy follow-ups: hexapod wing chain, folded-wing silhouette, insect/fin wing folding, Clodsttusk shell bands | creature sheet reviewed with no floating or blade-like parts | - |
+
+| P5-1 | Archetype balance from the batch lab: Powerful 68 % overall (beats Swarm 88 %), Swarm 30 %, Fast 37 % | `deno task batch 48`: no row above 65 %, none below 35 %, no cell above 85 %, every archetype beats at least one other significantly; balance 72 still 13/13 | P5-X1 |
+| P5-2 | Feed arena altitude (`arena.altitudeM`) and world place altitude into the circadian / breath effects in battle | a high-altitude arena changes a lowland Genemon's fight multiplier, logged | P5-G4, P5-W1 |
+| P5-3 | Imprints from use: dragging gear / cosmetics (and repeated foods) calls `imprintItem`; the sheet lists them | imprint row in the ledger; inherited by a bred child | P5-G6 |
+| P5-4 | Cel shading judged by two reviewers on close-ups (`tools/p5close.ts`); eggs on the Home platform and in battle (eggs currently render as the creature there) | reviewers agree on toon bands + outline on 12/16 creatures | P5-V7, P5-V2 |
+| P5-5 | Battle camera still clips fighters at the frame edge (probe: one fighter at x0 = -193 px at 12 s) | quest C2 acceptance | C2 |
 
 ## Later
 

@@ -1,12 +1,12 @@
 /**
  * ArenaView: the 3D arena from the pure Arena data - vertex-coloured heightmap (recoloured live when
- * reactions change the ground), water/lava sheet, props, stadium rim, gradient sky dome tied to
+ * reactions change the ground; level bands shaded), water/lava sheet, instanced props, stadium rim, gradient sky dome tied to
  * weather + real local hour, a sun whose elevation follows the hour, and weather particles.
  */
 import * as THREE from "../lib/three.ts";
 import { GROUND_IDS, GROUNDS } from "../data/grounds.ts";
 import { type Weather, WEATHERS } from "../data/weather.ts";
-import type { Arena } from "../world/arena.ts";
+import { type Arena, PROP_KINDS, type PropKind } from "../world/arena.ts";
 import { Rng } from "../core/rng.ts";
 import { softDot } from "./textures.ts";
 
@@ -40,6 +40,8 @@ export class ArenaView {
   private weatherId = "";
   private jitter: Float32Array;
   private dot = softDot();
+  /** Instanced prop meshes (draw calls spent on props). */
+  propMeshes = 0;
 
   constructor(readonly arena: Arena, private scene: THREE.Scene, shadows: boolean) {
     const n = arena.n;
@@ -54,7 +56,11 @@ export class ArenaView {
     this.colors = new Float32Array(pos.count * 3);
     this.jitter = new Float32Array(pos.count);
     const rng = new Rng(arena.spec.seed);
-    for (let k = 0; k < pos.count; k++) this.jitter[k] = 0.9 + rng.next() * 0.18;
+    // Colour jitter x level shading: higher bands a little lighter, so the terraces read [P5-W1].
+    for (let k = 0; k < pos.count; k++) {
+      const lv = THREE.MathUtils.clamp(arena.levelAt(pos.getX(k), pos.getZ(k)), -4, 4);
+      this.jitter[k] = (0.9 + rng.next() * 0.18) * (1 + 0.045 * lv);
+    }
     geo.setAttribute("color", new THREE.BufferAttribute(this.colors, 3));
     this.terrain = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, metalness: 0.02 }));
     this.terrain.receiveShadow = shadows;
@@ -119,77 +125,65 @@ export class ArenaView {
     scene.add(this.group);
   }
 
+  /**
+   * Props as INSTANCED meshes [P5-W1]: one InstancedMesh per (kind, part), so a dense forest of 40+
+   * trees costs a handful of draw calls instead of a group of meshes per prop.
+   */
   private addProps(shadows: boolean): void {
     const mats = {
       rock: new THREE.MeshStandardMaterial({ color: 0x7c7a74, roughness: 0.95, flatShading: true }),
       trunk: new THREE.MeshStandardMaterial({ color: 0x5b3d22, roughness: 0.9 }),
       leaves: new THREE.MeshStandardMaterial({ color: 0x2f6b32, roughness: 0.85, flatShading: true }),
+      bush: new THREE.MeshStandardMaterial({ color: 0x4f8a3a, roughness: 0.9, flatShading: true }),
       crystal: new THREE.MeshStandardMaterial({ color: 0xb59cff, emissive: 0x6a4cff, emissiveIntensity: 0.6, roughness: 0.2, metalness: 0.3, flatShading: true }),
       pillar: new THREE.MeshStandardMaterial({ color: 0x9aa0a8, roughness: 0.6, metalness: 0.3 }),
+      ruin: new THREE.MeshStandardMaterial({ color: 0x9a9184, roughness: 0.92, flatShading: true }),
       reed: new THREE.MeshStandardMaterial({ color: 0x6f8a3a, roughness: 0.8 }),
       dune: new THREE.MeshStandardMaterial({ color: 0xd8c27a, roughness: 1 }),
     };
-    for (const p of this.arena.props) {
-      const g = new THREE.Group();
-      const y = this.arena.heightAt(p.x, p.z);
-      g.position.set(p.x, y, p.z);
-      g.rotation.y = p.rot;
-      g.scale.setScalar(p.scale);
-      switch (p.kind) {
-        case "rock": {
-          const m = new THREE.Mesh(new THREE.DodecahedronGeometry(0.9, 0), mats.rock);
-          m.scale.set(1.2, 0.8, 1);
-          m.position.y = 0.3;
-          g.add(m);
-          break;
-        }
-        case "tree": {
-          const t = new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.28, 2.4, 7), mats.trunk);
-          t.position.y = 1.2;
-          const l = new THREE.Mesh(new THREE.ConeGeometry(1.4, 3.2, 8), mats.leaves);
-          l.position.y = 3.4;
-          g.add(t, l);
-          break;
-        }
-        case "crystal": {
-          for (let k = 0; k < 3; k++) {
-            const c = new THREE.Mesh(new THREE.OctahedronGeometry(0.5 + k * 0.15, 0), mats.crystal);
-            c.scale.set(0.6, 2 - k * 0.4, 0.6);
-            c.position.set((k - 1) * 0.5, 0.8, (k % 2) * 0.3);
-            c.rotation.z = (k - 1) * 0.3;
-            g.add(c);
-          }
-          break;
-        }
-        case "pillar": {
-          const c = new THREE.Mesh(new THREE.CylinderGeometry(0.45, 0.55, 4, 10), mats.pillar);
-          c.position.y = 2;
-          g.add(c);
-          break;
-        }
-        case "reed": {
-          for (let k = 0; k < 6; k++) {
-            const r = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.05, 1.6, 4), mats.reed);
-            r.position.set(Math.sin(k * 2.1) * 0.4, 0.8, Math.cos(k * 1.7) * 0.4);
-            r.rotation.z = Math.sin(k) * 0.2;
-            g.add(r);
-          }
-          break;
-        }
-        case "dune": {
-          const d = new THREE.Mesh(new THREE.SphereGeometry(1.6, 12, 8), mats.dune);
-          d.scale.set(1.6, 0.35, 1);
-          g.add(d);
-          break;
-        }
+    const M = (x: number, y: number, z: number, sx = 1, sy = 1, sz = 1, rz = 0, ry = 0) =>
+      new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, ry, rz)), new THREE.Vector3(sx, sy, sz));
+    type Part = { geo: THREE.BufferGeometry; mat: THREE.Material; m: THREE.Matrix4 };
+    const reedGeo = new THREE.CylinderGeometry(0.03, 0.05, 1.6, 4);
+    const parts: Record<PropKind, Part[]> = {
+      rock: [{ geo: new THREE.DodecahedronGeometry(0.9, 0), mat: mats.rock, m: M(0, 0.3, 0, 1.2, 0.8, 1) }],
+      tree: [
+        { geo: new THREE.CylinderGeometry(0.18, 0.28, 2.4, 7), mat: mats.trunk, m: M(0, 1.2, 0) },
+        { geo: new THREE.ConeGeometry(1.4, 3.2, 8), mat: mats.leaves, m: M(0, 3.4, 0) },
+      ],
+      crystal: [0, 1, 2].map((k) => ({ geo: new THREE.OctahedronGeometry(0.5 + k * 0.15, 0), mat: mats.crystal, m: M((k - 1) * 0.5, 0.8, (k % 2) * 0.3, 0.6, 2 - k * 0.4, 0.6, (k - 1) * 0.3) })),
+      pillar: [
+        { geo: new THREE.CylinderGeometry(0.45, 0.55, 4, 10), mat: mats.pillar, m: M(0, 2, 0) },
+        { geo: new THREE.BoxGeometry(1.2, 0.25, 1.2), mat: mats.pillar, m: M(0, 4.1, 0) },
+      ],
+      reed: [0, 1, 2, 3, 4, 5].map((k) => ({ geo: reedGeo, mat: mats.reed, m: M(Math.sin(k * 2.1) * 0.4, 0.8, Math.cos(k * 1.7) * 0.4, 1, 1, 1, Math.sin(k) * 0.2) })),
+      dune: [{ geo: new THREE.SphereGeometry(1.6, 12, 8), mat: mats.dune, m: M(0, 0, 0, 1.6, 0.25, 1) }],
+      ruin: [
+        { geo: new THREE.BoxGeometry(2.2, 1.6, 0.5), mat: mats.ruin, m: M(0, 0.8, 0) },
+        { geo: new THREE.BoxGeometry(0.7, 0.5, 0.7), mat: mats.ruin, m: M(0.9, 0.25, 0.75, 1, 1, 1, 0, 0.5) },
+        { geo: new THREE.CylinderGeometry(0.25, 0.3, 1.1, 8), mat: mats.ruin, m: M(-1.15, 0.55, 0.45) },
+      ],
+      bush: [{ geo: new THREE.IcosahedronGeometry(0.75, 0), mat: mats.bush, m: M(0, 0.42, 0, 1, 0.7, 1) }],
+    };
+    const base = new THREE.Matrix4(), tmp = new THREE.Matrix4();
+    const q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), pos = new THREE.Vector3(), sc = new THREE.Vector3();
+    for (const kind of PROP_KINDS) {
+      const list = this.arena.props.filter((p) => p.kind === kind);
+      if (!list.length) continue;
+      for (const part of parts[kind]) {
+        const im = new THREE.InstancedMesh(part.geo, part.mat, list.length);
+        list.forEach((p, i) => {
+          base.compose(pos.set(p.x, this.arena.heightAt(p.x, p.z), p.z), q.setFromAxisAngle(up, p.rot), sc.setScalar(p.scale));
+          im.setMatrixAt(i, tmp.multiplyMatrices(base, part.m));
+        });
+        im.instanceMatrix.needsUpdate = true;
+        im.computeBoundingSphere();
+        im.castShadow = shadows;
+        im.receiveShadow = shadows;
+        im.name = `props-${kind}`;
+        this.group.add(im);
+        this.propMeshes++;
       }
-      g.traverse((o) => {
-        if ((o as THREE.Mesh).isMesh) {
-          o.castShadow = shadows;
-          o.receiveShadow = shadows;
-        }
-      });
-      this.group.add(g);
     }
   }
 
@@ -314,7 +308,7 @@ export class ArenaView {
   dispose(): void {
     this.group.traverse((o) => {
       const m = o as THREE.Mesh;
-      if (m.geometry) m.geometry.dispose();
+      if (m.geometry && !(o instanceof THREE.Sprite)) m.geometry.dispose(); // sprites share three's quad
     });
     this.group.removeFromParent();
     this.scene.fog = null;

@@ -172,6 +172,58 @@ export function phaseLaw(power: number, area = 0, effects = 0): { charge: number
 }
 
 /**
+ * Fewer powers per fight [P5-B1]: a move carries at most ONE secondary effect (a status rider, a
+ * knockback or a pull, on the target or on its user) on top of its primary effect (the heal of a heal,
+ * the weather of a call, the ground of a terraform, the self state of a buff / phase / flight / dig).
+ * Every rider on the TARGET procs at PROC_SCALE x its design chance, except an interrupt (stun /
+ * freeze >= 50 %, the W slot's counter keeps its odds). Applied at load (`tamed`), so the rows the UI
+ * shows are the rows the engine rolls.
+ */
+export const PROC_SCALE = 0.8;
+const INTERRUPT_RIDER = new Set<StatusId>(["stunned", "frozen"]);
+
+/** The effects that ARE the move (not riders): heal, weather, ground, the self state of a buff-like shape. */
+export function primaryEffects(m: Move): MoveEffect[] {
+  switch (m.shape) {
+    case "heal":
+      return m.effects.filter((e) => e.kind === "heal");
+    case "weather":
+      return m.effects.filter((e) => e.kind === "weather");
+    case "terrain":
+      return m.effects.filter((e) => e.kind === "ground");
+    case "buff":
+    case "phase":
+    case "fly":
+    case "dig": {
+      const s = m.effects.find((e) => e.kind === "status" && e.self);
+      return s ? [s] : [];
+    }
+    default:
+      return [];
+  }
+}
+
+/** Riders on top of the primary effects (P5-B1 rule: at most one). */
+export function secondaryEffects(m: Move): MoveEffect[] {
+  const prim = primaryEffects(m);
+  return m.effects.filter((e) => !prim.includes(e));
+}
+
+/** Target status riders at PROC_SCALE x their chance (interrupts keep theirs), rounded to 0.01. */
+export function tameEffects(fx: MoveEffect[]): MoveEffect[] {
+  return fx.map((e) => {
+    if (e.kind !== "status" || e.self || !e.status) return e;
+    const chance = e.chance ?? 1;
+    if (INTERRUPT_RIDER.has(e.status) && chance >= 0.5) return e;
+    return { ...e, chance: Math.round(chance * PROC_SCALE * 100) / 100 };
+  });
+}
+
+function tamed(m: Move): Move {
+  return { ...m, effects: tameEffects(m.effects) };
+}
+
+/**
  * Legacy rows are re-timed by the phase law at load [P4-M5]: a damaging row keeps its power, reach,
  * effects and identity, but its charge / active / rest come from `phaseLaw` (the hand-written timings
  * in the table below were faster than the law at equal power, so Q always picked legacy rows).
@@ -189,7 +241,7 @@ const TF = { requires: { ability: "terraformer" as const } };
 export const MOVES: readonly Move[] = ([
   // neutral
   mv("tackle", "Tackle", "neutral", "melee", 40, 0.97, 0, 0, 0, 0.35, 0.2, 0.4, [kb(2)]),
-  mv("bodySlam", "Body Slam", "neutral", "melee", 60, 0.9, 0, 0, 0, 0.8, 0.3, 0.8, [kb(5), st("staggered", 0.25, 1)], 2, { tags: ["massScaled"] }),
+  mv("bodySlam", "Body Slam", "neutral", "melee", 60, 0.9, 0, 0, 0, 0.8, 0.3, 0.8, [kb(5)], 2, { tags: ["massScaled"] }),
   mv("stomp", "Stomp", "neutral", "burst", 45, 0.95, 0, 2.2, 0, 0.6, 0.25, 0.6, [st("staggered", 0.3, 1)], 1, { tags: ["ground"] }),
   mv("roar", "Roar", "neutral", "burst", 0, 1, 0, 4.5, 0, 0.6, 0.4, 0.6, [st("feared", 0.6, 3)], 1),
   mv("rest", "Rest", "neutral", "heal", 0, 1, 0, 0, 0, 0.4, 1.2, 0.6, [heal(0.3)], 1),
@@ -199,14 +251,14 @@ export const MOVES: readonly Move[] = ([
   mv("cinderSpit", "Cinder Spit", "fire", "projectile", 45, 0.9, 12, 0, 16, 0.5, 0.2, 0.45, [st("burn", 0.3)]),
   mv("flameLance", "Flame Lance", "fire", "beam", 76, 0.88, 14, 0, 0, 0.9, 0.35, 0.8, [st("burn", 0.35)], 2),
   mv("scorchField", "Scorch Field", "fire", "zone", 38, 0.95, 10, 2.6, 12, 0.8, 0.3, 0.7, [st("burn", 0.4)], 2),
-  mv("infernoBurst", "Inferno Burst", "fire", "burst", 135, 0.95, 0, 3.2, 0, 1.2, 0.35, 1.0, [st("burn", 0.3), kb(4)], 3),
+  mv("infernoBurst", "Inferno Burst", "fire", "burst", 135, 0.95, 0, 3.2, 0, 1.2, 0.35, 1.0, [st("burn", 0.3)], 3),
   mv("heatwaveCall", "Heatwave Call", "fire", "weather", 0, 1, 0, 0, 0, 1.4, 0.3, 1.2, [wx("heatwave")], 2, WS),
   // water
-  mv("tideSlam", "Tide Slam", "water", "melee", 55, 0.95, 0, 0, 0, 0.5, 0.25, 0.5, [kb(3), st("wet", 0.6, 5)]),
+  mv("tideSlam", "Tide Slam", "water", "melee", 55, 0.95, 0, 0, 0, 0.5, 0.25, 0.5, [st("wet", 0.6, 5)]),
   mv("waterJet", "Water Jet", "water", "projectile", 45, 0.92, 12, 0, 20, 0.45, 0.2, 0.45, [st("wet", 0.7, 5)]),
-  mv("hydroBeam", "Hydro Beam", "water", "beam", 72, 0.88, 14, 0, 0, 0.95, 0.35, 0.8, [st("wet", 0.8, 5), kb(2)], 2),
-  mv("riptide", "Riptide", "water", "burst", 52, 0.95, 0, 3, 0, 0.8, 0.3, 0.7, [st("wet", 0.9, 5), st("slowed", 0.3)], 2),
-  mv("geyser", "Geyser", "water", "zone", 125, 0.9, 11, 2.2, 0, 1.1, 0.4, 0.9, [kb(5), st("wet", 1, 6)], 3),
+  mv("hydroBeam", "Hydro Beam", "water", "beam", 72, 0.88, 14, 0, 0, 0.95, 0.35, 0.8, [st("wet", 0.8, 5)], 2),
+  mv("riptide", "Riptide", "water", "burst", 52, 0.95, 0, 3, 0, 0.8, 0.3, 0.7, [st("wet", 0.9, 5)], 2),
+  mv("geyser", "Geyser", "water", "zone", 125, 0.9, 11, 2.2, 0, 1.1, 0.4, 0.9, [kb(5)], 3),
   mv("rainCall", "Rain Call", "water", "weather", 0, 1, 0, 0, 0, 1.4, 0.3, 1.2, [wx("rain")], 2, WS),
   // plant
   mv("vineLash", "Vine Lash", "plant", "melee", 54, 0.98, 2.5, 0, 0, 0.45, 0.3, 0.5, [pull(3)]),
@@ -217,7 +269,7 @@ export const MOVES: readonly Move[] = ([
   mv("overgrowth", "Overgrowth", "plant", "terrain", 20, 1, 8, 4, 0, 1.0, 0.4, 0.8, [gr("grass"), st("regen", 1, 6, true)], 2, TF),
   mv("solarBloom", "Solar Bloom", "plant", "beam", 130, 0.9, 15, 0, 0, 1.5, 0.4, 1.0, [], 3),
   // earth
-  mv("boulderCrush", "Boulder Crush", "earth", "melee", 65, 0.9, 0, 0, 0, 0.7, 0.3, 0.7, [kb(5), st("staggered", 0.3, 1)], 1),
+  mv("boulderCrush", "Boulder Crush", "earth", "melee", 65, 0.9, 0, 0, 0, 0.7, 0.3, 0.7, [kb(5)], 1),
   mv("rockToss", "Rock Toss", "earth", "projectile", 55, 0.88, 11, 0, 14, 0.7, 0.25, 0.6, [kb(2)]),
   mv("quake", "Quake", "earth", "burst", 135, 0.95, 0, 4, 0, 1.2, 0.4, 1.0, [st("staggered", 0.5, 1)], 3, { tags: ["ground"] }),
   mv("burrow", "Burrow", "earth", "dig", 60, 0.95, 0, 0, 0, 0.6, 2.2, 0.6, [st("burrowed", 1, 2.2, true), kb(4)], 1, { requires: { ability: "dig" } }),
@@ -227,7 +279,7 @@ export const MOVES: readonly Move[] = ([
   mv("galeSlash", "Gale Slash", "air", "melee", 48, 0.96, 0.5, 0, 0, 0.3, 0.2, 0.4),
   mv("airCutter", "Air Cutter", "air", "projectile", 45, 0.92, 13, 0, 26, 0.4, 0.2, 0.4),
   mv("jetStream", "Jet Stream", "air", "beam", 68, 0.9, 14, 0, 0, 0.85, 0.35, 0.8, [kb(3)], 2),
-  mv("tornado", "Tornado", "air", "zone", 120, 0.9, 11, 2.8, 0, 1.0, 0.5, 0.9, [kb(4), st("slowed", 0.5, 2), st("staggered", 0.4, 1)], 3),
+  mv("tornado", "Tornado", "air", "zone", 120, 0.9, 11, 2.8, 0, 1.0, 0.5, 0.9, [kb(4)], 3),
   mv("takeFlight", "Take Flight", "air", "fly", 0, 1, 0, 0, 0, 0.5, 0.3, 0.3, [st("airborne", 1, 8, true)], 1, { requires: { ability: "fly" } }),
   mv("tailwind", "Tailwind", "air", "buff", 0, 1, 0, 0, 0, 0.5, 0.3, 0.4, [st("hasted", 1, 6, true)], 2),
   mv("galeCall", "Gale Call", "air", "weather", 0, 1, 0, 0, 0, 1.4, 0.3, 1.2, [wx("wind")], 2, WS),
@@ -247,14 +299,14 @@ export const MOVES: readonly Move[] = ([
   // metal
   mv("ironRam", "Iron Ram", "metal", "melee", 56, 0.86, 0, 0, 0, 0.6, 0.3, 0.7, [kb(6)], 1, { tags: ["massScaled"] }),
   mv("steelSpike", "Steel Spike", "metal", "projectile", 40, 0.8, 12, 0, 22, 0.55, 0.2, 0.5),
-  mv("magnetPull", "Magnet Pull", "metal", "zone", 30, 0.95, 12, 1.5, 0, 0.7, 0.3, 0.6, [pull(6), st("slowed", 0.4, 2), st("staggered", 0.3, 1)], 2),
+  mv("magnetPull", "Magnet Pull", "metal", "zone", 30, 0.95, 12, 1.5, 0, 0.7, 0.3, 0.6, [pull(6)], 2),
   mv("ironShell", "Iron Shell", "metal", "buff", 0, 1, 0, 0, 0, 0.5, 0.3, 0.4, [st("shielded", 1, 6, true)], 1),
   mv("shrapnel", "Shrapnel Burst", "metal", "burst", 135, 0.93, 0, 3, 0, 1.0, 0.3, 0.9, [], 3),
   // poison
   mv("venomFang", "Venom Fang", "poison", "melee", 54, 0.95, 0, 0, 0, 0.45, 0.25, 0.5, [st("poisoned", 0.6, 5)]),
   mv("toxicSpit", "Toxic Spit", "poison", "projectile", 52, 0.96, 11, 0, 16, 0.45, 0.2, 0.45, [st("poisoned", 0.6, 5)]),
   mv("miasma", "Miasma", "poison", "zone", 48, 1, 10, 3, 0, 0.8, 0.4, 0.7, [st("poisoned", 1, 5)], 2),
-  mv("corrosion", "Corrosion", "poison", "beam", 80, 0.93, 13, 0, 0, 0.9, 0.35, 0.8, [st("softened", 0.4, 4), st("poisoned", 0.4, 5)], 2),
+  mv("corrosion", "Corrosion", "poison", "beam", 80, 0.93, 13, 0, 0, 0.9, 0.35, 0.8, [st("poisoned", 0.4, 5)], 2),
   mv("plagueBurst", "Plague Burst", "poison", "burst", 125, 0.95, 0, 3.2, 0, 1.0, 0.35, 0.9, [st("poisoned", 0.6, 5)], 3),
   mv("acidRainCall", "Acid Rain Call", "poison", "weather", 0, 1, 0, 0, 0, 1.4, 0.3, 1.2, [wx("acidRain")], 2, WS),
   // light
@@ -283,7 +335,7 @@ export const MOVES: readonly Move[] = ([
   mv("voidOrb", "Void Orb", "void", "projectile", 48, 0.9, 12, 0, 15, 0.55, 0.2, 0.5),
   mv("phaseOut", "Phase Out", "void", "buff", 0, 1, 0, 0, 0, 0.4, 0.3, 0.4, [st("evasive", 1, 3, true)], 2),
   mv("collapse", "Collapse", "void", "burst", 125, 0.93, 0, 3.4, 0, 1.1, 0.35, 0.9, [pull(5)], 3),
-] as Move[]).map(lawTimed);
+] as Move[]).map(tamed).map(lawTimed);
 
 export const MOVE_BY_ID: Record<string, Move> = Object.fromEntries(MOVES.map((m) => [m.id, m]));
 

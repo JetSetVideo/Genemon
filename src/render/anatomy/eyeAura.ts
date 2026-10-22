@@ -8,6 +8,9 @@
  * `update(dt, headWorldMatrix)` every frame with the head joint's `matrixWorld`; the emitters
  * (FaceParts.auraEmitters, head-joint space) are carried through that matrix, so smoke trails behind a
  * moving head. Math.random is allowed here: cosmetic jitter only, it never feeds the simulation.
+ *
+ * Pass 5: up to 8 eyes. The total emission grows like 2 sqrt(n / 2) past two eyes (`auraWeight`), not
+ * linearly, so an eight-eyed creature smokes twice as much as a pair, not four times (less effect spam).
  */
 import * as THREE from "../../lib/three.ts";
 import type { EyeAura as AuraKind } from "../../genome/morphTypes.ts";
@@ -58,6 +61,12 @@ function spriteTexture(kind: AuraKind): THREE.CanvasTexture | null {
   return new THREE.CanvasTexture(c);
 }
 
+/** Emission weight of `n` eye emitters: n up to 2, then 2 sqrt(n / 2) (8 eyes = 4, not 8). */
+export function auraWeight(n: number): number {
+  const k = Math.max(0, Math.round(Number.isFinite(n) ? n : 0));
+  return k <= 2 ? k : 2 * Math.sqrt(k / 2);
+}
+
 export class EyeAura {
   readonly points: THREE.Points;
   private readonly geo = new THREE.BufferGeometry();
@@ -86,7 +95,7 @@ export class EyeAura {
     this.prof = kind === "none" ? null : { ...PROFILES[kind], color: kind === "flame" ? color : PROFILES[kind].color };
     this.emitters = emitters.map((e) => e.clone());
     this.world = emitters.map(() => new THREE.Vector3());
-    const cap = Math.max(1, emitters.length) * (quality === "high" ? 40 : 20);
+    const cap = Math.max(1, Math.ceil(auraWeight(emitters.length))) * (quality === "high" ? 40 : 20);
     this.pos = new Float32Array(cap * 3);
     this.col = new Float32Array(cap * 4);
     this.vel = new Float32Array(cap * 3);
@@ -133,7 +142,7 @@ export class EyeAura {
     for (let e = 0; e < this.emitters.length; e++) this.world[e].copy(this.emitters[e]).applyMatrix4(headWorldMatrix);
     const cap = this.age.length;
     // Spawn.
-    this.debt += p.rate * (0.35 + this.intensity) * this.emitters.length * dt;
+    this.debt += p.rate * (0.35 + this.intensity) * auraWeight(this.emitters.length) * dt;
     while (this.debt >= 1) {
       this.debt -= 1;
       const i = this.next;

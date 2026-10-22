@@ -14,7 +14,7 @@ import { ELEMENTS } from "../../data/elements.ts";
 import { GROUNDS } from "../../data/grounds.ts";
 import { WEATHERS, type WeatherId } from "../../data/weather.ts";
 import { phenotypeOf } from "../../genome/genemon.ts";
-import { MAP_SIZE_M, PLACE_COLORS, WorldView } from "../../render/worldView.ts";
+import { CONTOUR_M, MAP_SIZE_M, PLACE_COLORS, WorldView } from "../../render/worldView.ts";
 import { type Place, PLACE_KIND_DEFS, type PlaceKind, type Rarity, type Verdict, type WorldMap } from "../../world/worldmap.ts";
 import { bar, fmt, h, hex, pct, section, select, toast } from "../dom.ts";
 import { elChip, genemonCard } from "../widgets.ts";
@@ -143,6 +143,7 @@ export function renderWorld(app: App): HTMLElement {
   return h("div", {},
     h("h1", {}, "World"),
     h("p", {}, "Your neighbourhood as a living map: x east, y altitude, z north (on the map 1 unit = 25 m, heights ×3). Claim and defend territory, shop and train in person, discover places, and catch or release Genemon that change what spawns here. Arenas, stadiums, dungeons, portals, museums and libraries are reachable virtually."),
+    h("p", { class: "muted" }, `Relief: lighter = higher, contour lines every ${CONTOUR_M} m (bold every ${CONTOUR_M * 5} m), ▲ peaks and ▼ hollows labelled with their altitude; trees, rocks and scrub show the natural cover.`),
     whereSection(c),
     activitySection(c.s),
     wildSection(c),
@@ -165,6 +166,7 @@ function whereSection(c: Ctx): HTMLElement {
       h("dt", { title: `Local ENU metres from the world origin ${world.origin.lat.toFixed(4)}, ${world.origin.lon.toFixed(4)}` }, "x, y, z"),
       h("dd", { class: "mono" }, xyz(avatar.pos)),
       h("dt", {}, "Ground"), h("dd", {}, GROUNDS[world.groundAt(avatar.pos)].name),
+      h("dt", { title: "Terrain altitude of the place centre, relative to the world's reference level" }, "Altitude"), h("dd", {}, altitudeText(c, avatar)),
       h("dt", {}, "Territory"), h("dd", {}, territoryText(c, st)),
       h("dt", { title: "Sum of your team's power index: the garrison you claim or defend with" }, "Team power"), h("dd", {}, fmt(c.power)),
       h("dt", {}, "Hour · weather"), h("dd", {}, `${hourLabel(c.hour)} · ${WEATHERS[c.weather].name}`)),
@@ -267,7 +269,7 @@ function placeRow(c: Ctx, p: Place): HTMLElement {
   return h("tr", { "data-place": p.id },
     h("td", {},
       placeTitle(p),
-      h("div", { class: "muted" }, `${where} · ${known} · ${territoryText(c, st)}`)),
+      h("div", { class: "muted" }, `${where} · ${known} · alt ${fmt(p.pos.y)} m · ${territoryText(c, st)}`)),
     h("td", {},
       h("div", { class: "row" },
         go,
@@ -339,6 +341,14 @@ function territoryText(c: Ctx, st: PlaceStatus): string {
   if (!st.owner) return "free cell";
   if (st.yours) return `your territory (garrison ${fmt(st.defense)})`;
   return `held by ${c.app.store.get(st.owner)?.name ?? st.owner} (garrison ${fmt(st.defense)})`;
+}
+
+/** "34 m · +12 m vs home · cover: trees" */
+function altitudeText(c: Ctx, p: Place): string {
+  const d = p.pos.y - c.home.pos.y;
+  const cover = c.world.coverAt(p.pos.x, p.pos.z);
+  const rel = p.id === c.home.id ? "your home" : `${d >= 0 ? "+" : "−"}${fmt(Math.abs(d))} m vs home`;
+  return `${fmt(p.pos.y)} m · ${rel}${cover ? ` · cover: ${cover}` : ""}`;
 }
 
 function xyz(p: V3): string {

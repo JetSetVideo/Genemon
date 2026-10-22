@@ -10,9 +10,10 @@
 import * as THREE from "../../lib/three.ts";
 import type { JointDef, JointRole } from "../../body/skeleton.ts";
 import type { Phenotype } from "../../genome/phenotype.ts";
-import type { MorphHelix } from "../../genome/morphTypes.ts";
+import type { BodyP5, LimbStyle, MorphHelix, MorphOp } from "../../genome/morphTypes.ts";
 import type { SkinMaterials } from "./types.ts";
 import { asymScale } from "./hitbox.ts";
+import { applyOps } from "./ops.ts";
 import {
   add3,
   bezier3,
@@ -119,16 +120,31 @@ export function socketK(role: JointRole): number {
 
 export type LimbPart = "upper" | "lower" | "foot" | "pod" | "podTip" | "wing";
 
+/** Pass-5 limb options: morph ops on the "limb" region (u range of this part), effective angularity, baby, style. */
+export interface LimbOpts {
+  ops?: MorphOp[];
+  /** Station range of this part along the whole limb. */
+  u?: [number, number];
+  /** Effective angularity (overrides helix.angularity). */
+  A?: number;
+  /** Baby factor 0..1: softer muscles. */
+  baby?: number;
+  style?: LimbStyle;
+}
+
 /**
  * A limb segment in its (canonical) joint frame: a tapered loft from slightly behind the pivot to the bone
  * end, then a smoothstep connector toward the child's root radius, with muscle lobes (thigh / biceps in
  * front and outside, hamstring behind; calf behind on the lower segment), and the child's socket sphere.
  * `lengthOverride` stretches the bone (wing tip extended to the requested span).
  */
-export function limbPieces(j: JointDef, child: JointDef | undefined, part: LimbPart, ph: Phenotype, helix: MorphHelix, res: Res, lengthOverride?: number): Piece<Slot>[] {
+export function limbPieces(j: JointDef, child: JointDef | undefined, part: LimbPart, ph: Phenotype, helix: MorphHelix, res: Res, lengthOverride?: number, o: LimbOpts = {}): Piece<Slot>[] {
   const L = Math.max(1e-4, lengthOverride ?? j.length);
   const r0 = Math.max(1e-4, j.r0), r1 = Math.max(1e-4, j.r1);
-  const F = clamp01(helix.fusion), A = clamp01(helix.angularity), G = clamp01(ph.plan.girth);
+  const F = clamp01(helix.fusion), A = clamp01(o.A ?? helix.angularity), G = clamp01(ph.plan.girth) * (1 - 0.5 * clamp01(o.baby ?? 0));
+  const ops = o.ops ?? [];
+  const [ua, ub] = o.u ?? [0, 1];
+  const fin = o.style === "fins" && part === "foot";
   const back = r0 * 0.35;
   const fwd = child ? Math.max(1e-4, child.r0) * (0.45 + 0.5 * F) : 0;
   const n = res.limbStations + (child ? 2 : 0);
@@ -157,8 +173,8 @@ export function limbPieces(j: JointDef, child: JointDef | undefined, part: LimbP
         ];
         break;
       case "foot":
-        sec.rx = r * (1.1 + 0.25 * u);
-        sec.ry = r * 0.62;
+        sec.rx = r * (1.1 + 0.25 * u) * (fin ? 1.9 : 1);
+        sec.ry = r * (fin ? 0.32 : 0.62);
         sec.offsetY = r * 0.12;
         sec.exp = 2.15 + 0.3 * A;
         sec.lobes = [{ angle: -Math.PI / 2, amp: -0.1, sharp: 2 }];
@@ -174,7 +190,7 @@ export function limbPieces(j: JointDef, child: JointDef | undefined, part: LimbP
         sec.lobes = [{ angle: Math.PI / 2, amp: 0.15 * bump(u, 0.2, 0.3), sharp: 3 }];
         break;
     }
-    st.push({ ...sec, z: t });
+    st.push({ ...(ops.length ? applyOps(sec, ua + (ub - ua) * u, ops) : sec), z: t });
   }
   const frame = part === "wing" ? boneFrame(j.dir, [0, 1, 0], [0, 0, 1]) : boneFrame(j.dir, [0, 0, 1], [0, 1, 0]);
   const endCap = child ? 0.5 : part === "foot" ? 0.9 : part === "wing" ? 2.2 : 0.85;
@@ -184,6 +200,81 @@ export function limbPieces(j: JointDef, child: JointDef | undefined, part: LimbP
   }];
   // `child` is passed in the same canon as `j`, so its offset is already in this frame.
   if (child) out.push({ geo: sphereGeo(child.offset, socketK(child.role) * child.r0, res.sphere[0], res.sphere[1]), slots: ["skin"] });
+  return out;
+}
+
+// ------------------------------------------------------------------ fractal arms [P5-V5]
+
+/**
+ * Mathematical sub-branches (armFractal) grown from `origin` along `dir`, breadth-first so a triangle BUDGET
+ * (max segments) trims the deepest level evenly:
+ * - branch: `branch` children on a cone around the parent (spread 0.5 rad, rotated by `twist` per level);
+ * - spiral: one child per level turning by (0.55 + twist) about a fixed axis (a nautilus curl), with a small
+ *   side bud every other level;
+ * - mandelbrot: children follow the orbit z <- z^2 + c (c from ratio and twist): arg(z) sets each child's
+ *   angle, |z| its length, so the branching is irregular yet fully deterministic.
+ * Depth <= 4, branch 1..4, ratio 0.35..0.85. Each segment is a small tapered loft overlapping its parent.
+ */
+export function fractalPieces(origin: V3, dir: V3, len: number, r: number, af: BodyP5["armFractal"], res: Res, budget: number, slot: Slot, tipSlot: Slot = "keratin"): Piece<Slot>[] {
+  const depth = Math.max(0, Math.min(4, Math.round(af.depth)));
+  if (af.mode === "none" || depth < 1 || budget < 1) return [];
+  const nB = Math.max(1, Math.min(4, Math.round(af.branch)));
+  const ratio = Math.max(0.35, Math.min(0.85, Number.isFinite(af.ratio) ? af.ratio : 0.6));
+  const twist = Number.isFinite(af.twist) ? Math.max(-1.5, Math.min(1.5, af.twist)) : 0;
+  const d0 = norm3(dir);
+  const ref: V3 = Math.abs(d0[1]) < 0.9 ? [0, 1, 0] : [1, 0, 0];
+  const axis0 = norm3(cross3(d0, ref));
+  const c = { re: ratio - 0.95, im: 0.25 + 0.4 * twist };
+  interface Node { p: V3; d: V3; L: number; r: number; level: number; z: { re: number; im: number }; ax: V3 }
+  const queue: Node[] = [{ p: origin, d: d0, L: len, r, level: 0, z: { re: 0, im: 0 }, ax: axis0 }];
+  const out: Piece<Slot>[] = [];
+  const ns = 3;
+  const radial = Math.max(4, res.smallRadial - 2);
+  let count = 0;
+  while (queue.length && count < budget) {
+    const n = queue.shift()!;
+    count++;
+    // The segment: a short loft that starts inside its parent and bends a little toward its curl axis.
+    const pts: V3[] = [];
+    const bend = af.mode === "spiral" ? 0.35 : 0.12;
+    let p = sub3(n.p, mul3(n.d, n.r * 0.5)), d = n.d;
+    const step = (n.L + n.r * 0.5) / (ns - 1);
+    for (let i = 0; i < ns; i++) {
+      pts.push(p);
+      p = add3(p, mul3(d, step));
+      d = norm3(rotate3(d, n.ax, bend / ns));
+    }
+    const end = pts[pts.length - 1];
+    const leaf = n.level >= depth;
+    out.push({
+      geo: loftRings(curveRings(pts, (u) => ({ rx: n.r * (1 - 0.35 * u) + 1e-4, ry: n.r * (1 - 0.35 * u) + 1e-4 }), n.ax), { radial, capRings: 1, capScale: [0.5, leaf ? 1.4 : 0.7] }),
+      slots: [leaf ? tipSlot : slot],
+    });
+    if (leaf) continue;
+    const kids: { d: V3; L: number; z: { re: number; im: number } }[] = [];
+    const spin = twist * (n.level + 1);
+    if (af.mode === "branch") {
+      for (let k = 0; k < nB; k++) {
+        const around = spin + (2 * Math.PI * k) / nB;
+        const tilt = nB === 1 ? 0.35 : 0.5;
+        kids.push({ d: norm3(rotate3(rotate3(d, n.ax, tilt), d, around)), L: n.L * ratio, z: n.z });
+      }
+    } else if (af.mode === "spiral") {
+      kids.push({ d: norm3(rotate3(d, n.ax, 0.55 + twist * 0.5)), L: n.L * Math.max(ratio, 0.7), z: n.z });
+      if (n.level % 2 === 1) kids.push({ d: norm3(rotate3(d, n.ax, -0.7)), L: n.L * ratio * 0.6, z: n.z });
+    } else {
+      // mandelbrot-like: iterate the orbit once per child.
+      let z = n.z;
+      for (let k = 0; k < nB; k++) {
+        z = { re: z.re * z.re - z.im * z.im + c.re + 0.15 * k, im: 2 * z.re * z.im + c.im };
+        const m = Math.hypot(z.re, z.im);
+        if (!Number.isFinite(m) || m > 4) z = { re: c.re, im: c.im };
+        const ang = Math.atan2(z.im, z.re) * 0.45;
+        kids.push({ d: norm3(rotate3(rotate3(d, n.ax, ang), d, spin + (2 * Math.PI * k) / nB)), L: n.L * ratio * Math.max(0.55, Math.min(1.15, 0.6 + 0.35 * Math.min(2, m))), z });
+      }
+    }
+    for (const k of kids) queue.push({ p: end, d: k.d, L: k.L, r: n.r * 0.68, level: n.level + 1, z: k.z, ax: norm3(rotate3(n.ax, k.d, 0.9)) });
+  }
   return out;
 }
 

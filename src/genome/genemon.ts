@@ -14,7 +14,10 @@ import { buildKit } from "../combat/kit.ts";
 import { type Conditions, emptyConditions, levelOf, noteActivity, xpForLevel } from "./epigenetics.ts";
 import { type Genome, type GenomeBias, randomGenome } from "./genome.ts";
 import { express, nameFor, type Phenotype } from "./phenotype.ts";
-import type { LifeState } from "./lifeTypes.ts";
+import type { EatResult, Imprint, LifeState, LifeTickCtx, LifeTickReport, Scar } from "./lifeTypes.ts";
+import { eat } from "./digestion.ts";
+import { addScar, newLifeState, scarFromHit, tickLife } from "./lifeclock.ts";
+import { imprintAxisShift, imprintFrom, inheritImprints } from "./imprint.ts";
 import { u01 } from "../core/math.ts";
 
 export interface Genemon {
@@ -36,14 +39,14 @@ export const STAGE_NAMES = ["", "Hatchling", "Juvenile", "Adult", "Ascended"] as
 
 const cache = new Map<string, Phenotype>();
 function conditionKey(g: Genemon): string {
-  return `${g.genome.id}|${JSON.stringify(g.conditions)}`;
+  return `${g.genome.id}|${JSON.stringify(g.conditions)}|${JSON.stringify(imprintAxisShift(g.life))}`;
 }
 
 export function phenotypeOf(g: Genemon): Phenotype {
   const key = conditionKey(g);
   let ph = cache.get(key);
   if (!ph) {
-    ph = express(g.genome, g.conditions);
+    ph = express(g.genome, g.conditions, imprintAxisShift(g.life));
     if (cache.size > 4000) cache.clear();
     cache.set(key, ph);
   }
@@ -227,6 +230,65 @@ export function expose(g: Genemon, ground: GroundId, hours: number, ctx: LifeCtx
   g.conditions.exposure[ground] = (g.conditions.exposure[ground] ?? 0) + hours;
   log(ctx, g, "genemon.exposure", { ground, hours }, { totalHours: r3(g.conditions.exposure[ground]!) });
   settle(g, before, ctx);
+}
+
+// ------------------------------------------------------------------ pass 5 life loop [P5-G3..G6, P5-L1]
+/**
+ * Pass-5 feeding: the food goes into the STOMACH (capacity, diet efficiency, preview) and reaches
+ * conditions.diet / hunger only when liveTick() digests it. `ignoreCapacity` = demo "no food limit".
+ * A refused meal writes genemon.feed.refused (no portion served); the legacy feed() stays instant.
+ */
+export function feedLife(g: Genemon, food: FoodId, units: number, now: number, ctx: LifeCtx & { ignoreCapacity?: boolean } = {}): EatResult {
+  const before = snapshot(g);
+  const life = g.life ?? (g.life = newLifeState(g, now));
+  const r = eat(life, food, units, now, phenotypeOf(g), { ignoreCapacity: ctx.ignoreCapacity });
+  const c: LifeCtx = { ...ctx, when: ctx.when ?? now };
+  if (!r.ok) {
+    log(c, g, "genemon.feed.refused", { food, units }, { fullness: r.fullness, capacity: life.digestion.capacity }, r.why);
+    return r;
+  }
+  g.conditions.bond = Math.min(1, g.conditions.bond + 0.005 * r.units);
+  if (ctx.hour !== undefined) noteActivity(g.conditions, ctx.hour, r.units);
+  log(c, g, "genemon.feed", { food, units: r.units }, { hunger: r3(g.conditions.hunger), bond: r3(g.conditions.bond) }, r.why);
+  settle(g, before, c);
+  return r;
+}
+
+/** The long loop: tickLife (digestion -> diet, hunger, age, rhythm; one genemon.life row), then level / stage / element re-derivation. */
+export function liveTick(g: Genemon, now: number, ctx: LifeTickCtx): LifeTickReport {
+  const before = snapshot(g);
+  const rep = tickLife(g, now, ctx);
+  settle(g, before, { ledger: ctx.ledger, when: now, who: ctx.who });
+  return rep;
+}
+
+/** A heavy hit may leave a scar [P5-V8]: seeded, stored in g.life.scars, one genemon.scar row. */
+export function scarHit(g: Genemon, damageFrac: number, element: ElementId | "physical", part: string, seed: number, ctx: LifeCtx = {}): Scar | null {
+  const s = scarFromHit(g, damageFrac, element, part, seed);
+  if (!s) return null;
+  addScar(g, s);
+  log(ctx, g, "genemon.scar", { part, from: element, damage: r3(damageFrac) }, { severity: s.severity, scars: g.life?.scars.length ?? 0 }, "heavy hit");
+  return s;
+}
+
+/** An object eaten / worn / held imprints a trait [P5-G6]; repeated use strengthens it. One genemon.imprint row. */
+export function imprintItem(g: Genemon, itemId: string, now: number, ctx: LifeCtx = {}): Imprint | null {
+  const before = snapshot(g);
+  const im = imprintFrom(g, itemId, now);
+  if (!im) return null;
+  const c: LifeCtx = { ...ctx, when: ctx.when ?? now };
+  log(c, g, "genemon.imprint", { item: itemId }, { trait: im.trait, strength: im.strength, generation: im.generation }, "object imprint");
+  settle(g, before, c);
+  return im;
+}
+
+/** A bred child carries its parents' strongest imprints, halved (generation + 1) [P5-G6]. Call right after createGenemon. */
+export function inheritLife(child: Genemon, a: Genemon, b: Genemon, seed: number, now: number): Genemon {
+  child.life = { ...newLifeState(child, now), imprints: inheritImprints(a.life, b.life, seed) };
+  const ph = phenotypeOf(child);
+  child.moves = learnset(ph, child.genome.id);
+  child.stage = stageOf(child, ph);
+  return child;
 }
 
 export function age(g: Genemon, days: number, ctx: LifeCtx = {}): void {

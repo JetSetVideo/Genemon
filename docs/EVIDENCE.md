@@ -128,3 +128,38 @@ Honest gaps after pass 2:
 - Engine smoke in a browser: 1v1 volcano battle 37.8 s with 10 throw-ins and switches, loot added to the bag.
 - Open: fighters still small and hidden by weather effects in storm battle shots (C2); 27 lopsided element pairs; hexapods never get wings; the folded wing reads as a thin blade from the side; learn-lock reasons not shown in the UI; investments not in the game; boss gauntlet UI not browser-checked.
 
+
+## Pass 5 (2026-10-23): ten lanes integrated, measured by the orchestrator
+
+Orchestrator model: claude-opus-5-5 (anthropic). Lanes: genetics-life, battle-brain, body-morph, helix-face,
+skin-coat, animation, ui-sheet, home-dex, world-maps, batch-lab (`docs/team/PASS5-BRIEF.md`). Every number below
+was re-run in the parent after integration, not copied from a lane report.
+
+- Gates: `deno task check` clean; `deno lint` clean (177 files); `deno test`: **453 passed, 0 failed**.
+- Scenarios SC-01..06 all PASS; SC-06 side parity 45.8 % [37-55] n=120; duration p10 26.3 s, median 42.9 s, p90 67.7 s.
+- Balance 72 (senses plugged in as the default perception): 13/13 elements in band (Metal 60 % .. Fire 41 %);
+  big vs swarm XL/4S 56 %, L/3S 55 %, M/2S 50 %; draws 1/1440; median 41.2 s (pass 4: 24.8 s);
+  never learned 5/141 (geyser, solarBloom, shrapnel, plagueBurst, plague); learned never used: roar, tailwind,
+  ironShell, worldTree, blackHole. 14 element pairs still at 0-4 % / 94-100 % (B2 open).
+- Battle playback in Chrome: 0.75x of the speed setting measured (t = 11.0 s after 16 s wall, including slow-mo).
+- Archetype matrix `deno task batch 48` (1008 battles, 0 draws): Powerful 68 % (DOMINANT, beats Swarm 88 %),
+  Clever 60 %, Tank 57 %, Sensory 47 %, Fast 37 %, Swarm 30 % (WEAK); held-out seed: Powerful 62 %, Swarm 30 %.
+  Clever and Tank have real counters (Tank loses to Clever 29 %); Fast and Swarm lack a winning matchup outside
+  Swarm/Sensory. **The founder's "every archetype has pros and cons" is not met yet** (quest P5-1).
+- Browser (`tools/p5probe.ts`, headless Chrome + Metal, 1440x900): 19/19 checks, 0 console errors; home platform
+  with 4 creatures and size labels; profile sheet 10 sections; drag-to-feed onto `#scene` adds one `genemon.feed`
+  row and a stomach item, popup moved to the top-left after the first capture showed it covering the creature;
+  egg (opaque) and fetus (translucent, curled) seen; battle intents in the snapshot; a battle left 3 scars;
+  no panel overflow on home, lab, dex, market, batch, settings, world; Home titles on 6 colour bands (DOM-measured).
+- Long loop (`tools/p5life.ts`, fake clock): 10080x aged the team ~70 days in 10 min (1200 `genemon.life` rows);
+  credits topped to 1e9; a x10 feast refused 3 times at capacity 7.9, accepted to 37.9 with "no food limit"
+  (animator bloat 1); an ancient (age 5000 d) benched from a ranked battle. 7/7.
+- Connectivity (`tools/p5gaps.ts`): 0 meshes farther than 4 % of body height from another mesh across 16 creatures;
+  `--fake` reports the injected floating copy (gap 41-46 x height). Two vision "floating part" calls on the
+  contact sheet were wrong by this measure (a far wing tip over the back; a whole-sheet question).
+- Vision on close-ups: bellies lighter than backs; eyes in shallow sockets; serpents, octopus blobs, flame tails
+  read; cel shading reads as toon bands + ink on some creatures and as smooth on others (celMix raised 0.9 -> 1,
+  not re-judged).
+- Integration choices: drag/Lab feeding goes through the stomach (`feedLife`), so food effects arrive as the life
+  loop digests (shown as "digesting ->" lines); hatching starts at age 0 (egg); scars are applied after the fight
+  from heavy hits (>= 25 % max HP, max 2 per Genemon), never inside the simulation.

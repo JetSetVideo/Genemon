@@ -9,7 +9,7 @@
  */
 import type { Skeleton } from "../../body/skeleton.ts";
 import type { Phenotype } from "../../genome/phenotype.ts";
-import type { AsymPart, MorphHelix } from "../../genome/morphTypes.ts";
+import { type AsymPart, type MorphHelix, P5_DEFAULTS } from "../../genome/morphTypes.ts";
 import type { HitSphere } from "./types.ts";
 
 type P3 = [number, number, number];
@@ -33,9 +33,24 @@ export function restPositions(sk: Skeleton): P3[] {
 
 const WING_ROLES = new Set(["wingRoot", "wingMid", "wingTip"]);
 
+/** Tail tips with real volume [P5-V6] get their own hit sphere (tip size x the tail root radius). */
+const BULKY_TIPS = new Set(["club", "spade", "fan", "fin", "leaf", "rattle"]);
+
 export function hitSpheres(ph: Phenotype, sk: Skeleton, helix: MorphHelix): HitSphere[] {
   const out: HitSphere[] = [];
   const hasChild = new Set(sk.joints.map((j) => j.parent));
+  const tail = (helix.p5 ?? P5_DEFAULTS).body.tail;
+  let tails = sk.joints.flatMap((j, i) => (j.role === "tail" ? [i] : []));
+  if (tails.length === 0 && sk.kind === "serpent") {
+    const body = sk.joints.flatMap((j, i) => (j.chain === "body" ? [i] : []));
+    tails = body.slice(Math.floor(body.length * 0.6));
+  }
+  if (tails.length > 0 && BULKY_TIPS.has(tail.shape)) {
+    const last = sk.joints[tails[tails.length - 1]];
+    const r = sk.joints[tails[0]].r0 * 0.9 * Math.max(0.4, Math.min(2.5, tail.tipSize));
+    const L = last.length + r * 0.6;
+    out.push({ joint: tails[tails.length - 1], offset: [last.dir[0] * L, last.dir[1] * L, last.dir[2] * L], r: Math.max(1e-3, r) });
+  }
   const torsoK = 1.1 + 0.1 * Math.max(0, Math.min(1, helix.fusion));
   const limbK = 1.08 + 0.12 * Math.max(0, Math.min(1, ph.plan.girth));
   sk.joints.forEach((j, i) => {

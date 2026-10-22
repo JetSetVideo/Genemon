@@ -29,20 +29,43 @@
  *
  * Legacy genomes (no `morph`) get a deterministic helix from `deriveMorph` (seeded by the genome id
  * and its plan genes). The genome id never hashes the morph genes. Pure module: Rng/hashSeed only.
+ *
+ * PASS 5 [P5-V2..V7]: `helixOf` also fills `p5` (eyes 1..8 with layout / height / spread / yaw / tilt /
+ * socket / outline, beaks and mouth scale / tongue / lips, the growth envelope, shoulders / tails /
+ * fractal arms / limb style / curvature / morph operators, the coat). Every field comes from a `p5.*`
+ * allele pair (P5_MORPH_GENES, appended after the pass-4 genes) expressed through the same equation,
+ * the same categorical lead-allele rolls and the same recessive gates. Elements shape the parts
+ * (water curves, earth / metal / ice angular, fire flame tails, plant leaves) while the colour code is
+ * untouched. `EyeGenes.count` mirrors `p5.eyes.count` (one number, 1..8).
  */
 import {
   ANIM_CHANNELS,
   type AnimChannel,
   type AsymPart,
+  type BeakKind,
+  type BodyP5,
   type BoundTrait,
+  type CoatKind,
   type EyeAura,
+  type EyeLayout,
+  type EyeP5,
+  type EyeShape,
   type EyeGenes,
   type EyeStyle,
   type GenePair,
+  type GrowthGenes,
+  type LimbStyle,
   type MorphHelix,
+  type MorphOp,
+  type MorphOpKind,
+  type MorphP5,
+  type MorphRegion,
   type MouthGenes,
+  type MouthP5,
   type PupilFill,
+  type SkinP5,
   type SurfaceGenes,
+  type TailShape,
   type TeethKind,
   type WingGenes,
   type WingKind,
@@ -54,7 +77,8 @@ import type { Genome, PlanGene } from "./genome.ts";
 import type { Phenotype } from "./phenotype.ts";
 
 // ------------------------------------------------------------------ genes
-export const MORPH_GENES = [
+/** Pass-4 genes (the order is frozen: `deriveMorph` draws them first, so legacy derivations never move). */
+export const P4_MORPH_GENES = [
   "asymmetry",
   "fractal",
   "digits",
@@ -90,6 +114,66 @@ export const MORPH_GENES = [
   "anim.recoil",
   "anim.squash",
 ] as const;
+/**
+ * Pass-5 genes [P5-V2..V7]: eyes 1..8 and their outlines, beaks / mouth scale / tongue / lips, the growth
+ * envelope, body plan details (shoulders, tails, fractal arms, limb style, curvature, morph operators)
+ * and the coat. Appended AFTER the pass-4 list: a genome stored with only pass-4 alleles keeps them, and
+ * the missing pass-5 alleles are filled deterministically from its id (`ensureMorph`).
+ */
+export const P5_MORPH_GENES = [
+  "p5.eyeMany",
+  "p5.eyeShape",
+  "p5.eyeLayout",
+  "p5.eyeHeight",
+  "p5.eyeSpread",
+  "p5.eyeYaw",
+  "p5.eyeTilt",
+  "p5.socket",
+  "p5.eyeScaleX",
+  "p5.eyeScaleY",
+  "p5.eyeScaleZ",
+  "p5.brow",
+  "p5.beak",
+  "p5.beakLength",
+  "p5.beakRound",
+  "p5.mouthScaleX",
+  "p5.mouthScaleY",
+  "p5.mouthScaleZ",
+  "p5.mouthHeight",
+  "p5.tongue",
+  "p5.tongueFork",
+  "p5.lip",
+  "p5.growLength",
+  "p5.growStrength",
+  "p5.growAngle",
+  "p5.spiral",
+  "p5.neoteny",
+  "p5.shoulderW",
+  "p5.shoulderH",
+  "p5.hump",
+  "p5.tailShape",
+  "p5.tailLength",
+  "p5.tailCurl",
+  "p5.tailTip",
+  "p5.armMode",
+  "p5.armDepth",
+  "p5.armBranch",
+  "p5.armRatio",
+  "p5.armTwist",
+  "p5.limbStyle",
+  "p5.serpentLegs",
+  "p5.limbVariation",
+  "p5.curvature",
+  "p5.ops",
+  "p5.coat",
+  "p5.belly",
+  "p5.frills",
+  "p5.stripes",
+  "p5.celBands",
+  "p5.outline",
+  "p5.overlays",
+] as const;
+export const MORPH_GENES = [...P4_MORPH_GENES, ...P5_MORPH_GENES] as const;
 export type MorphGeneId = typeof MORPH_GENES[number];
 /** Allele pairs in [0, 1]; for bounded traits a0/a1 are the min and the max gene (order-free). */
 export type MorphAlleles = Record<MorphGeneId, [number, number]>;
@@ -110,6 +194,9 @@ const PLAN_SEED: Partial<Record<MorphGeneId, PlanGene>> = {
   wingDetail: "quality",
   plates: "spikes",
   "anim.tail": "tail",
+  "p5.tailLength": "tail",
+  "p5.mouthScaleX": "jaw",
+  "p5.shoulderW": "girth",
 };
 
 // ------------------------------------------------------------------ the equation
@@ -163,14 +250,9 @@ export function channelRange(ch: AnimChannel): [number, number] {
 }
 
 // ------------------------------------------------------------------ alleles
-function validAlleles(m: unknown): m is MorphAlleles {
-  if (!m || typeof m !== "object") return false;
-  const o = m as Record<string, unknown>;
-  return MORPH_GENES.every((id) => {
-    const p = o[id];
-    return Array.isArray(p) && p.length === 2 &&
-      p.every((v) => typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 1);
-  });
+function validPair(p: unknown): p is [number, number] {
+  return Array.isArray(p) && p.length === 2 &&
+    p.every((v) => typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= 1);
 }
 
 /** Deterministic alleles for a genome without stored morph genes (legacy saves, wild spawns). */
@@ -187,10 +269,25 @@ export function deriveMorph(g: Genome): MorphAlleles {
   return out;
 }
 
-/** The genome's stored morph alleles when present and valid, else the deterministic derivation. */
+/**
+ * The genome's stored morph alleles when present and valid, else the deterministic derivation.
+ * A stored morph whose PASS-4 genes are all valid is kept; any missing / invalid PASS-5 gene is filled
+ * from `deriveMorph` (seeded by the genome id), so a pass-4 save keeps its look and gains stable pass-5
+ * genes. A stored morph with an invalid pass-4 gene is rejected as a whole (as before).
+ */
 export function ensureMorph(g: Genome): MorphAlleles {
   const m = (g as Genome & { morph?: unknown }).morph;
-  return validAlleles(m) ? m : deriveMorph(g);
+  if (!m || typeof m !== "object") return deriveMorph(g);
+  const o = m as Record<string, unknown>;
+  if (!P4_MORPH_GENES.every((id) => validPair(o[id]))) return deriveMorph(g);
+  if (MORPH_GENES.every((id) => validPair(o[id]))) return m as MorphAlleles;
+  const d = deriveMorph(g);
+  const out = {} as MorphAlleles;
+  for (const id of MORPH_GENES) {
+    const p = o[id];
+    out[id] = validPair(p) ? [p[0], p[1]] : d[id];
+  }
+  return out;
 }
 
 /** Mendelian inheritance: one allele from each parent per gene, then a small clamped normal jitter. */
@@ -250,6 +347,24 @@ const PUPIL: Record<EyeStyle, PupilFill> = {
   compound: "none",
 };
 
+/**
+ * Eye count 1..8 [P5-V4]. RECESSIVE both ways: a cyclops needs BOTH eyeCount alleles low (hi < 0.245,
+ * ~6 %), extra eyes need BOTH alleles high (lo > ~0.66, ~14 %; hexapods, wise and psychic / void
+ * creatures lower the bar); how many extra eyes (3..8) is the categorical roll of the p5.eyeMany lead
+ * allele. Two eyes stay the norm (~80 %). `EyeGenes.count` and `p5.eyes.count` are this same number.
+ */
+function eyeCountOf(m: MorphAlleles, ph: Phenotype): number {
+  const a = ph.axes, prim = ph.elements.primary;
+  const pos = (v: number) => Math.max(0, v);
+  const c = genePair(m.eyeCount);
+  const manyT = 0.66 - (ph.kind === "hexapod" ? 0.12 : 0) - 0.05 * pos(a.wisdom) -
+    (prim === "psychic" || prim === "void" ? 0.05 : 0);
+  if (c.hi < 0.245) return 1;
+  if (c.lo <= manyT) return 2;
+  const hex = ph.kind === "hexapod";
+  return pickBy([3, 4, 5, 6, 7, 8], [3.0, 2.6, 1.0, 1.4, 0.4, hex ? 2.6 : 0.7], m["p5.eyeMany"][0]);
+}
+
 function eyesOf(m: MorphAlleles, ph: Phenotype): EyeGenes {
   const a = ph.axes, prim = ph.elements.primary, sec = ph.elements.secondary;
   const pos = (v: number) => Math.max(0, v);
@@ -265,10 +380,7 @@ function eyesOf(m: MorphAlleles, ph: Phenotype): EyeGenes {
     ph.kind === "hexapod" ? 3.2 : 0.02, // compound
   ];
   const style = pickBy(EYE_STYLES, w, m.eyeStyle[0]);
-  // Recessive counts: a cyclops needs both alleles low, 3-4 eyes need both alleles high.
-  const c = genePair(m.eyeCount);
-  const manyT = 0.82 - (ph.kind === "hexapod" ? 0.08 : 0) - 0.06 * pos(a.wisdom);
-  const count = c.hi < 0.18 ? 1 : c.lo > manyT ? (c.lo > 0.95 ? 4 : 3) : 2;
+  const count = eyeCountOf(m, ph);
   const sizeDrive = 0.45 * ph.plan.eyes + 0.3 * (1 - u01(a.stature)) + 0.15 * u01(a.mood) +
     (style === "sparkle" || style === "compound" ? 0.15 : 0);
   const size = clamp(trait(m, "eyeSize", sizeDrive, 0.12, 0.45) * (count > 2 ? 0.8 : 1), 0.12, 0.45);
@@ -453,6 +565,372 @@ function animOf(m: MorphAlleles, ph: Phenotype, wings: WingKind): Record<AnimCha
 
 const ASYM_PARTS: readonly AsymPart[] = ["horn", "ear", "eye", "wing", "claw", "tail", "pattern"];
 
+
+// ------------------------------------------------------------------ pass 5 [P5-V2..V7]
+/** Element curvature signature: + flowing curves (water, air, psychic), - angular facets (earth, metal, ice). */
+const CURVE: Record<ElementId, number> = {
+  neutral: 0,
+  fire: 0.15,
+  water: 0.75,
+  plant: 0.25,
+  earth: -0.65,
+  air: 0.6,
+  electric: -0.3,
+  ice: -0.5,
+  metal: -0.8,
+  poison: 0.3,
+  light: 0.2,
+  shadow: 0,
+  psychic: 0.55,
+  void: 0.1,
+};
+
+/** Physical value of a gene pair mapped into a creature window [W0, W1] (min gene low 60 %, max gene high 60 %). */
+function band(m: MorphAlleles, gene: MorphGeneId, w0: number, w1: number): GenePair {
+  const p = genePair(m[gene]);
+  return { lo: r3(w0 + (w1 - w0) * 0.6 * p.lo), hi: r3(w0 + (w1 - w0) * (0.4 + 0.6 * p.hi)) };
+}
+
+/** Recessive gate: both alleles above `t`; returns how far above (0..1) or -1 when closed. */
+function recessive(m: MorphAlleles, gene: MorphGeneId, t: number): number {
+  const p = genePair(m[gene]);
+  if (p.lo <= t) return -1;
+  return clamp01((p.lo - t) / Math.max(1e-6, 1 - t));
+}
+
+const EYE_SHAPES: readonly EyeShape[] = ["round", "almond", "tear", "crescent", "hooded", "diamond", "oval"];
+const LAYOUTS_MANY: readonly EyeLayout[] = ["row", "arc", "cluster", "stacked"];
+
+function eyesP5(m: MorphAlleles, ph: Phenotype, e: EyeGenes): EyeP5 {
+  const a = ph.axes, prim = ph.elements.primary, st = e.style;
+  const pos = (v: number) => Math.max(0, v);
+  const hard = prim === "metal" || prim === "ice" || prim === "earth";
+  const shape: EyeShape = st === "compound" ? "round" : pickBy(EYE_SHAPES, [
+    1.2 + (st === "round" || st === "sparkle" ? 2.0 : 0) + 0.5 * u01(a.mood), // round
+    0.6 + (st === "sharp" || st === "slit" ? 2.0 : 0) + 0.5 * pos(a.focus), // almond
+    0.15 + 1.6 * pos(-a.mood) + (e.aura === "tears" ? 1.5 : 0), // tear
+    0.12 + 1.2 * pos(a.mood - 0.4) + (prim === "psychic" || prim === "shadow" || prim === "void" ? 0.4 : 0), // crescent
+    0.2 + (st === "sleepy" ? 2.5 : 0) + 0.6 * pos(-a.tempo), // hooded
+    0.1 + 1.2 * pos(a.hardness) * (hard ? 1 : 0.4) + (prim === "light" ? 0.3 : 0), // diamond
+    0.8, // oval
+  ], m["p5.eyeShape"][0]);
+  const count = e.count;
+  const layout: EyeLayout = count === 1 ? "cyclops" : count === 2 ? "pair" : pickBy(LAYOUTS_MANY, [
+    1.0, // row
+    1.0 + (prim === "psychic" || prim === "light" ? 0.8 : 0), // arc
+    0.6 + (ph.kind === "hexapod" ? 2.5 : 0) + (count >= 6 ? 1.2 : 0), // cluster (spider)
+    0.8 + (count <= 4 ? 0.8 : 0), // stacked
+  ], m["p5.eyeLayout"][0]);
+  // Predator (wild, mighty, focused): eyes close together and forward; prey: wide-set and side-facing.
+  const predator = 0.5 * u01(a.temper) + 0.3 * u01(a.might) + 0.2 * u01(a.focus);
+  const spread = trait(m, "p5.eyeSpread", 1 - predator + (ph.kind === "avian" ? 0.1 : 0));
+  const yaw = trait(m, "p5.eyeYaw", spread, 0.05, 1.3);
+  const height = trait(
+    m,
+    "p5.eyeHeight",
+    0.45 + 0.25 * pos(a.moisture) + (ph.kind === "serpent" ? 0.15 : 0) - 0.15 * pos(-a.altitude),
+    -0.5,
+    0.9,
+  );
+  const tilt = trait(m, "p5.eyeTilt", 0.5 + 0.35 * a.temper - 0.4 * ph.psyche.emotions.sadness, -0.5, 0.5);
+  const socketDepth = trait(m, "p5.socket", 0.4 * u01(a.hardness) + 0.3 * u01(a.wisdom) + 0.3 * (1 - u01(a.mood)));
+  const sx = trait(m, "p5.eyeScaleX", 0.5 + (shape === "almond" || shape === "diamond" ? 0.25 : 0), 0.8, 1.3);
+  const sy = trait(m, "p5.eyeScaleY", 0.5 - (shape === "hooded" || shape === "crescent" ? 0.2 : 0) + 0.2 * u01(a.mood) - 0.1, 0.75, 1.25);
+  const sz = trait(m, "p5.eyeScaleZ", 0.4 + 0.4 * spread + (st === "compound" ? 0.2 : 0), 0.75, 1.35);
+  const brow = trait(m, "p5.brow", 0.5 * u01(a.temper) + 0.3 * u01(a.might) + 0.2 * u01(a.hardness));
+  return {
+    shape,
+    layout,
+    count,
+    height: r3(height),
+    spread: r3(spread),
+    yaw: r3(yaw),
+    tilt: r3(tilt),
+    socketDepth: r3(socketDepth),
+    scale: [r3(sx), r3(sy), r3(sz)],
+    brow: r3(brow),
+  };
+}
+
+const BEAKS: readonly BeakKind[] = ["round", "hooked", "flat", "needle", "shovel"];
+const BEAK_LEN: Record<BeakKind, [number, number]> = {
+  none: [0, 0],
+  round: [0.15, 0.45],
+  hooked: [0.25, 0.55],
+  flat: [0.3, 0.6],
+  needle: [0.5, 0.9],
+  shovel: [0.4, 0.75],
+};
+const BEAK_ROUND: Record<BeakKind, [number, number]> = {
+  none: [0.5, 0.5],
+  round: [0.6, 1],
+  hooked: [0.3, 0.6],
+  flat: [0.45, 0.75],
+  needle: [0, 0.2],
+  shovel: [0.5, 0.85],
+};
+
+function mouthP5(m: MorphAlleles, ph: Phenotype, mo: MouthGenes, eyes: EyeGenes, coat: CoatKind): MouthP5 {
+  const a = ph.axes, prim = ph.elements.primary, kind = ph.kind;
+  const pos = (v: number) => Math.max(0, v);
+  const small = ph.sizeClass === "XS" || ph.sizeClass === "S";
+  let beak: BeakKind = "none";
+  if (mo.teeth === "beak") {
+    beak = pickBy(BEAKS, [
+      1.2 + (prim === "plant" || prim === "neutral" ? 1.5 : 0) + u01(a.mood) + (small ? 0.6 : 0), // round
+      0.4 + 2.0 * pos(a.temper) + 1.0 * pos(a.might), // hooked
+      0.2 + 2.5 * pos(a.moisture) + (prim === "water" ? 1.5 : 0), // flat
+      0.2 + 1.5 * pos(a.focus) + 1.0 * pos(a.reach) + (small ? 0.5 : 0), // needle
+      0.1 + 1.5 * pos(a.moisture) * u01(a.stature) + (prim === "water" ? 0.6 : 0), // shovel
+    ], m["p5.beak"][0]);
+  } else if ((mo.teeth === "none" || mo.teeth === "molars") && kind !== "blob" && kind !== "serpent") {
+    // Rare, recessive non-avian beaks (turtle, platypus): both alleles high.
+    const gate = recessive(m, "p5.beak", 0.9);
+    if (gate >= 0) beak = pickBy(["hooked", "flat", "round", "shovel"] as const, [1, 1 + pos(a.moisture), 0.8, 0.4], gate);
+  }
+  const lenDrive = 0.5 * ph.plan.jaw + 0.3 * u01(a.reach) + 0.2 * u01(a.stature);
+  const [l0, l1] = BEAK_LEN[beak];
+  const beakLength = beak === "none" ? 0 : trait(m, "p5.beakLength", lenDrive, l0, l1);
+  const [q0, q1] = BEAK_ROUND[beak];
+  const beakRound = trait(m, "p5.beakRound", 0.5 * u01(a.mood) + 0.5 * (1 - u01(a.temper)), q0, q1);
+  const sx = trait(m, "p5.mouthScaleX", 0.6 * ph.plan.jaw + 0.4 * mo.width, 0.75, 1.35);
+  const sy = trait(m, "p5.mouthScaleY", 0.5 * u01(a.temper) + 0.5 * ph.plan.jaw, 0.7, 1.4);
+  const sz = trait(m, "p5.mouthScaleZ", ph.plan.head, 0.75, 1.3);
+  const height = trait(m, "p5.mouthHeight", 0.5 - (kind === "serpent" ? 0.15 : 0) + 0.1 * a.mood, -0.6, 0.6);
+  const reptile = kind !== "avian" && kind !== "blob" &&
+    (eyes.style === "slit" || ph.pattern === "scales" || coat === "scales");
+  const tongueLength = !mo.tongue
+    ? 0
+    : trait(
+      m,
+      "p5.tongue",
+      (kind === "serpent" ? 0.5 : 0) + 0.3 * u01(a.appetite) + 0.2 * u01(a.reach),
+      0.25,
+      1.2,
+    );
+  const fork = genePair(m["p5.tongueFork"]);
+  const tongueFork = tongueLength > 0 &&
+    (kind === "serpent" ? fork.hi > 0.2 : reptile ? fork.lo > 0.5 : fork.lo > 0.93);
+  const lipCurve = trait(m, "p5.lip", 0.5 + 0.4 * a.mood - 0.3 * pos(a.temper) - 0.3 * ph.psyche.emotions.sadness, -1, 1);
+  return {
+    beak,
+    beakLength: r3(beakLength),
+    beakRound: r3(beakRound),
+    scale: [r3(sx), r3(sy), r3(sz)],
+    height: r3(height),
+    tongueLength: r3(tongueLength),
+    tongueFork,
+    lipCurve: r3(lipCurve),
+  };
+}
+
+function growthP5(m: MorphAlleles, ph: Phenotype, curvature: number): GrowthGenes {
+  const a = ph.axes;
+  const ang = genePair(m["p5.growAngle"]);
+  const A = 0.08 + 0.3 * ph.elasticity + 0.1 * Math.max(0, curvature);
+  return {
+    length: band(m, "p5.growLength", 0.7, 1.35),
+    strength: band(m, "p5.growStrength", 0.7 + 0.1 * u01(a.might), 1.35),
+    angle: { lo: r3(-A * (0.4 + 0.6 * ang.lo)), hi: r3(A * (0.4 + 0.6 * ang.hi)) },
+    spiral: r3(trait(
+      m,
+      "p5.spiral",
+      (ph.kind === "serpent" ? 0.4 : 0) + 0.3 * u01(a.form) + 0.3 * ph.elasticity,
+      0.6,
+      1.6,
+    )),
+    neoteny: r3(trait(m, "p5.neoteny", 0.5 * u01(a.mood) + 0.3 * (1 - u01(a.stature)) + 0.2 * u01(a.sociality))),
+  };
+}
+
+const TAILS: readonly TailShape[] = ["taper", "club", "fin", "fan", "spade", "whip", "flame", "leaf", "rattle", "split"];
+const BIG_TIP: ReadonlySet<TailShape> = new Set(["club", "flame", "spade", "fan", "leaf"]);
+const OP_KINDS: readonly MorphOpKind[] = ["carve", "merge", "compress", "decompress", "difference", "twist", "bulge", "pinch"];
+const OP_SIGN: Record<MorphOpKind, number> = {
+  carve: -1,
+  merge: 1,
+  compress: -1,
+  decompress: 1,
+  difference: -1,
+  twist: 1,
+  bulge: 1,
+  pinch: -1,
+};
+
+function bodyP5(m: MorphAlleles, ph: Phenotype, fractalDepth: number, chaos: number): BodyP5 {
+  const a = ph.axes, prim = ph.elements.primary, sec = ph.elements.secondary, kind = ph.kind;
+  const pos = (v: number) => Math.max(0, v);
+  const has = (el: ElementId) => prim === el ? 1 : sec === el ? 0.5 * ph.elements.secondaryLevel : 0;
+  // Curvature: element signature (primary + weighted secondary) + fluid / elastic / hard axes + a gene nudge.
+  const curvature = clamp(
+    CURVE[prim] + (sec ? 0.4 * ph.elements.secondaryLevel * CURVE[sec] : 0) + 0.2 * a.form +
+      0.3 * (ph.elasticity - 0.5) - 0.15 * a.hardness + 0.5 * (trait(m, "p5.curvature", 0.5) - 0.5),
+    -1,
+    1,
+  );
+  const limbed = kind === "quadruped" || kind === "biped" || kind === "hexapod";
+  const shoulder = {
+    width: r3(trait(m, "p5.shoulderW", 0.5 * u01(a.might) + 0.3 * ph.plan.girth + (kind === "biped" ? 0.2 : 0), 0.8, 1.35)),
+    height: r3(trait(m, "p5.shoulderH", 0.4 + 0.3 * u01(a.might) - 0.2 * u01(a.tempo) + 0.2 * u01(a.stature), 0.85, 1.2)),
+    hump: 0,
+  };
+  const hg = recessive(m, "p5.hump", 0.65 - 0.2 * pos(a.weight) - 0.1 * pos(a.might));
+  if (limbed && hg >= 0) shoulder.hump = r3(0.15 + 0.85 * hg);
+  const big = ph.sizeClass === "L" || ph.sizeClass === "XL";
+  const shape = pickBy(TAILS, [
+    1.0, // taper
+    1.6 * (has("earth") + has("metal")) + 0.8 * pos(a.hardness) * pos(a.might) + (kind === "quadruped" && big ? 0.4 : 0), // club
+    2.2 * has("water") + pos(a.moisture), // fin
+    1.2 * has("air") + (kind === "avian" ? 2.0 : 0) + 0.4 * has("light"), // fan
+    1.6 * (has("shadow") + has("void")) + 0.6 * has("ice") + 0.3, // spade
+    0.4 + pos(a.tempo) + 0.6 * has("electric") + (kind === "serpent" ? 0.6 : 0), // whip
+    3.0 * has("fire"), // flame
+    3.0 * has("plant"), // leaf
+    kind === "serpent" ? 0.6 + 1.4 * has("poison") : 0.3 * has("poison"), // rattle
+    1.2 * has("electric") + 0.8 * has("psychic") + 0.15, // split
+  ], m["p5.tailShape"][0]);
+  const tail = {
+    shape,
+    length: r3(trait(m, "p5.tailLength", 0.6 * ph.plan.tail + (kind === "serpent" ? 0.4 : 0.12), 0.4, 1.8)),
+    curl: r3(trait(m, "p5.tailCurl", 0.5 * clamp01(0.5 + curvature / 2) + 0.3 * ph.elasticity + 0.2 * u01(a.form))),
+    tipSize: r3(trait(m, "p5.tailTip", (BIG_TIP.has(shape) ? 0.5 : 0) + 0.3 * u01(a.might) + 0.2 * ph.plan.tail, 0.5, 2)),
+  };
+  // Limb style: tentacles are rare and mostly blobs / serpents (recessive); fins for water bodies.
+  const ls = genePair(m["p5.limbStyle"]);
+  const wet = prim === "water" || prim === "poison" || a.moisture > 0.4;
+  let limbStyle: LimbStyle = kind === "blob" ? "stumps" : "legs";
+  if (kind === "blob" && ls.lo > (wet ? 0.45 : 0.55)) limbStyle = "tentacles";
+  else if (kind === "serpent" && ls.lo > (wet ? 0.72 : 0.8)) limbStyle = "tentacles";
+  else if (kind !== "blob" && kind !== "serpent" && ls.lo > 0.95) limbStyle = "tentacles";
+  else if ((prim === "water" || a.moisture > 0.55) && kind !== "avian" && kind !== "blob" && ls.hi < 0.5) limbStyle = "fins";
+  const sl = recessive(m, "p5.serpentLegs", 0.72);
+  const serpentLegs = kind === "serpent" && limbStyle === "legs" && sl >= 0 ? (genePair(m["p5.serpentLegs"]).hi > 0.95 ? 2 : 1) : 0;
+  const lv = recessive(m, "p5.limbVariation", 0.78 - 0.15 * chaos);
+  const limbVariation = lv >= 0 ? r3(0.03 + 0.22 * lv) : 0;
+  // Fractal arms: branch / spiral are common once the creature develops detail; mandelbrot is recessive.
+  type ArmMode = BodyP5["armFractal"]["mode"];
+  let mode: ArmMode = "none";
+  if (fractalDepth > 0) {
+    const mt = 0.86 - 0.08 * chaos - (prim === "psychic" || prim === "void" ? 0.06 : 0);
+    if (recessive(m, "p5.armMode", mt) >= 0) mode = "mandelbrot";
+    else {
+      mode = pickBy(["none", "branch", "spiral"] as const, [
+        2.0,
+        1.0 + 0.5 * fractalDepth,
+        0.2 + 1.2 * pos(curvature) + 0.6 * (has("psychic") + has("water")),
+      ], m["p5.armMode"][0]);
+    }
+  }
+  const depth = mode === "none"
+    ? 0
+    : Math.round(clamp(fractalDepth + trait(m, "p5.armDepth", ph.plan.quality, -0.4, 1.4), mode === "mandelbrot" ? 3 : 1, 4));
+  const armFractal = {
+    depth,
+    branch: mode === "none" ? 2 : Math.round(trait(m, "p5.armBranch", 0.5 * ph.plan.quality + 0.5 * u01(a.structure), 2, 4)),
+    ratio: r3(trait(m, "p5.armRatio", 0.5 + 0.3 * curvature * 0.5, 0.45, 0.75)),
+    twist: mode === "none"
+      ? 0
+      : r3(mode === "spiral" ? trait(m, "p5.armTwist", u01(a.form), 0.4, 1.4) : trait(m, "p5.armTwist", u01(a.form), 0, 0.4)),
+    mode,
+  };
+  // Morph operators: 0..4, most creatures 0-1. Seeded by the ORDER-FREE ops allele pair, so a child that
+  // inherits the same pair inherits the same operators.
+  const opsPair = genePair(m["p5.ops"]);
+  const v = boundTrait(opsPair, 0.3 * chaos + 0.3 * u01(a.form) + 0.2 * fractalDepth / 3 + 0.2 * ph.plan.quality);
+  const nOps = Math.min(4, Math.floor(5 * v * v));
+  const orng = new Rng(hashSeed(Math.round(opsPair.lo * 1e6), Math.round(opsPair.hi * 1e6), "ops"));
+  const opW = [
+    0.4 + has("earth") + has("metal") + 0.6 * has("ice"), // carve
+    0.4 + has("water") + has("plant") + 0.6 * has("poison"), // merge
+    0.3 + 0.8 * pos(a.hardness) + 0.5 * has("metal"), // compress
+    0.3 + has("air") + 0.6 * pos(a.phase), // decompress
+    0.2 + has("void") + has("shadow"), // difference
+    0.3 + has("psychic") + 0.6 * (has("air") + has("water") + has("electric")), // twist
+    0.4 + 0.8 * pos(a.might) + 0.5 * has("fire"), // bulge
+    0.3 + has("fire") + has("electric"), // pinch
+  ];
+  const regions: MorphRegion[] = ["torso", "torso", "head", "all"];
+  if (ph.plan.tail > 0.25 || kind === "serpent") regions.push("tail", "tail");
+  if (limbed) regions.push("limb", "limb");
+  if (ph.plan.neck > 0.3 && kind !== "blob") regions.push("neck");
+  const ops: MorphOp[] = [];
+  for (let i = 0; i < nOps; i++) {
+    const k = orng.weighted(OP_KINDS, opW);
+    ops.push({
+      kind: k,
+      region: orng.pick(regions),
+      u: r3(orng.range(0.15, 0.85)),
+      amount: r3(OP_SIGN[k] * orng.range(0.15, 0.6) * (k === "twist" && orng.chance(0.5) ? -1 : 1)),
+      width: r3(orng.range(0.1, 0.5)),
+      angle: orng.chance(0.65) ? 0 : r3(Math.PI), // dorsal or ventral: keeps the bilateral mirror
+    });
+  }
+  return {
+    shoulder,
+    tail,
+    armFractal,
+    limbStyle,
+    serpentLegs,
+    limbVariation,
+    curvature: r3(curvature),
+    ops,
+  };
+}
+
+const COATS: readonly CoatKind[] = ["skin", "fur", "scales", "feathers", "leaves", "chitin", "slime", "bark", "crystal"];
+
+function skinP5(m: MorphAlleles, ph: Phenotype, s: SurfaceGenes): SkinP5 {
+  const a = ph.axes, prim = ph.elements.primary, sec = ph.elements.secondary, kind = ph.kind;
+  const pos = (v: number) => Math.max(0, v);
+  const has = (el: ElementId) => prim === el ? 1 : sec === el ? 0.5 * ph.elements.secondaryLevel : 0;
+  const mammal = (kind === "quadruped" || kind === "biped") && s.fur > 0.25;
+  const coat = pickBy(COATS, [
+    0.6, // skin
+    mammal ? 0.6 + 2.5 * s.fur : 0.1 * s.fur, // fur
+    (kind === "serpent" ? 4 : 0) + (s.plates > 0.4 ? 1 : 0) + (kind !== "blob" ? 0.6 * has("water") : 0) + 1.2 * has("metal"), // scales
+    (kind === "avian" ? 6 : 0) + (kind !== "serpent" && kind !== "hexapod" && kind !== "blob" ? 0.8 * (has("fire") + has("air")) : 0), // feathers
+    5 * (prim === "plant" ? 1 : 0) + (sec === "plant" ? 1.5 * ph.elements.secondaryLevel : 0), // leaves
+    (kind === "hexapod" ? 5 : 0) + 0.4 * has("metal"), // chitin
+    (kind === "blob" ? 1 + 5 * Math.min(1, has("poison") + has("water")) : 0) + 0.5 * has("poison") + (a.moisture > 0.5 ? 0.4 : 0), // slime
+    1.5 * (prim === "earth" ? 1 : 0) + 2 * (prim === "earth" && sec === "plant" ? 1 : 0) + (prim === "plant" ? 0.4 : 0), // bark
+    1.2 * (prim === "earth" ? 1 : 0) + 2 * has("ice") + 0.6 * has("light") + 0.8 * has("metal"), // crystal
+  ], m["p5.coat"][0]);
+  const fr = recessive(m, "p5.frills", 0.55 - 0.15 * (has("water") + (ph.plan.spikes > 0.6 ? 1 : 0)));
+  const frills = fr >= 0 ? r3(0.2 + 0.8 * fr) : 0;
+  const stripes = ph.pattern === "stripes"
+    ? trait(m, "p5.stripes", 0.7, 0.5, 1)
+    : recessive(m, "p5.stripes", 0.6) >= 0
+    ? trait(m, "p5.stripes", 0.3, 0.1, 0.6)
+    : 0;
+  return {
+    coat,
+    bellyContrast: r3(trait(m, "p5.belly", 0.5 + (kind === "serpent" || kind === "avian" ? 0.2 : 0) + 0.15 * pos(a.moisture), 0.3, 0.95)),
+    frills,
+    stripes: r3(stripes),
+    celBands: Math.round(trait(m, "p5.celBands", 0.5 * u01(a.structure) + 0.5 * (1 - u01(a.form)), 2, 5)),
+    outline: r3(trait(m, "p5.outline", 0.4 + 0.3 * u01(a.temper) + 0.3 * u01(a.structure), 0.1, 0.8)),
+    overlays: Math.round(trait(m, "p5.overlays", 0.6 * s.patternContrast + 0.4 * (ph.pattern === "solid" ? 0 : 1), 0, 3)),
+  };
+}
+
+/** Express every pass-5 gene [P5-V2..V7] (deterministic; the alleles are inherited with the rest). */
+export function p5Of(
+  m: MorphAlleles,
+  ph: Phenotype,
+  base: { eyes: EyeGenes; mouth: MouthGenes; surface: SurfaceGenes; fractalDepth: number; chaos: number },
+): MorphP5 {
+  const body = bodyP5(m, ph, base.fractalDepth, base.chaos);
+  const skin = skinP5(m, ph, base.surface);
+  return {
+    version: 5,
+    eyes: eyesP5(m, ph, base.eyes),
+    mouth: mouthP5(m, ph, base.mouth, base.eyes, skin.coat),
+    growth: growthP5(m, ph, body.curvature),
+    body,
+    skin,
+  };
+}
+
 // ------------------------------------------------------------------ the helix
 /** Express the morph helix of a genome given its phenotype (version 1). Deterministic. */
 export function helixOf(g: Genome, ph: Phenotype): MorphHelix {
@@ -529,6 +1007,7 @@ export function helixOf(g: Genome, ph: Phenotype): MorphHelix {
     fusion: r3(fusion),
     angularity: r3(angularity),
     anim: animOf(m, ph, wings.kind),
+    p5: p5Of(m, ph, { eyes, mouth, surface, fractalDepth, chaos }),
   };
 }
 
@@ -588,5 +1067,38 @@ export function describeHelix(h: MorphHelix): string[] {
   const motion = ANIM_CHANNELS.filter((c) => c !== "wingFlap")
     .map((c) => `${c} ${f2(h.anim[c].lo)}-${f2(h.anim[c].hi)}`);
   lines.push(`Motion: ${motion.join(", ")}`);
+  if (h.p5) lines.push(...describeP5(h.p5));
   return lines;
+}
+
+const sgn = (v: number) => (v >= 0 ? "+" : "") + v.toFixed(2);
+
+/** Pass-5 lines: eye layout and outline, beak / mouth / tongue, coat, body plan, growth, operators. */
+export function describeP5(p: MorphP5): string[] {
+  const e = p.eyes, mo = p.mouth, b = p.body, sk = p.skin, g = p.growth;
+  const out: string[] = [];
+  out.push(
+    `Eye layout: ${e.count} ${e.shape} eye${e.count === 1 ? "" : "s"}, ${e.layout}, height ${sgn(e.height)}, ` +
+      `spread ${f2(e.spread)}, socket ${f2(e.socketDepth)}, brow ${f2(e.brow)}`,
+  );
+  const mouth = [`scale ${mo.scale.map(f2).join("/")}`, `lips ${mo.lipCurve > 0.2 ? "smile" : mo.lipCurve < -0.2 ? "frown" : "flat"}`];
+  if (mo.beak !== "none") mouth.unshift(`${mo.beak} beak (length ${f2(mo.beakLength)}, round ${f2(mo.beakRound)})`);
+  if (mo.tongueLength > 0) mouth.push(`${mo.tongueFork ? "forked " : ""}tongue ${f2(mo.tongueLength)}`);
+  out.push(`Mouth: ${mouth.join(", ")}`);
+  const coat = [`${sk.coat}`, `belly ${f2(sk.bellyContrast)}`, `${sk.celBands} cel bands`];
+  if (sk.frills > 0) coat.push(`frills ${f2(sk.frills)}`);
+  if (sk.stripes > 0) coat.push(`stripes ${f2(sk.stripes)}`);
+  out.push(`Coat: ${coat.join(", ")}`);
+  const body = [`${b.tail.shape} tail x${b.tail.length.toFixed(1)}`, `limbs ${b.limbStyle}`, `curvature ${sgn(b.curvature)}`];
+  if (b.shoulder.hump > 0) body.push(`hump ${f2(b.shoulder.hump)}`);
+  if (b.serpentLegs > 0) body.push(`${b.serpentLegs} leg pair${b.serpentLegs > 1 ? "s" : ""}`);
+  if (b.limbVariation > 0) body.push(`limb drift ${f2(b.limbVariation)}`);
+  if (b.armFractal.mode !== "none") body.push(`${b.armFractal.mode} arms depth ${b.armFractal.depth}`);
+  out.push(`Body: ${body.join(", ")}`);
+  out.push(
+    `Growth: length ${f2(g.length.lo)}-${f2(g.length.hi)}, strength ${f2(g.strength.lo)}-${f2(g.strength.hi)}, ` +
+      `spiral ${g.spiral.toFixed(1)} turns, neoteny ${f2(g.neoteny)}`,
+  );
+  if (b.ops.length) out.push(`Morph ops: ${b.ops.map((o) => `${o.kind} ${o.region}`).join(", ")}`);
+  return out;
 }

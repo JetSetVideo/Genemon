@@ -23,14 +23,14 @@ Deno.test("a water egg hatches water in >= 70 %", () => {
   assert(f >= 0.7, `fire share ${f}`);
 });
 
-Deno.test("hatching is deterministic per seed; newborns are level 3, one day old, small", () => {
+Deno.test("hatching is deterministic per seed; newborns are level 3 eggs (age 0), small", () => {
   const a = hatchGenemon({ seed: 42, owner: "me", element: "plain" });
   const b = hatchGenemon({ seed: 42, owner: "me", element: "plain" });
   assertEquals(a, b);
   assert(hatchGenemon({ seed: 43, owner: "me" }).id !== a.id, "other seed, other Genemon");
   const ph = phenotypeOf(a);
   assertEquals(ph.level, 3);
-  assertEquals(a.conditions.ageDays, 1);
+  assertEquals(a.conditions.ageDays, 0); // pass 5: a hatch starts as an EGG (lifePhase egg -> fetus -> hatchling) [P5-V2]
   assert(ph.slots <= 2, `newborn slots ${ph.slots}`);
   assert(a.moves.length > 0, "a newborn knows at least one move");
   assert(HATCH_CHOICES.includes("any") && HATCH_CHOICES.includes("plain") && HATCH_CHOICES.includes("water"));

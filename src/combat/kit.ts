@@ -92,6 +92,19 @@ export function interrupts(m: Move): boolean {
   return inflicts(m, INTERRUPT_STATUS, 0.5);
 }
 
+/** Statuses a lingering field must never re-apply (a lock): stun, freeze, stagger. */
+export const HARD_STATUS: ReadonlySet<StatusId> = new Set<StatusId>(["stunned", "frozen", "staggered"]);
+
+/**
+ * The status a zone's lingering FIELD re-applies to whoever stands in it [P4-M4, P5-B1]: the move's
+ * first SOFT target rider, or null. A hard rider (stun / freeze / stagger) lands once with the cast
+ * and never from the field, so a control zone cannot stun-lock.
+ */
+export function fieldStatus(m: Move): StatusId | null {
+  const e = m.effects.find((x) => x.kind === "status" && !x.self && x.status !== undefined && !HARD_STATUS.has(x.status));
+  return e?.status ?? null;
+}
+
 /** Carries a damage-over-time or a status on the target (the kit's "special effect"). */
 function hasSpecialEffect(m: Move): boolean {
   return m.effects.some((e) => e.kind === "status" && !e.self && (e.chance ?? 1) >= 0.2);
@@ -333,7 +346,8 @@ const QUENCH: Partial<Record<ElementId, ElementId[]>> = {
  * How well `mine` answers the enemy's current move and phase, in [0, 2] (1 = neutral). Stuns on a
  * long, strong charge (an ultimate wind-up) are the best counter; a dash during a ranged charge
  * dodges it; evasive/shield buffs blunt projectiles and beams; quench elements douse; a heavy hit
- * punishes a long rest. Starting a long charge into an enemy's interrupt is penalised.
+ * punishes a long rest. Starting a long charge into an enemy's interrupt is penalised. `theirPhaseLeft`
+ * is in battle seconds; `tempo` (battle.ts TEMPO, default 1) stretches my move's table charge to match.
  */
 export function counterValue(
   mine: Move,
@@ -341,13 +355,16 @@ export function counterValue(
   theirPhase: "idle" | "charge" | "active" | "rest",
   theirProgress: number,
   theirPhaseLeft: number,
+  tempo = 1,
 ): number {
   if (!theirs || theirPhase === "idle") return 1;
   let v = 1;
   const prog = clamp01(theirProgress);
   const left = Math.max(0, theirPhaseLeft);
   const heavy = clamp01(theirs.power / 140);
-  const inTime = mine.charge <= left + 0.05;
+  // `tempo` converts move-table seconds into battle seconds (battle.ts TEMPO) for mine AND theirs.
+  const myCharge = mine.charge * tempo;
+  const inTime = myCharge <= left + 0.05;
   const selfSt = (s: StatusId) => mine.effects.some((e) => e.kind === "status" && e.self && e.status === s);
   if (theirPhase === "charge") {
     if (interrupts(mine)) {
@@ -356,7 +373,7 @@ export function counterValue(
     }
     if (mine.shape === "dash" && RANGED_SHAPES.has(theirs.shape)) v += (inTime ? 1 : 0.5) * (0.25 + 0.25 * prog) + 0.15 * heavy;
     if (mine.shape === "fly" && (theirs.tags.includes("ground") || theirs.shape === "melee")) v += 0.35;
-    if (interrupts(theirs) && mine.charge > left) v -= 0.25 * clamp01((mine.charge - left) / 1);
+    if (interrupts(theirs) && myCharge > left) v -= 0.25 * clamp01((myCharge - left) / tempo);
   }
   if (theirPhase === "charge" || theirPhase === "active") {
     const ranged = RANGED_SHAPES.has(theirs.shape);
@@ -368,7 +385,7 @@ export function counterValue(
     }
   }
   if (theirPhase === "rest" && isDamaging(mine)) {
-    const lands = clamp01(left / Math.max(0.2, mine.charge));
+    const lands = clamp01(left / Math.max(0.2 * tempo, myCharge));
     v += (slotOf(mine) === "ultimate" || mine.power >= 100 ? 0.6 : 0.25 * clamp01(mine.power / 80)) * lands;
   }
   return clamp(v, 0, 2);

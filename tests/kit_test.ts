@@ -1,7 +1,7 @@
 // Pass-4 move kit [P4-M1..M7]: categories, body-part power, limited learnsets, phase law, counters,
 // the League-style 4-slot kit builder and the ~47 kit moves.
 import { assert, assertEquals } from "./_assert.ts";
-import { isDamaging, MOVE_BY_ID, MOVES, moveCost, type BodyPart, type Move } from "../src/combat/moves.ts";
+import { isDamaging, MOVE_BY_ID, MOVES, moveCost, st, type BodyPart, type Move } from "../src/combat/moves.ts";
 import {
   ALL_MOVE_BY_ID,
   ALL_MOVES,
@@ -9,6 +9,7 @@ import {
   buildKit,
   categoryOf,
   counterValue,
+  fieldStatus,
   interrupts,
   KIT_MOVES,
   kitSummary,
@@ -133,16 +134,22 @@ Deno.test("[SPEC M5] legacy damaging rows are re-timed by the law at the source;
   assert(MOVE_BY_ID.photonDart.charge >= phaseLaw(46).charge, "photonDart on the law");
 });
 
-Deno.test("[SPEC M4] a zone's lingering field re-applies a SOFT status, never a stun / freeze / stagger lock", () => {
-  // battle.ts spawnZone re-applies the move's FIRST target status to everyone inside the field.
+Deno.test("[SPEC M4][P5-B1] a zone's lingering field re-applies a SOFT status, never a stun / freeze / stagger lock", () => {
+  // battle.ts spawnZone re-applies fieldStatus(m) to everyone inside the field; a control zone whose one
+  // rider is a stun / freeze is a snap (no field at all). Pass 5: one rider per move, so the old rule
+  // "list the soft status first" became "the field only ever carries a soft rider".
   const HARD = new Set(["stunned", "frozen", "staggered"]);
+  let snaps = 0;
   for (const m of ALL_MOVES.filter((x) => x.shape === "zone")) {
-    const first = m.effects.find((e) => e.kind === "status" && !e.self && e.status);
-    assert(!first || !HARD.has(first.status!), `${m.id}: field would lock with ${first?.status}`);
+    const st = fieldStatus(m);
+    assert(st === null || !HARD.has(st), `${m.id}: field would lock with ${st}`);
+    if (m.effects.some((e) => e.kind === "status" && !e.self && HARD.has(e.status!))) snaps++;
   }
-  // FALSIFIER: the rule catches a stun-first zone.
-  const lock: Move = { ...K("whirlpool"), effects: [...K("whirlpool").effects].reverse() };
-  assert(HARD.has(lock.effects.find((e) => e.kind === "status" && !e.self)!.status!), "reversed whirlpool must lead with its stun");
+  assert(snaps >= 4, `control zones (stun / freeze riders) ${snaps}`);
+  // FALSIFIER: a zone whose rider is a stun yields no field status, a soft rider is kept.
+  assertEquals(fieldStatus(K("whirlpool")), null, "whirlpool's rider is its stun: no field status");
+  assertEquals(fieldStatus({ ...K("whirlpool"), effects: [st("wet", 0.6, 4)] }), "wet");
+  assert(HARD.has(K("whirlpool").effects.find((e) => e.kind === "status" && !e.self)!.status!), "whirlpool still stuns on the cast");
 });
 
 Deno.test("[SPEC M4] utility slot: weather / terrain / heal / buff moves are learned again, weather by its element", () => {

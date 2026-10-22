@@ -288,11 +288,12 @@ export function powerIndex(s: Pick<Stats, "hp" | "def" | "atk" | "rate" | "regen
   return Math.sqrt(ehp * dps);
 }
 
-export function express(g: Genome, c: Conditions): Phenotype {
+export function express(g: Genome, c: Conditions, extraShift: Partial<Record<AxisId, number>> = {}): Phenotype {
   const genetic = geneticAxes(g);
   const shift = epigeneticShift(c);
   const axes = {} as AxisVector;
-  for (const id of AXIS_IDS) axes[id] = clamp(genetic[id] + shift[id], -1, 1);
+  // Pass 5: object imprints bend an axis by at most +-0.06 (src/genome/imprint.ts imprintAxisShift) [P5-G6].
+  for (const id of AXIS_IDS) axes[id] = clamp(genetic[id] + shift[id] + (extraShift[id] ?? 0), -1, 1);
   const growth = growthOf(c);
   const level = levelOf(c.xp);
   const plan = {} as Record<PlanGene, number>;

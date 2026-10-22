@@ -392,6 +392,9 @@ const NAME_PREFIXES: readonly string[] = [
 
 // ---------------------------------------------------------------- public types
 
+/** Natural cover classes of the map's density layer (WorldMap.coverAt). */
+export type WorldCover = "trees" | "rocks" | "scrub";
+
 export interface Place {
   id: string;
   kind: PlaceKind;
@@ -646,6 +649,74 @@ export class WorldMap {
     if (m > 0.62) return h < -20 ? "mud" : "moss";
     if (m < 0.38) return "soil";
     return "grass";
+  }
+
+  /**
+   * Natural cover at a point, for the map's density layer [P5-W1]: "trees" in forests / parks /
+   * gardens and on moist natural ground, "rocks" on high stone / gravel and mountains, "scrub" on dry
+   * or patchy ground, null in built-up places and open fields. Deterministic in lat/lon + world seed.
+   */
+  coverAt(x: number, z: number): WorldCover | null {
+    const pos = v3(x, 0, z);
+    const inside = this.#inside(pos);
+    const g = this.toGeo(pos);
+    const [gx, gz] = globalXZ(g.lat, g.lon);
+    const n = fbm2(this.#detailSeed + 17, gx / 120, gz / 120, 2); // patchiness
+    if (inside.length > 0) {
+      const k = inside[0].kind;
+      if (k === "forest") return n > 0.32 ? "trees" : "scrub";
+      if (k === "park" || k === "garden") return n > 0.52 ? "trees" : null;
+      if (k === "mountain") return n > 0.45 ? "rocks" : "scrub";
+      return null;
+    }
+    const h = this.#terrain(g.lat, g.lon);
+    if (h > 55) return n > 0.48 ? "rocks" : null;
+    if (h > 40) return n > 0.6 ? "rocks" : n > 0.52 ? "scrub" : null;
+    const m = fbm2(this.#moistSeed, gx / 900, gz / 900, 3);
+    if (m > 0.62) return n > 0.42 ? "trees" : "scrub";
+    if (m < 0.38) return n > 0.68 ? "scrub" : null;
+    return n > 0.6 ? "trees" : n > 0.52 ? "scrub" : null;
+  }
+
+  /**
+   * Altitude landmarks around a centre (map labels) [P5-W1]: the highest local maxima and the lowest
+   * local minima of the terrain on a 41 x 41 lattice over the square of half-side `halfM`, highest /
+   * lowest first, at least `minSep` metres apart. Points carry y = terrain altitude (m).
+   */
+  reliefMarks(centre: V3, halfM: number, count = 5, minSep = halfM / 3): { peaks: V3[]; lows: V3[] } {
+    const N = 41, step = (2 * halfM) / (N - 1);
+    const H = new Float64Array(N * N);
+    for (let j = 0; j < N; j++) {
+      for (let i = 0; i < N; i++) H[j * N + i] = this.heightAt(centre.x - halfM + i * step, centre.z - halfM + j * step);
+    }
+    const peaks: V3[] = [], lows: V3[] = [];
+    for (let j = 1; j < N - 1; j++) {
+      for (let i = 1; i < N - 1; i++) {
+        const v = H[j * N + i];
+        let hi = true, lo = true;
+        for (let dj = -1; dj <= 1; dj++) {
+          for (let di = -1; di <= 1; di++) {
+            if (!di && !dj) continue;
+            const w = H[(j + dj) * N + i + di];
+            if (w >= v) hi = false;
+            if (w <= v) lo = false;
+          }
+        }
+        const p = v3(centre.x - halfM + i * step, v, centre.z - halfM + j * step);
+        if (hi) peaks.push(p);
+        if (lo) lows.push(p);
+      }
+    }
+    const pickSpread = (list: V3[], desc: boolean): V3[] => {
+      list.sort((a, b) => (desc ? b.y - a.y : a.y - b.y) || a.x - b.x || a.z - b.z);
+      const out: V3[] = [];
+      for (const p of list) {
+        if (out.length >= count) break;
+        if (out.every((q) => distXZ(p, q) >= minSep)) out.push(p);
+      }
+      return out;
+    };
+    return { peaks: pickSpread(peaks, true), lows: pickSpread(lows, false) };
   }
 
   #terrain(lat: number, lon: number): number {

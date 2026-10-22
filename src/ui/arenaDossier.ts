@@ -1,7 +1,8 @@
 /**
  * Arena dossier [P4-A1]: a collapsible glass panel with everything worth knowing about an arena
  * before a battle - ground composition (click a ground to highlight it in the 3D preview), elevation
- * and slope, liquid / diggable / conductive shares, favoured elements, the arena's weathers with their
+ * and slope, height levels / altitude / symmetry / cover [P5-W1], liquid / diggable / conductive shares,
+ * favoured elements, the arena's weathers with their
  * boosted / weakened elements, plain-language hints and a topology toggle. Strict CSP: every dynamic
  * style value goes through CSS custom properties (h(..., { vars })).
  */
@@ -34,6 +35,14 @@ function chip(e: ElementId, extra?: string): HTMLElement {
 
 function shareRow(label: string, frac: number, color: string, title: string): HTMLElement {
   return h("div", { class: "dossier-share", title }, h("span", { class: "dossier-share-label" }, label), bar(frac, color), h("span", { class: "dossier-share-val mono" }, pct(frac)));
+}
+
+/** Blue (low) -> amber (high) for a level band, relative to the arena's own band range. */
+function levelColor(level: number, all: readonly { level: number }[]): string {
+  const lo = Math.min(...all.map((b) => b.level)), hi = Math.max(...all.map((b) => b.level));
+  const t = hi > lo ? (level - lo) / (hi - lo) : 0.5;
+  const mix = (a: number, b: number) => Math.round(a + (b - a) * t);
+  return `rgb(${mix(76, 255)}, ${mix(201, 209)}, ${mix(240, 102)})`;
 }
 
 function signedMult(m: number): string {
@@ -103,6 +112,20 @@ export function renderArenaDossier(stats: ArenaStats, o: ArenaDossierOptions = {
     shareRow("Diggable", stats.diggableShare, "#a0703c", "Burrowers can hide underground here"),
     shareRow("Conductive", stats.conductiveShare, "#ffe14a", "Conductivity ≥ 1.2: electric chains through it"),
     shareRow("Steep", s.steepShare, "#ff6b35", "Cells sloping over 25°")));
+
+  // Height levels, altitude and cover [P5-W1].
+  const bands = [...stats.levels.bands].filter((b) => b.share >= 0.01).reverse(); // highest first
+  const symText = stats.symmetry === "none" ? "free layout" : stats.symmetry === "mirror" ? "mirror (left = right)" : "rotated 180°";
+  body.append(h("div", { class: "dossier-block", "data-dossier": "levels" }, h("h3", {}, "Levels & cover"),
+    h("dl", { class: "kv" },
+      h("dt", {}, "Altitude"), h("dd", {}, `${fmt(stats.altitudeM)} m above sea level`),
+      h("dt", {}, "Symmetry"), h("dd", {}, symText),
+      h("dt", {}, "Height levels"), h("dd", {}, `${bands.length} bands, ${fmt(stats.levels.step, 2)} m apart · ${stats.plateaus} plateau${stats.plateaus === 1 ? "" : "s"}`),
+      h("dt", {}, "Cover"), h("dd", {}, `${stats.cover.inner} props in the ring (${stats.cover.solid} solid) · ${fmt(stats.cover.per100m2, 2)} per 100 m²`)),
+    ...bands.map((b) => shareRow(`${b.h >= 0 ? "+" : ""}${fmt(b.h, 1)} m`, b.share, levelColor(b.level, stats.levels.bands), `Level ${b.level}: ${pct(b.share)} of the floor`)),
+    stats.cover.kinds.length
+      ? h("div", { class: "row dossier-cover" }, ...stats.cover.kinds.map((k) => h("span", { class: "chip dossier-chip", "data-prop": k.kind }, `${k.name} ×${k.count}`)))
+      : h("p", { class: "muted" }, "An open floor: no cover inside the ring.")));
 
   // Favoured elements.
   body.append(h("div", { class: "dossier-block" }, h("h3", {}, "Favours"),

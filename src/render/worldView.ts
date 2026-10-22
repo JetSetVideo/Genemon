@@ -7,12 +7,15 @@
  * - Territory: every owned cell as a translucent tile draped on the terrain, yours in the accent
  *   colour, others in a hue hashed from the owner id; opacity follows the decayed garrison.
  * - The avatar: a floating pin over the avatar's place.
+ * - Relief and density [P5-W1]: altitude bands in the terrain colours, contour lines every 10 m
+ *   (bold every 50 m), ▲ peak / ▼ hollow altitude labels (WorldMap.reliefMarks), and an instanced
+ *   cover layer of trees, rocks and scrub (WorldMap.coverAt) on a jittered 60 m lattice.
  * Scene axes: x = east, y = up, z = SOUTH (north is -z, away from the default camera).
  * Read-only over the world: the World screen performs every action, then calls refresh().
  */
 import * as THREE from "../lib/three.ts";
 import type { V3 } from "../core/math.ts";
-import { hashSeed } from "../core/rng.ts";
+import { hashSeed, Rng } from "../core/rng.ts";
 import { GROUNDS } from "../data/grounds.ts";
 import type { Place, PlaceKind, WorldMap } from "../world/worldmap.ts";
 import { textSprite } from "./textures.ts";
@@ -35,6 +38,12 @@ const MAX_DIST = 380;
 /** Keep the camera above the ground: polar angle from straight up <= ~76 deg. */
 const MAX_POLAR = 1.32;
 const BG = { dark: 0x0b1220, light: 0xdbe6f0 } as const;
+/** Contour interval and the bold every-Nth line (metres). */
+export const CONTOUR_M = 10;
+const CONTOUR_MAJOR = 5;
+/** Cover lattice spacing (m) and the instance caps per kind. */
+const COVER_STEP_M = 60;
+const COVER_CAP = { trees: 4500, rocks: 1500, scrub: 2500 } as const;
 const ACCENT = { dark: 0x4cc9f0, light: 0x0077b6 } as const;
 
 /** Marker colour per place kind (also used by the World screen's kind chips). */
@@ -133,6 +142,8 @@ export class WorldView implements View {
   private disposed = false;
   private lastT = 0;
   private counts = { places: 0, discovered: 0, territories: 0, own: 0 };
+  private relief = { contourSegments: 0, labels: 0, trees: 0, rocks: 0, scrub: 0 };
+  private readonly contourMats: THREE.LineBasicMaterial[] = [];
 
   constructor(stage: Stage, world: WorldMap, opts: WorldViewOptions) {
     this.stage = stage;
@@ -157,6 +168,7 @@ export class WorldView implements View {
     const sun = new THREE.DirectionalLight(0xfff2dc, 2.1);
     sun.position.set(120, 200, 80);
     this.group.add(terrain, this.cells, this.markers, this.avatar, this.compass(), hemi, sun);
+    this.group.add(this.buildContours(terrain), this.buildReliefLabels(), this.buildCover());
     stage.scene.add(this.group);
     stage.camera.position.set(0, 55, 78);
     stage.controls.target.set(0, 0, 0);
@@ -289,6 +301,7 @@ export class WorldView implements View {
     this.avatarMat.emissive.setHex(accent);
     this.beamMat.color.setHex(accent);
     this.pulse.material.color.setHex(accent);
+    for (const m of this.contourMats) m.color.setHex(dark ? 0xe8f1ff : 0x1b2a3a);
     this.refresh();
   }
 
@@ -336,6 +349,8 @@ export class WorldView implements View {
       heightExaggeration: MAP_HEIGHT_X,
       mapSizeM: MAP_SIZE_M,
       terrainVertices: this.terrainVertices,
+      contourIntervalM: CONTOUR_M,
+      ...this.relief,
     };
   }
 
@@ -390,7 +405,9 @@ export class WorldView implements View {
       const h = this.world.heightAt(wx, wz);
       pos.setY(i, ((h - this.centreAlt) * MAP_HEIGHT_X) / MAP_UNIT_M);
       c.setHex(GROUNDS[this.world.groundAt({ x: wx, y: h, z: wz })].color);
-      const shade = 0.8 + 0.4 * clampN((h + 70) / 140, 0, 1);
+      // Altitude shading + alternating 10 m bands: the relief reads even from straight above.
+      const band = (((Math.floor(h / CONTOUR_M) % 2) + 2) % 2) * 0.05;
+      const shade = (0.8 + 0.4 * clampN((h + 70) / 140, 0, 1)) * (1 + band);
       colors[i * 3] = c.r * shade;
       colors[i * 3 + 1] = c.g * shade;
       colors[i * 3 + 2] = c.b * shade;
@@ -400,6 +417,114 @@ export class WorldView implements View {
     const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0 }));
     mesh.name = "world-terrain";
     return mesh;
+  }
+
+  /** Iso-altitude lines every CONTOUR_M (marching squares over the terrain grid), bold every 5th. */
+  private buildContours(terrain: THREE.Mesh): THREE.Group {
+    const out = new THREE.Group();
+    out.name = "world-contours";
+    const pos = terrain.geometry.getAttribute("position") as THREE.BufferAttribute;
+    const n = SEGMENTS + 1;
+    // Scene y -> metres (inverse of buildTerrain's mapping).
+    const toM = (y: number) => (y * MAP_UNIT_M) / MAP_HEIGHT_X + this.centreAlt;
+    const H = new Float32Array(n * n);
+    for (let k = 0; k < n * n; k++) H[k] = toM(pos.getY(k));
+    let lo = Infinity, hi = -Infinity;
+    for (const v of H) {
+      lo = Math.min(lo, v);
+      hi = Math.max(hi, v);
+    }
+    const minor: number[] = [], major: number[] = [];
+    const lift = 0.12;
+    for (let lv = Math.ceil(lo / CONTOUR_M) * CONTOUR_M; lv <= hi; lv += CONTOUR_M) {
+      const dst = Math.round(lv / CONTOUR_M) % CONTOUR_MAJOR === 0 ? major : minor;
+      const y = ((lv - this.centreAlt) * MAP_HEIGHT_X) / MAP_UNIT_M + lift;
+      for (let j = 0; j < n - 1; j++) {
+        for (let i = 0; i < n - 1; i++) {
+          const ks = [j * n + i, j * n + i + 1, (j + 1) * n + i + 1, (j + 1) * n + i];
+          const hits: number[] = [];
+          for (let e = 0; e < 4; e++) {
+            const a = ks[e], b = ks[(e + 1) % 4];
+            if ((H[a] < lv) === (H[b] < lv)) continue;
+            const t = (lv - H[a]) / (H[b] - H[a]);
+            hits.push(pos.getX(a) + (pos.getX(b) - pos.getX(a)) * t, y, pos.getZ(a) + (pos.getZ(b) - pos.getZ(a)) * t);
+          }
+          for (let s = 0; s + 5 < hits.length; s += 6) dst.push(...hits.slice(s, s + 6));
+        }
+      }
+    }
+    const ink = this.dark ? 0xe8f1ff : 0x1b2a3a;
+    for (const [arr, opacity] of [[minor, 0.18], [major, 0.42]] as const) {
+      if (!arr.length) continue;
+      const g = new THREE.BufferGeometry();
+      g.setAttribute("position", new THREE.Float32BufferAttribute(arr, 3));
+      const mat = new THREE.LineBasicMaterial({ color: ink, transparent: true, opacity, depthWrite: false });
+      this.contourMats.push(mat);
+      out.add(new THREE.LineSegments(g, mat));
+    }
+    this.relief.contourSegments = (minor.length + major.length) / 6;
+    return out;
+  }
+
+  /** ▲ peak and ▼ hollow labels with their altitude (constant screen size, like the place names). */
+  private buildReliefLabels(): THREE.Group {
+    const out = new THREE.Group();
+    out.name = "world-relief-labels";
+    const marks = this.world.reliefMarks(this.centre, this.half * 0.92, 5);
+    for (const [list, glyph, color] of [[marks.peaks, "▲", "#ffd166"], [marks.lows, "▼", "#8ecae6"]] as const) {
+      for (const p of list) {
+        const label = textSprite(`${glyph} ${Math.round(p.y)} m`, color, 24);
+        label.material.sizeAttenuation = false;
+        label.material.needsUpdate = true;
+        label.scale.multiplyScalar((LABEL_H * 0.8) / 0.6);
+        label.position.copy(this.toScene(p, 1.6));
+        out.add(label);
+      }
+    }
+    this.relief.labels = marks.peaks.length + marks.lows.length;
+    return out;
+  }
+
+  /** Instanced trees / rocks / scrub from WorldMap.coverAt on a jittered lattice (deterministic per world). */
+  private buildCover(): THREE.Group {
+    const out = new THREE.Group();
+    out.name = "world-cover";
+    const rng = new Rng(hashSeed(this.world.seed, "map-cover"));
+    const N = Math.floor(MAP_SIZE_M / COVER_STEP_M);
+    type Kind = keyof typeof COVER_CAP;
+    const pts: Record<Kind, { x: number; y: number; z: number; s: number; r: number }[]> = { trees: [], rocks: [], scrub: [] };
+    for (let j = 0; j < N; j++) {
+      for (let i = 0; i < N; i++) {
+        const jx = rng.range(-0.45, 0.45), jz = rng.range(-0.45, 0.45), s = rng.range(0.7, 1.35), r = rng.range(0, Math.PI * 2);
+        const wx = this.centre.x - this.half + (i + 0.5 + jx) * COVER_STEP_M, wz = this.centre.z - this.half + (j + 0.5 + jz) * COVER_STEP_M;
+        const c = this.world.coverAt(wx, wz);
+        if (!c || pts[c].length >= COVER_CAP[c]) continue;
+        const p = this.toScene({ x: wx, y: 0, z: wz });
+        pts[c].push({ x: p.x, y: p.y, z: p.z, s, r });
+      }
+    }
+    const geo: Record<Kind, THREE.BufferGeometry> = {
+      trees: new THREE.ConeGeometry(0.34, 1.15, 6).translate(0, 0.55, 0),
+      rocks: new THREE.DodecahedronGeometry(0.32, 0).translate(0, 0.12, 0),
+      scrub: new THREE.IcosahedronGeometry(0.26, 0).translate(0, 0.14, 0),
+    };
+    const col: Record<Kind, number> = { trees: 0x2d6a4f, rocks: 0x8a8580, scrub: 0x7a9a46 };
+    const m = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), v = new THREE.Vector3(), sc = new THREE.Vector3();
+    for (const k of Object.keys(pts) as Kind[]) {
+      const list = pts[k];
+      this.relief[k] = list.length;
+      if (!list.length) {
+        geo[k].dispose();
+        continue;
+      }
+      const im = new THREE.InstancedMesh(geo[k], new THREE.MeshStandardMaterial({ color: col[k], roughness: 0.9, flatShading: true }), list.length);
+      list.forEach((p, i) => im.setMatrixAt(i, m.compose(v.set(p.x, p.y, p.z), q.setFromAxisAngle(up, p.r), sc.set(p.s, p.s * (k === "trees" ? 1.1 : 0.8), p.s))));
+      im.instanceMatrix.needsUpdate = true;
+      im.computeBoundingSphere();
+      im.name = `world-cover-${k}`;
+      out.add(im);
+    }
+    return out;
   }
 
   /** Lay a flat geometry (local x/z offsets around ox, oz) on the terrain surface + lift. */

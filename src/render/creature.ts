@@ -14,10 +14,12 @@
 import * as THREE from "../lib/three.ts";
 import type { Pose, Skeleton } from "../body/skeleton.ts";
 import type { Phenotype } from "../genome/phenotype.ts";
-import type { MorphHelix } from "../genome/morphTypes.ts";
+import { type MorphHelix, P5_DEFAULTS } from "../genome/morphTypes.ts";
+import type { LifePhase, Scar } from "../genome/lifeTypes.ts";
 import { buildBody } from "./anatomy/body.ts";
-import { buildFace } from "./anatomy/face.ts";
-import { makeSkinMaterials } from "./anatomy/skin.ts";
+import { buildFace, buildHead, buildJaw } from "./anatomy/face.ts";
+import { addOutlines, ageTint, applyScars, makeOutlineMaterial, makeSkinMaterials, type ScarSet, type SkinMaterialsP5, swapMaterial, tickSkin } from "./anatomy/skin.ts";
+import { buildCoat, type CoatParts } from "./anatomy/coat.ts";
 import { EyeAura } from "./anatomy/eyeAura.ts";
 
 type Mat = THREE.MeshStandardMaterial | THREE.MeshPhysicalMaterial;
@@ -26,6 +28,8 @@ export interface CreatureOptions {
   quality: "low" | "high";
   shadows: boolean;
   helix: MorphHelix;
+  /** Pass 5: scars and life phase (g.life?.scars, lifePhase(g)); absent = no scars, adult. */
+  life?: { scars: readonly Scar[]; phase: LifePhase };
 }
 
 export class CreatureView {
@@ -52,9 +56,19 @@ export class CreatureView {
   private blink = 0;
   private ko = 0;
   private bodyTris = 0;
+  private mats: SkinMaterialsP5;
+  private coat: CoatParts | null = null;
+  private scars: ScarSet | null = null;
+  private ink: THREE.MeshBasicMaterial | null = null;
+  private skinTime = 0;
+  /** Pass-5 animation: minimum lid closure (sleepy / asleep) and the pupils' gaze rotation [P5-A2]. */
+  private lidFloor = 0;
+  private gazeQ = new THREE.Quaternion();
+  private gazeE = new THREE.Euler();
 
   constructor(readonly ph: Phenotype, readonly sk: Skeleton, seed: number, readonly o: CreatureOptions) {
     const m = makeSkinMaterials(ph, o.helix, seed, o.quality);
+    this.mats = m;
     this.skin = m.skin;
     this.accent = m.accent;
     this.belly = m.belly;
@@ -94,24 +108,26 @@ export class CreatureView {
       }
     });
     this.wingSurfaces = body.wings;
+    // Pass 5 [P5-V7]: coat cards / shards / fur shells (high), frills, fire flames.
+    this.coat = buildCoat(sk, ph, o.helix, m, o.quality, body.perJoint, { seed });
+    this.coat.perJoint.forEach((objs, i) => {
+      for (const x of objs) this.joints[i].add(x);
+    });
     // Head and jaw volumes (face.ts places eyes and teeth on exactly these ellipsoids), glowing tail tip.
     const lastTail = `tail${sk.joints.filter((x) => x.role === "tail").length - 1}`;
     sk.joints.forEach((j, i) => {
       const obj = this.joints[i];
       const dir = new THREE.Vector3(j.dir[0], j.dir[1], j.dir[2]);
-      const mid = dir.clone().multiplyScalar(j.length / 2);
-      const qz = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), dir);
-      if (j.role === "head") {
-        const r = j.r0;
-        const head = add(obj, new THREE.SphereGeometry(1, seg * 2, seg), this.skin);
-        head.position.copy(mid).multiplyScalar(0.9);
-        head.quaternion.copy(qz);
-        head.scale.set(r, r * 0.95, j.length * 0.62);
-      } else if (j.role === "jaw") {
-        const jaw = add(obj, new THREE.SphereGeometry(1, seg, seg), this.belly);
-        jaw.position.copy(mid);
-        jaw.quaternion.copy(qz);
-        jaw.scale.set(j.r0 * 1.05, j.r0 * 0.5, j.length / 2);
+      if (j.role === "head" || j.role === "jaw") {
+        // Head surface with carved eye sockets + brow ridges, and the mouth-scaled jaw (face.ts owns both).
+        const parts = j.role === "head" ? buildHead(j, ph, o.helix, m, o.quality) : buildJaw(j, o.helix, m, o.quality);
+        for (const x of parts) {
+          x.traverse((y) => {
+            y.castShadow = shadow;
+            y.receiveShadow = false;
+          });
+          obj.add(x);
+        }
       } else if (j.id === lastTail && ph.glow > 0.35) {
         const mat = new THREE.MeshBasicMaterial({ color: ph.palette.glow });
         this.extraMats.push(mat);
@@ -132,6 +148,19 @@ export class CreatureView {
       if (o.helix.eyes.aura !== "none" && face.auraEmitters.length > 0) {
         this.aura = new EyeAura(o.helix.eyes.aura, face.auraEmitters, o.helix.eyes.size * sk.joints[hi].r0, ph.palette.glow, o.quality);
       }
+    }
+    // Pass 5 [P5-V8]: scars on their own body part, elder tint; then the ink outline (budgeted).
+    const jointSet = new Set<THREE.Object3D>(this.joints);
+    if (o.life && o.life.scars.length > 0) {
+      this.scars = applyScars(m, o.life.scars, sk);
+      this.scars.byJoint.forEach((mat, i) => swapMaterial(this.joints[i], this.skin, mat, (x) => jointSet.has(x)));
+    }
+    if (o.life) ageTint(m, o.life.phase);
+    this.ink = makeOutlineMaterial(ph, (o.helix.p5 ?? P5_DEFAULTS).skin, sk.height);
+    if (this.ink) {
+      const cap = o.quality === "high" ? 38000 : 14000;
+      const budget = Math.max(0, Math.min(o.quality === "high" ? 12000 : 3000, cap - this.triangles()));
+      addOutlines([this.root], this.ink, budget, [this.keratin]);
     }
   }
 
@@ -159,12 +188,30 @@ export class CreatureView {
     const rim = this.skin.userData.rim as { strength: { value: number } } | undefined;
     if (rim) rim.strength.value = this.rimBase + 0.6 * k;
     this.aura?.setIntensity(1 + k);
+    this.scars?.sync();
   }
 
   /** Emotion read on the eyes: fear widens pupils, anger narrows them. */
   setPupils(fear: number, anger: number): void {
     const s = Math.max(0.35, 0.75 + 0.6 * fear - 0.35 * anger);
     for (const p of this.pupils) p.scale.set(s, s, s * s);
+  }
+
+  /** Pupils follow the gaze: eye-space yaw (+ left) and pitch (+ down), radians, about +-0.3 [P5-A2]. */
+  setGaze(yaw: number, pitch: number): void {
+    this.gazeE.set(pitch * 0.8, yaw * 0.8, 0);
+    this.gazeQ.setFromEuler(this.gazeE);
+    for (const p of this.pupils) {
+      const base = (p.userData.basePos ??= p.position.clone()) as THREE.Vector3;
+      const bq = (p.userData.baseQuat ??= p.quaternion.clone()) as THREE.Quaternion;
+      p.position.copy(base).applyQuaternion(this.gazeQ);
+      p.quaternion.copy(this.gazeQ).multiply(bq);
+    }
+  }
+
+  /** Minimum lid closure 0..1 (sleepy / asleep); blinks still close fully on top [P5-A2]. */
+  setLids(minClosed: number): void {
+    this.lidFloor = Math.max(0, Math.min(1, minClosed));
   }
 
   setTint(frozen: boolean, ko: number): void {
@@ -175,10 +222,14 @@ export class CreatureView {
       m.opacity = op * (1 - ko * 0.75);
     }
     this.ko = ko;
+    this.scars?.sync();
+    if (this.ink) this.ink.visible = ko < 0.3;
   }
 
   /** Per-frame cosmetics: blinks + eye aura (render-only randomness). Called by the views. */
   tick(dt: number): void {
+    this.skinTime += dt;
+    tickSkin(this.mats, this.skinTime);
     this.blinkT -= dt;
     if (this.blinkT <= 0) {
       this.blink += dt / 0.14;
@@ -187,7 +238,7 @@ export class CreatureView {
         this.blinkT = 2.5 + Math.random() * 4;
       }
     }
-    const c = this.ko > 0.5 ? 1 : this.blink <= 0 ? 0 : 1 - Math.abs(1 - this.blink);
+    const c = this.ko > 0.5 ? 1 : Math.max(this.lidFloor, this.blink <= 0 ? 0 : 1 - Math.abs(1 - this.blink));
     for (const l of this.lids) l.rotation.x = l.userData.open + (l.userData.closed - l.userData.open) * c;
     if (this.aura && this.headObj) {
       let scene: THREE.Object3D = this.root;
@@ -221,6 +272,9 @@ export class CreatureView {
       if (m.isMesh) m.geometry.dispose();
     });
     for (const m of [this.skin, this.accent, this.belly, this.keratin, this.membrane, ...this.eyeMats, ...this.extraMats]) m.dispose();
+    this.coat?.dispose();
+    this.scars?.dispose();
+    this.ink?.dispose();
     for (const t of this.textures) t.dispose();
     this.aura?.points.removeFromParent();
     this.aura?.dispose();

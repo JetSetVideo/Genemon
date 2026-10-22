@@ -7,7 +7,7 @@
 import { ELEMENT_IDS, type ElementId } from "../data/elements.ts";
 import { GROUND_IDS, type GroundId, GROUNDS } from "../data/grounds.ts";
 import { type Weather, type WeatherId, WEATHERS } from "../data/weather.ts";
-import { ARENA_INFO, type ArenaKind, generateArena } from "./arena.ts";
+import { ARENA_INFO, type ArenaKind, type ArenaSymmetry, generateArena, levelStepOf, PROP_DEFS, type PropKind } from "./arena.ts";
 
 /** The subset of `Arena` the statistics read (a hand-built fake can satisfy it in tests). */
 export interface ArenaLike {
@@ -21,6 +21,19 @@ export interface ArenaLike {
   readonly props: readonly unknown[];
   readonly waterLevel: number;
   heightAt(x: number, z: number): number;
+  /** Pass-5 fields (optional so hand-built fakes still satisfy the interface). */
+  readonly altitudeM?: number;
+  readonly symmetry?: ArenaSymmetry;
+  readonly levelStep?: number;
+  readonly plateaus?: readonly unknown[];
+}
+
+export interface LevelBand {
+  /** Band index (height / step, rounded). */
+  level: number;
+  /** Tread height (m above the arena floor reference). */
+  h: number;
+  share: number;
 }
 
 export interface GroundShare {
@@ -66,6 +79,14 @@ export interface ArenaStats {
   solidShare: number;
   waterLevel: number;
   props: number;
+  /** Altitude above sea level of the arena floor (m) [P5-W1]. */
+  altitudeM: number;
+  symmetry: ArenaSymmetry;
+  /** Level bands inside the playable circle, lowest first; `step` metres apart. */
+  levels: { step: number; bands: LevelBand[] };
+  plateaus: number;
+  /** Interior props (obstacles / cover inside the playable circle), solid ones, and per 100 m2. */
+  cover: { inner: number; solid: number; per100m2: number; kinds: { kind: PropKind; name: string; count: number }[] };
   /** Top elements favoured by the ground affinity weighted by composition (+ weather elementMult - 1). */
   favours: { element: ElementId; score: number }[];
   weather: WeatherSummary | null;
@@ -105,6 +126,8 @@ export function arenaStats(a: ArenaLike, weather?: WeatherId): ArenaStats {
   let cells = 0, hMin = Infinity, hMax = -Infinity, hSum = 0;
   let slopeSum = 0, slopeMax = 0, steep = 0;
   let liquid = 0, diggable = 0, conductive = 0, condSum = 0;
+  const step = a.levelStep ?? levelStepOf(kind);
+  const levelCounts = new Map<number, number>();
   const e = a.cell;
   const r2 = a.radius * a.radius;
   for (let j = 0; j < a.n; j++) {
@@ -120,6 +143,8 @@ export function arenaStats(a: ArenaLike, weather?: WeatherId): ArenaStats {
       hMin = Math.min(hMin, h);
       hMax = Math.max(hMax, h);
       hSum += h;
+      const lv = Math.round(h / step);
+      levelCounts.set(lv, (levelCounts.get(lv) ?? 0) + 1);
       const gx = (a.heightAt(x + e, z) - a.heightAt(x - e, z)) / (2 * e);
       const gz = (a.heightAt(x, z + e) - a.heightAt(x, z - e)) / (2 * e);
       const deg = Math.atan(Math.hypot(gx, gz)) * 180 / Math.PI;
@@ -140,6 +165,16 @@ export function arenaStats(a: ArenaLike, weather?: WeatherId): ArenaStats {
       return { ground: g.id, name: g.name, share: c / total, color: g.color };
     });
   const w = weather ? WEATHERS[weather] : null;
+  const kindCounts = new Map<PropKind, number>();
+  let inner = 0, solid = 0;
+  for (const raw of a.props) {
+    const p = raw as { kind?: string; inner?: boolean; solid?: boolean };
+    if (!p.inner || !p.kind || !(p.kind in PROP_DEFS)) continue;
+    inner++;
+    if (p.solid) solid++;
+    kindCounts.set(p.kind as PropKind, (kindCounts.get(p.kind as PropKind) ?? 0) + 1);
+  }
+  const area = Math.PI * a.radius * a.radius;
   const favours = ELEMENT_IDS.filter((el) => el !== "neutral")
     .map((el) => {
       let score = 0;
@@ -167,6 +202,19 @@ export function arenaStats(a: ArenaLike, weather?: WeatherId): ArenaStats {
     solidShare: (cells - liquid) / total,
     waterLevel: a.waterLevel,
     props: a.props.length,
+    altitudeM: a.altitudeM ?? ARENA_INFO[kind]?.altitudeM ?? 0,
+    symmetry: a.symmetry ?? "none",
+    levels: {
+      step,
+      bands: [...levelCounts.entries()].sort((p, q) => p[0] - q[0]).map(([level, c]) => ({ level, h: level * step, share: c / total })),
+    },
+    plateaus: a.plateaus?.length ?? 0,
+    cover: {
+      inner,
+      solid,
+      per100m2: area > 0 ? (inner / area) * 100 : 0,
+      kinds: [...kindCounts.entries()].sort((p, q) => q[1] - p[1] || p[0].localeCompare(q[0])).map(([k, count]) => ({ kind: k, name: PROP_DEFS[k].name, count })),
+    },
     favours,
     weather: w ? summarizeWeather(w) : null,
     hints: [],
@@ -198,6 +246,13 @@ export function arenaHints(s: ArenaStats): string[] {
   if (s.slope.steepShare >= 0.03) out.push(`Steep: ${pctText(s.slope.steepShare)} of cells slope over ${STEEP_DEG} deg.`);
   else if (s.slope.mean < 6) out.push(`Flat floor (mean slope ${s.slope.mean.toFixed(1)} deg): long lines of sight for ranged moves.`);
   if (s.elevation.range >= 3) out.push(`High ground: ${s.elevation.range.toFixed(1)} m between the lowest and the highest point.`);
+  const bands = s.levels.bands.filter((b) => b.share >= 0.03).length;
+  if (bands >= 3) out.push(`${bands} height levels ${s.levels.step.toFixed(2).replace(/0$/, "")} m apart${s.plateaus ? `, ${s.plateaus} plateau${s.plateaus > 1 ? "s" : ""} with a ramp` : ""}: the high ground sees further and is harder to rush.`);
+  if (s.cover.solid >= 6) out.push(`Dense cover: ${s.cover.solid} solid obstacles (${s.cover.kinds.slice(0, 3).map((k) => k.name.toLowerCase()).join(", ")}) block bodies and lines of sight.`);
+  else if (s.cover.inner > 0) out.push(`Light cover: ${s.cover.inner} props inside the ring, ${s.cover.solid} of them solid.`);
+  if (s.symmetry !== "none") out.push(`Symmetric map (${s.symmetry === "mirror" ? "mirrored left-right" : "rotated 180 deg"}): both sides start on equivalent ground.`);
+  if (s.altitudeM >= 1500) out.push(`Altitude ${Math.round(s.altitudeM)} m: thin, cold air.`);
+  else if (s.altitudeM <= 50) out.push(`Sea level (${Math.round(s.altitudeM)} m): dense, humid air.`);
   const w = s.weather;
   if (w) {
     if (w.boosted.length || w.weakened.length) {

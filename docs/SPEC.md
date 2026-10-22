@@ -13,6 +13,41 @@ evidence (a test name, a harness number, a capture file). Numbers come from the 
 Last updated: 2026-10-22 (pass 4; section P4 below). Measurements: `artifacts/balance/REPORT.md`, `artifacts/scenarios/`,
 `artifacts/qa/round-2/REPORT.md` (when written), `docs/EVIDENCE.md`.
 
+## P5 - Pass 5 (founder's second request of 2026-10-22, decoded in `docs/team/PASS5-BRIEF.md`)
+
+Browser evidence: `tools/p5probe.ts` (19/19, `artifacts/qa/p5-r2/`), `tools/p5life.ts` (7/7), `tools/p5gaps.ts`
+(0 floating meshes in 16 creatures; `--fake` proves it can fail), `tools/p5close.ts` (`artifacts/qa/p5-close/`).
+
+| id | requirement | bound | owner | status |
+|---|---|---|---|---|
+| P5-U1 | Icons for every object | procedural SVG per item kind, element tint, rarity ring; covers every ITEM_ID | `src/ui/icons.ts` | TESTED `tests/icons_test.ts`; LIVE (bag, market lots, loot) |
+| P5-U2 | Drag an object from the panel onto the 3D view to feed; see the effects | pointer drag (mouse + touch), drop -> stomach (food) / gear / cosmetic; popup + recent effects; eat animation | `src/ui/dragFeed.ts`, `labView.feedReaction/hitTest` | LIVE: probe dragged berries onto `#scene`, `genemon.feed` +1, stomach 1 item, popup top-left, head dips + crumbs (vision) |
+| P5-U3 | Genemon profile page | identity (age, phase, parents), story, character, stats, attacks, objects, senses, digestion, scars, evolution path | `src/ui/sheet.ts` (Lab default tab) | LIVE: 10 sections measured |
+| P5-U4 | Shaded section titles; actions work; auction house finished | every `section()` title on a colour band (6 shades), lot icons + time bars + ending-soon + bid outcomes + settle now | `web/styles.css`, `src/ui/widgets.ts sec`, `market.ts` | LIVE: Home bands measured (6 titles, 6 colours); outbid state tested only in a pure test |
+| P5-V1 | Evolution steps with cost and properties | egg -> ancient, cost {days, xp, food, credits, bond} + properties | `src/genome/lifeclock.ts evolutionPath` | TESTED; shown on the sheet |
+| P5-V2 | Egg, fetal spiral, growth bands, neoteny | spiral curl = turns x 2pi, uncurls with growth; bone length/strength/bend inside gene bands; hatch starts as an egg | `skeleton.ts`, `anatomy/egg.ts`, `hatch.ts` | TESTED `tests/morph_p5_test.ts`; LIVE: egg (opaque) and fetus (translucent, curled) seen in the Lab |
+| P5-V3 | Morph operators + viability | carve, merge, compress, decompress, difference, twist, bulge, pinch on loft stations; connectivity check | `anatomy/ops.ts`, `viability.ts` | TESTED; browser: 0 meshes > 4 % of height from a neighbour (16 creatures) |
+| P5-V4 | Faces: sockets, 1-8 eyes, outlines, beaks, mouth xyz, tongues | eye count 2 = 80 %, 1 = 5.6 %, 3-8 = 14.4 % (2000 seeds) | `helix.ts p5Of`, `anatomy/face.ts buildHead` | TESTED `tests/helix_p5_test.ts`, `face_test.ts`; LIVE (vision: eyes in shallow sockets) |
+| P5-V5 | Shoulders, rare limb drift, fractal arms | drift on 6 % of genomes, mirror symmetric | `body.ts`, `limbs.ts fractalPieces` | TESTED; fractal branching reads as clawed paws at full-creature scale |
+| P5-V6 | Tentacles, legged serpents, element curvature, 10 tail shapes | tentacles 5.3 %, serpent legs 4.7 % of serpents; water +0.83 / metal -0.91 curvature | `body.ts`, `helix.ts` | TESTED; LIVE (octopus blobs seen) |
+| P5-V7 | Cel shading, countershaded bellies, overlays, coats | 2-5 cel bands, ink outline (budgeted), belly texture, 9 coats | `anatomy/skin.ts`, `coat.ts`, `textures.ts` | TESTED; vision: bellies lighter, cel look visible on some creatures but read as smooth on others |
+| P5-V8 | Scars, aged skin | heavy hits (>= 25 % max HP) may scar after the fight; elder/ancient grey tint | `app.ts applyScars`, `skin.ts applyScars/ageTint` | LIVE: a probe battle left 3 scars on the team |
+| P5-A1 | Smoother, slower | sim TEMPO 1.85 + playback x0.75; springs; FX caps | `battle.ts`, `battleView.ts`, `animator.ts`, `fx.ts` | MEASURED: median 41.2 s sim (24.8 s before), playback 0.75x measured in Chrome |
+| P5-A2 | Head-aware, state-aware animation, slither, mouths | look-at within limits, hungry/sleepy/bloated/KO, rear-up, chew/roar | `animator.ts` | TESTED `tests/animator_p5_test.ts`; bloat 1 reached in the browser after overfeeding |
+| P5-B1 | Fewer powers; neural-shaped decision tree | 1 rider per move, STATUS_CAP 2, MAX_ZONES 4; 8 intent neurons | `src/combat/brain.ts`, `battle.ts` | TESTED `tests/brain_test.ts`; LIVE (intents in the battle snapshot) |
+| P5-B2 | Awareness: facing, field of view, hearing | perception from the genome's senses (sensesOf) by default; blind-side bonus | `battle.ts`, `senses.ts` | TESTED |
+| P5-G1/G2 | Senses from features, double-edged resonance | acuity sum = SENSE_BUDGET; resonance 0.7-1.45; damage weight 0.5 | `src/genome/senses.ts` | TESTED; 104/141 moves travel through a sense |
+| P5-G3 | Digestion | stomach capacity by size, diet efficiency, hours per unit, bloat | `src/genome/digestion.ts`, `genemon.feedLife` | LIVE: feast refused at capacity 7.9, accepted to 37.9 with "no food limit" |
+| P5-G4 | Circadian rhythm, altitude, age | fight/production/fertility multipliers, asleep | `lifeclock.ts circadian` | TESTED; the Lab creature sleeps by its rhythm; arena altitude not yet fed into battles: OPEN |
+| P5-G5 | Long loop: feed, age, scars, retirement | phases by size class; ancients and scarred elders cannot rank | `lifeclock.ts`, `app.startBattle` | LIVE: an ancient was benched from ranked |
+| P5-G6 | Imprints passed down | +-0.06 axis bend, decaying inheritance | `src/genome/imprint.ts`, `breed -> inheritLife` | TESTED; using an item does not yet call imprintItem in the UI: OPEN |
+| P5-L1 | Loops at several time scales | life loop ticks (1/min real, 5 s demo), offline catch-up 30 d | `src/ui/lifeLoop.ts` | LIVE: 70 days in 10 min at 10080x |
+| P5-D1 | Test demo: time scale, overfeed, unlimited money | 1x / 60x / 1440x / 10080x; credits topped to 1e9 | `src/ui/devPanel.ts` (top of Settings, compact on Home) | LIVE |
+| P5-D2 | Dex: unlock and develop species | 432 species keys, research 1-5 | `src/ui/screens/dex.ts` | TESTED `tests/home_dex_test.ts`; LIVE |
+| P5-W1 | Maps: density, levels, altitude, symmetric ranked, start points, minimaps | terraces, plateaus, props (solid collide), mirror / rotational ranked maps, 4 start slots | `src/world/arena.ts`, `arenaPreview.ts`, `screens/arena.ts` | TESTED `tests/arena_p5_test.ts`; parity 49.7-49.8 % over 1000 battles |
+| P5-H1 | Home platform with graduations, several Genemon interacting | rings 0.5 m, ruler 0.1 m, pole 0.25 m bands; 2-6 creatures pair up and play | `src/render/homeView.ts` | LIVE (4 creatures, size labels) |
+| P5-X1 | Batches, archetype matrices | win rate excl. draws, Wilson CI, flags | `src/sim/batch.ts`, `tools/batch.ts`, Batch screen | MEASURED n=48: Powerful 68 % DOMINANT, Swarm 30 % WEAK, Fast 37 %: the "every archetype has pros and cons" goal is NOT met yet |
+
 ## P4 - Pass 4 (founder's requests of 2026-10-22, decoded in `docs/team/PASS4-BRIEF.md`)
 
 | id | requirement | bound | owner | status |

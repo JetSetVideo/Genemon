@@ -6,7 +6,7 @@
  */
 import { ELEMENTS } from "../data/elements.ts";
 import { type KitSlot, type Move, type MoveCategory, type MoveEffect, moveCost } from "../combat/moves.ts";
-import { slotOf } from "../combat/kit.ts";
+import { ALL_MOVE_BY_ID, slotOf } from "../combat/kit.ts";
 import { h, hex } from "./dom.ts";
 import { elChip } from "./widgets.ts";
 
@@ -123,4 +123,9 @@ export function kitKeys(moves: readonly Move[], keys?: readonly SlotKey[]): (Slo
 export function kitStrip(moves: readonly Move[], keys?: readonly SlotKey[], o: Omit<MoveCardOptions, "slotKey"> = {}): HTMLElement {
   const ks = kitKeys(moves, keys);
   return h("div", { class: "kit-strip" }, ...moves.map((m, i) => moveCard(m, { ...o, slotKey: ks[i] })));
+}
+
+/** A Genemon's kit as Move rows (unknown ids skipped), for the profile sheet. */
+export function kitMoves(ids: readonly string[]): Move[] {
+  return ids.map((id) => ALL_MOVE_BY_ID[id]).filter((m): m is Move => Boolean(m));
 }

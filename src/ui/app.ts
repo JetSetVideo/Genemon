@@ -10,11 +10,11 @@ import { autoTeam, type Team } from "../combat/team.ts";
 import { ALL_MOVE_BY_ID as MOVE_BY_ID } from "../combat/kit.ts";
 import { ELEMENTS } from "../data/elements.ts";
 import { WEATHERS, type WeatherId } from "../data/weather.ts";
-import { createGenemon, type Genemon, grantXp, phenotypeOf } from "../genome/genemon.ts";
+import { createGenemon, type Genemon, grantXp, phenotypeOf, scarHit } from "../genome/genemon.ts";
 import { abandonRun, arenaFor, battleSeed, GAUNTLET_OWNER, isBoss, opponentFor, recordRound, roundReward, startRun } from "../combat/gauntlet.ts";
 import { GauntletStore } from "./gauntletStore.ts";
 import type { GauntletDeps } from "./gauntletPanel.ts";
-import { ARENA_INFO, type ArenaKind } from "../world/arena.ts";
+import { ARENA_INFO, type ArenaKind, type ArenaSymmetry, rankedSymmetry } from "../world/arena.ts";
 import { BattleView, SIDE_COLORS } from "../render/battleView.ts";
 import { isRated, rankedConditions } from "../ladder/ranked.ts";
 import { getLadder, recordBattle } from "./ladderStore.ts";
@@ -26,11 +26,15 @@ import { addItems, bagOf } from "./bagStore.ts";
 import type { CameraMode } from "../render/battleCamera.ts";
 import { GenospaceView } from "../render/genospaceView.ts";
 import { LabView } from "../render/labView.ts";
+import { canRank, circadian, lifeOf, lifePhase } from "../genome/lifeclock.ts";
+import { sensesOf } from "../genome/senses.ts";
+import { helixOf } from "../genome/helix.ts";
 import { Stage, type View } from "../render/stage.ts";
 import { $, clear, h, hex, toast } from "./dom.ts";
 import { type Profile, ProfileStore, type Settings, teamOf } from "./profile.ts";
 import { readRealWorld, type RealWorld, Session } from "./realworld.ts";
 import { SCREENS, type ScreenDef } from "./screens/registry.ts";
+import { type LifeLoop, startLifeLoop } from "./lifeLoop.ts";
 
 export interface BattleOptions {
   arena: ArenaKind;
@@ -51,6 +55,14 @@ export interface BattleOptions {
   opponentTeam?: Team;
   /** Starting HP fraction per Genemon id (gauntlet carries HP between rounds). */
   startHp?: Record<string, number>;
+  /** Start slot [P5-W1] (SPAWN_SLOTS index, default 0); the opponent starts on its symmetric image. */
+  spawn?: number;
+  /** Arena layout seed (default: the battle seed): the Arena screen passes the previewed layout. */
+  arenaSeed?: number;
+  /** Map symmetry for practice battles (ranked battles are always symmetric: rankedSymmetry). */
+  symmetry?: ArenaSymmetry;
+  /** Interior prop density multiplier (default 1). */
+  density?: number;
 }
 
 export type BattleFormat = "brawl" | "1v1" | "2v2" | "3v3";
@@ -72,6 +84,8 @@ export class App {
   lastLoot: { itemId: string; qty: number; rarity: string }[] = [];
   lastBattle: { opts: BattleOptions; seed: number } | null = null;
   selected: string | null = null;
+  /** The long life loop (src/ui/lifeLoop.ts) [P5-L1]. */
+  life: LifeLoop | null = null;
   private wild: Genemon[] | null = null;
   private gauntletStore: GauntletStore | null = null;
   private hudTimer = 0;
@@ -106,6 +120,7 @@ export class App {
     $("#scene").addEventListener("pointermove", (e) => this.hover(e as PointerEvent));
     setInterval(() => this.tickChrome(), 1000);
     this.tickChrome();
+    this.life = startLifeLoop(this);
     this.go("home");
     requestAnimationFrame(() => this.hudLoop());
   }
@@ -272,13 +287,14 @@ export class App {
   select(id: string): void {
     this.selected = id;
     if (this.labView) this.labView.setGenemon(this.selectedGenemon());
-    else this.showLab(this.selectedGenemon());
+    else if (this.screen !== "home") this.showLab(this.selectedGenemon());
     this.render();
   }
 
   showLab(g: Genemon): void {
     if (this.labView && !this.battleView) {
       this.labView.setGenemon(g);
+      this.labLife(g);
       return;
     }
     this.closeBattle();
@@ -286,7 +302,17 @@ export class App {
     clear($("#view-tools"));
     this.labView = new LabView(this.stage, g, this.profile.settings.theme === "dark");
     this.labView.showSkeleton = this.profile.settings.showSkeleton;
+    this.labView.lifePhaseOf = lifePhase;
+    this.labLife(g);
     this.stage.setView(this.labView);
+  }
+
+  /** Lab creature reflects its circadian state (sleepy / asleep) [P5-A2, P5-G4]. */
+  private labLife(g: Genemon): void {
+    if (!this.labView) return;
+    const life = lifeOf(g, Date.now());
+    const circ = circadian(life, this.hourNow(), life.altitudeM, g.conditions.ageDays);
+    this.labView.setLifeState({ asleep: circ.asleep, sleepy: 1 - circ.alertness });
   }
 
   wildPool(): Genemon[] {
@@ -354,7 +380,19 @@ export class App {
   startBattle(o: BattleOptions): void {
     const seed = o.seed ?? (Date.now() % 2147483647);
     const gRun = o.opponent === "gauntlet" ? this.gauntlet().current() : null;
-    const mine = o.mine ?? (o.opponent === "gauntlet" ? this.profile.collection.filter((g) => g.id === gRun?.championId) : teamOf(this.profile));
+    let mine = o.mine ?? (o.opponent === "gauntlet" ? this.profile.collection.filter((g) => g.id === gRun?.championId) : teamOf(this.profile));
+    // Elders past their prime cannot RANK [P5-G5]: they sit out rated battles (practice is still open).
+    if (o.ranked) {
+      const out = mine.filter((g) => !canRank(g).ok);
+      if (out.length > 0) {
+        mine = mine.filter((g) => canRank(g).ok);
+        toast(`${out.map((g) => `${g.name} (${canRank(g).why})`).join(", ")} cannot rank and sits this one out.`, 4200);
+      }
+      if (mine.length === 0) {
+        toast("Nobody in your team can rank: they are all past their prime. Train younger Genemon.", 4200);
+        return;
+      }
+    }
     if (mine.length === 0) {
       toast("Your team is empty - add Genemon in the Team screen.");
       return;
@@ -363,17 +401,18 @@ export class App {
     const B = o.opponentTeam ?? this.opponentTeam(o, seed);
     const weather = o.weather === "auto" ? (ARENA_INFO[o.arena].weathers.includes(this.rw.weather) ? this.rw.weather : ARENA_INFO[o.arena].weathers[0]) : o.weather;
     const hour = o.hour === "real" ? this.hourNow() : o.hour;
-    const battle = new Battle({ seed, arena: { seed, kind: o.arena, weather, hour }, teams: [A, B], ledger: this.ledger, when0: Date.now(), field: FORMAT_FIELD[o.format ?? "brawl"], startHp: o.startHp ?? (gRun ? { [gRun.championId]: gRun.hpCarry } : undefined) });
+    const battle = new Battle({ seed, arena: { seed: o.ranked ? seed : (o.arenaSeed ?? seed), kind: o.arena, weather, hour, symmetry: o.ranked ? rankedSymmetry(o.arena, seed) : (o.symmetry ?? "none"), density: o.ranked ? 1 : o.density }, spawn: o.spawn, teams: [A, B], ledger: this.ledger, when0: Date.now(), field: FORMAT_FIELD[o.format ?? "brawl"], startHp: o.startHp ?? (gRun ? { [gRun.championId]: gRun.hpCarry } : undefined), perception: (g, ph) => sensesOf(ph, helixOf(g.genome, ph), g.life) });
     this.labView = null;
     this.genoView = null;
     const s = this.profile.settings;
-    this.battleView = new BattleView(this.stage, battle, { shadows: s.shadows, quality: s.quality, shake: s.shake, speed: s.speed, camera: s.camera, fog: clampPost(s.post).fogDensity });
+    this.battleView = new BattleView(this.stage, battle, { shadows: s.shadows, quality: s.quality, shake: s.shake, speed: s.speed, camera: s.camera, fog: clampPost(s.post).fogDensity, lifePhaseOf: lifePhase });
     this.camFollow = null;
     this.applyCam();
     this.battleView.onEvents((ev) => this.onBattleEvents(ev));
     this.stage.setView(this.battleView);
     this.lastBattle = { opts: o, seed };
     this.lastResult = null;
+    this.heavyHits.clear();
     this.lastLoot = [];
     this.feed = [];
     this.buildHud();
@@ -390,9 +429,36 @@ export class App {
     clear($("#view-tools"));
   }
 
+  /** Heavy hits taken by MY fighters this battle (seq -> hit): scars are applied after the fight [P5-V8]. */
+  private heavyHits = new Map<number, BattleEvent>();
+
+  private noteHeavy(b: Battle, e: BattleEvent): void {
+    if (e.type !== "hit" || e.b === undefined || e.label?.startsWith("conduction")) return;
+    const v = b.fighters[e.b];
+    if (v && v.team === 0 && (e.value ?? 0) >= 0.25 * v.maxHp) this.heavyHits.set(e.seq, e);
+  }
+
+  /** Scars after a fight: the simulation never mutates the Genemon; this runs once per rewarded seed. */
+  private applyScars(b: Battle, seed: number): void {
+    for (const e of b.events) this.noteHeavy(b, e);
+    const perG = new Map<string, number>();
+    for (const e of [...this.heavyHits.values()].sort((x, y) => (y.value ?? 0) - (x.value ?? 0))) {
+      const f = b.fighters[e.b!];
+      const g = this.profile.collection.find((x) => x.id === f.id);
+      if (!g || (perG.get(g.id) ?? 0) >= 2) continue;
+      const m = MOVE_BY_ID[e.move ?? ""];
+      const physical = !!m && (m.category === "physical" || m.tags.includes("contact"));
+      const part = m?.part === "tail" ? "tail" : physical ? (e.seq % 3 === 0 ? "limb" : "torso") : e.seq % 2 ? "head" : "torso";
+      const s = scarHit(g, (e.value ?? 0) / f.maxHp, physical ? "physical" : (e.element ?? "neutral"), part, hashSeed(seed, e.seq), { ledger: this.ledger, when: Date.now(), who: this.profile.id, why: `hit by ${m?.name ?? e.move} in battle` });
+      if (s) perG.set(g.id, (perG.get(g.id) ?? 0) + 1);
+    }
+    this.heavyHits.clear();
+  }
+
   private onBattleEvents(ev: BattleEvent[]): void {
     const b = this.battleView?.battle;
     if (!b) return;
+    for (const e of ev) this.noteHeavy(b, e);
     const name = (i?: number) => (i === undefined ? "?" : b.fighters[i]?.name ?? "?");
     for (const e of ev) {
       let text = "";
@@ -406,6 +472,7 @@ export class App {
       else if (e.type === "terrain") text = `▦ ground → ${e.label}`;
       else if (e.type === "lightning") text = `⚡ lightning strikes ${name(e.b)}`;
       else if (e.type === "fail") text = `✖ ${name(e.a)}: ${e.label}`;
+      else if (e.type === "flank") text = `↻ ${name(e.a)} strikes ${name(e.b)} from its blind side`;
       else if (e.type === "status" && ["frozen", "burrowed", "airborne", "liquid", "paralyzed"].includes(e.label ?? "")) text = `${name(e.a)} is ${e.label}`;
       else if (e.type === "end") {
         this.finishBattle();
@@ -449,7 +516,10 @@ export class App {
     // XP and W/L are paid once per seed (X1); an abandoned PRACTICE battle pays and costs nothing.
     if (fresh && (!forfeit || ranked)) {
       // Only the player's own Genemon learn from this battle (opponents are copies or NPCs).
-      if (!forfeit) applyBattleResult(r, [teams[0], { ...teams[1], members: [] }]);
+      if (!forfeit) {
+        applyBattleResult(r, [teams[0], { ...teams[1], members: [] }]);
+        this.applyScars(b, seed);
+      }
       this.profile.rewardedSeeds = [seed, ...paid].slice(0, 300);
       const st = this.profile.stats;
       st.battles++;
@@ -581,9 +651,9 @@ export class App {
   }
 
   /** A rated battle: the ladder draws the arena and seed; the hour and (when it fits) the weather are real (X6). */
-  startRanked(opponent: "rival" | "profile" = "rival", opponentProfile?: string): void {
+  startRanked(opponent: "rival" | "profile" = "rival", opponentProfile?: string, spawn?: number): void {
     const d = rankedConditions(this.profile.id, this.profile.stats.battles, Math.floor(Date.now() / 86_400_000), this.hourNow(), this.rw.weather);
-    this.startBattle({ arena: d.arena, weather: d.weather, hour: d.hour, opponent, opponentProfile, seed: d.seed, ranked: true });
+    this.startBattle({ arena: d.arena, weather: d.weather, hour: d.hour, opponent, opponentProfile, seed: d.seed, ranked: true, spawn });
   }
 
   // ---------------------------------------------------------------- HUD
@@ -737,6 +807,7 @@ export class App {
       screen: this.screen,
       profile: { id: this.profile.id, name: this.profile.name, mmr: this.profile.mmr, collection: this.profile.collection.length, team: this.profile.team.length, theme: this.profile.settings.theme },
       view: this.stage.view?.snapshot?.() ?? null,
+      life: this.life?.stats() ?? null,
       ledger: { size: this.ledger.size, counts: this.ledger.counts() },
       realWorld: { hour: this.rw.hour, dayPhase: this.rw.dayPhase, season: this.rw.season, weather: this.rw.weather, device: this.rw.device },
       fps: this.stage.fps,

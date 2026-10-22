@@ -18,15 +18,25 @@
  * - Asymmetry (rare): helix.asymmetricParts on helix.asymmetricSide scale by (1 + a), the other side by
  *   (1 - a/2); all lateral parts are otherwise exact mirror images (built for side +1, then mirrored).
  * Head and jaw are the face lane's (face.ts); this module leaves them empty.
+ *
+ * Pass 5 [P5-V2, V3, V5, V6] (genes: helix.p5 ?? P5_DEFAULTS):
+ * - neoteny: the skeleton's baby factor (sk.dev.baby) rounds the forms (lower angularity, softer muscles);
+ * - element curvature: + curvy (exponent toward 1.85, softer lobes), - angular (higher exponent, facet ridges);
+ * - morph operators (ops.ts) reshape every chain / limb section before meshing;
+ * - shoulders: width and hump on the quadruped / biped chest;
+ * - tail tips: taper, club, fin, fan, spade, whip, flame, leaf, rattle, split (tipSize);
+ * - armFractal: branch / spiral / mandelbrot-like sub-branches on hands, front claws and horn tips (budgeted);
+ * - tentacle chains (`tent<i>`) lofted as one tapering surface with a belly-coloured underside.
  */
 import type * as THREE from "../../lib/three.ts";
 import type { JointDef, Skeleton } from "../../body/skeleton.ts";
 import type { Phenotype } from "../../genome/phenotype.ts";
-import type { MorphHelix } from "../../genome/morphTypes.ts";
+import { type MorphHelix, type MorphOp, type MorphP5, type MorphRegion, P5_DEFAULTS } from "../../genome/morphTypes.ts";
 import type { BodyParts, JointMeshes, SkinMaterials } from "./types.ts";
 import { asymScale } from "./hitbox.ts";
-import { buildDigits, canon, canonJoint, limbPieces, type LimbPart, meshOf, type Quality, type Res, resolution, type Slot, socketK } from "./limbs.ts";
-import { buildWing } from "./wings.ts";
+import { buildDigits, canon, canonJoint, fractalPieces, limbPieces, type LimbPart, meshOf, type Quality, type Res, resolution, type Slot, socketK } from "./limbs.ts";
+import { buildWing, feather } from "./wings.ts";
+import { applyOps, opsFor, regionOfChain } from "./ops.ts";
 import {
   add3,
   bezier3,
@@ -60,8 +70,21 @@ interface Ctx {
   helix: MorphHelix;
   res: Res;
   F: number;
+  /** Effective angularity: helix angularity bent by element curvature and rounded by neoteny. */
   A: number;
+  p5: MorphP5;
+  /** Element curvature -1 (angular) .. +1 (curvy). */
+  curv: number;
+  /** Baby proportions 1 .. 0 (sk.dev.baby; 0 on legacy skeletons). */
+  baby: number;
+  ops: (region: MorphRegion) => MorphOp[];
   pieces: Piece<Slot>[][];
+}
+
+/** Effective angularity [P5-V2, P5-V6]: element curvature bends it (rock / metal up, water / air down), babies are round. */
+export function effectiveAngularity(angularity: number, curvature: number, baby: number): number {
+  const c = Math.max(-1, Math.min(1, Number.isFinite(curvature) ? curvature : 0));
+  return clamp01((clamp01(angularity) - 0.55 * c) * (1 - 0.6 * clamp01(baby)));
 }
 
 interface ChainCfg {
@@ -78,16 +101,20 @@ interface ChainCfg {
 }
 
 /** Shared angular extras: dorsolateral ridges (outer angles) and the spine groove (inner angle). */
-function angularLobes(A: number, groove: number): Lobe[] {
+function angularLobes(A: number, groove: number, curv = 0): Lobe[] {
   const out: Lobe[] = [{ angle: HALF_PI, amp: -groove * (0.4 + A), sharp: 8 }];
   if (A > 0.05) out.push(...pair(HALF_PI - 0.75, 0.07 * A, 4 + 8 * A));
+  // Rock / metal: a second, ventrolateral facet ridge (the section reads as cut stone).
+  if (curv < -0.3) out.push(...pair(-HALF_PI + 1.25, 0.05 * -curv, 6 + 4 * -curv));
   return out;
 }
 
 function chainCfg(ctx: Ctx, chain: string, lastHeadR: number, rbEnd: number): ChainCfg {
-  const { ph, A, F, helix } = ctx;
+  const { ph, A, F, helix, curv, p5 } = ctx;
   const G = clamp01(ph.plan.girth);
-  const exp = clampExponent(1.9 + 0.55 * A);
+  const exp = clampExponent(1.9 + 0.55 * A - 0.06 * Math.max(0, curv));
+  const hump = Math.max(0, Math.min(1.2, p5.body.shoulder.hump));
+  const shW = Math.max(0.7, Math.min(1.4, p5.body.shoulder.width));
   const base: ChainCfg = {
     section: (_s, rb) => ({ rx: rb, ry: rb, exp }),
     caps: [0.9, 0.9],
@@ -99,6 +126,16 @@ function chainCfg(ctx: Ctx, chain: string, lastHeadR: number, rbEnd: number): Ch
     dorsal: [0, 1, 0],
     vertical: [0, 0, -1],
   };
+  if (chain.startsWith("tent")) {
+    // Octopus arm: round, a flat sucker underside (belly material), a dorsal ridge when angular.
+    return {
+      ...base,
+      section: (_s, rb) => ({ rx: rb, ry: rb * 0.88, exp, lobes: [{ angle: -HALF_PI, amp: -0.12, sharp: 2.5 }, ...(A > 0.3 ? [{ angle: HALF_PI, amp: 0.06 * A, sharp: 10 }] : [])] }),
+      caps: [0.7, 1.3],
+      belly: 0.8,
+      extStart: 0.6,
+    };
+  }
   if (chain === "neck") {
     return {
       ...base,
@@ -129,14 +166,15 @@ function chainCfg(ctx: Ctx, chain: string, lastHeadR: number, rbEnd: number): Ch
       return {
         ...base,
         section: (s, rb) => ({
-          rx: rb * (1 + 0.12 * bump(s, 0.12, 0.25) + 0.15 * bump(s, 0.85, 0.25) - 0.07 * bump(s, 0.5, 0.3)),
+          rx: rb * (1 + 0.12 * bump(s, 0.12, 0.25) + (0.15 + 0.4 * (shW - 1)) * bump(s, 0.85, 0.25) - 0.07 * bump(s, 0.5, 0.3)),
           ry: rb * (1 + 0.08 * bump(s, 0.8, 0.3)),
           exp,
           lobes: [
             { angle: -HALF_PI, amp: 0.16 * (0.6 + G) * bump(s, 0.48, 0.4), sharp: 2.2 },
             ...pair(HALF_PI - 0.55, 0.09 * bump(s, 0.85, 0.2), 5),
             ...pair(HALF_PI - 0.9, 0.08 * bump(s, 0.12, 0.2), 4),
-            ...angularLobes(A, 0.05),
+            ...angularLobes(A, 0.05, curv),
+            ...(hump > 0.02 ? [{ angle: HALF_PI, amp: 0.32 * hump * bump(s, 0.82, 0.24), sharp: 2.6 }] : []),
           ],
         }),
         caps: [0.95, 0.85],
@@ -160,7 +198,8 @@ function chainCfg(ctx: Ctx, chain: string, lastHeadR: number, rbEnd: number): Ch
           lobes: [
             { angle: -HALF_PI, amp: 0.12 * (0.5 + G) * bump(s, 0.3, 0.3), sharp: 2.2 },
             ...pair(-HALF_PI + 0.6, 0.1 * bump(s, 0.8, 0.25), 4),
-            ...angularLobes(A, 0.05),
+            ...angularLobes(A, 0.05, curv),
+            ...(hump > 0.02 ? [{ angle: HALF_PI, amp: 0.3 * hump * bump(s, 0.78, 0.25), sharp: 2.6 }] : []),
           ],
         }),
         caps: [0.7, 0.65],
@@ -175,7 +214,7 @@ function chainCfg(ctx: Ctx, chain: string, lastHeadR: number, rbEnd: number): Ch
           rx: rb * (0.95 + 0.12 * bump(s, 0.6, 0.4)),
           ry: rb * (1.02 + 0.06 * bump(s, 0.7, 0.3)),
           exp,
-          lobes: [{ angle: -HALF_PI, amp: (0.12 + 0.1 * A) * bump(s, 0.68, 0.35), sharp: 4 + 6 * A }, ...angularLobes(A, 0.03)],
+          lobes: [{ angle: -HALF_PI, amp: (0.12 + 0.1 * A) * bump(s, 0.68, 0.35), sharp: 4 + 6 * A }, ...angularLobes(A, 0.03, curv)],
         }),
         caps: [1.1, 0.8],
         belly: 0.75,
@@ -187,7 +226,7 @@ function chainCfg(ctx: Ctx, chain: string, lastHeadR: number, rbEnd: number): Ch
           ...base,
           section: (s, rb) => {
             const k = 1 + 0.25 * bump(s, 0.35, 0.45);
-            return { rx: rb * k, ry: rb * k * 0.85, exp, lobes: angularLobes(A, 0.04) };
+            return { rx: rb * k, ry: rb * k * 0.85, exp, lobes: angularLobes(A, 0.04, curv) };
           },
           caps: [0.5, 1.25],
           pinch: 0.12 + 0.2 * (1 - F),
@@ -195,7 +234,7 @@ function chainCfg(ctx: Ctx, chain: string, lastHeadR: number, rbEnd: number): Ch
       }
       return {
         ...base,
-        section: (s, rb) => ({ rx: rb * (1 + 0.08 * bump(s, 0.5, 0.5)), ry: rb * 0.9, exp, lobes: angularLobes(A, 0.05) }),
+        section: (s, rb) => ({ rx: rb * (1 + 0.08 * bump(s, 0.5, 0.5)), ry: rb * 0.9, exp, lobes: angularLobes(A, 0.05, curv) }),
         caps: [0.7, 0.75],
         spikes: true,
       };
@@ -252,12 +291,14 @@ function chainPieces(ctx: Ctx, ids: number[]): void {
   };
   const headIdx = sk.joints.findIndex((j) => j.role === "head" && j.parent === ids[n - 1]);
   const cfg = chainCfg(ctx, js[0].chain, headIdx >= 0 ? sk.joints[headIdx].r0 : 0, rE[n - 1]);
+  const tent = js[0].chain.startsWith("tent");
   const bounds = cum.slice(1).map((c) => c / T);
   const w = 0.35 * Math.min(...lens) / T;
+  const ops = ctx.ops(regionOfChain(js[0].chain));
   const sectionAt = (s: number): Section => {
     let pinch = 1;
     for (const b of bounds) pinch -= cfg.pinch * bump(s, b, w);
-    return cfg.section(clamp01(s), rb(s) * pinch);
+    return applyOps(cfg.section(clamp01(s), rb(s) * pinch), clamp01(s), ops);
   };
   for (let k = 0; k < n; k++) {
     const j = js[k];
@@ -267,7 +308,7 @@ function chainPieces(ctx: Ctx, ids: number[]): void {
     const ovNext = last ? 0 : rb((cum[k] + L) / T) * (0.25 + 0.75 * F);
     const a = first ? -cfg.extStart * rS[0] : -ovPrev;
     const b = last ? L + cfg.extEnd * rE[n - 1] : L + ovNext;
-    const nSt = res.stations + (a < -0.3 * L || b > 1.3 * L ? 2 : 0);
+    const nSt = (tent ? (res.limbStations > 5 ? 4 : 3) : res.stations) + (a < -0.3 * L || b > 1.3 * L ? 2 : 0);
     const st: Station[] = [];
     for (let m = 0; m < nSt; m++) {
       const t = a + ((b - a) * m) / (nSt - 1);
@@ -280,7 +321,7 @@ function chainPieces(ctx: Ctx, ids: number[]): void {
     const frame = boneFrame(j.dir, cfg.dorsal, cfg.vertical);
     ctx.pieces[ids[k]].push({
       geo: loftRings(boneRings([0, 0, 0], j.dir, st, frame), {
-        radial: res.radial,
+        radial: tent ? res.smallRadial + (res.limbStations > 5 ? 2 : 0) : res.radial,
         capRings: res.capRings,
         capScale: [first ? cfg.caps[0] : 0.45, last ? cfg.caps[1] : 0.45],
         belly: cfg.belly,
@@ -320,6 +361,113 @@ function spikePieces(ctx: Ctx, idx: number, frame: { t: V3; x: V3; y: V3 }, L: n
     };
     ctx.pieces[idx].push({ geo: loftRings(curveRings(pts, sec, frame.t), { radial: res.smallRadial, capRings: 1, capScale: [0.5, 0.8] }), slots: ["accent"] });
   }
+}
+
+/**
+ * Tail tip shapes [P5-V6] on the LAST tail joint (its frame: bone along dir, dorsal +Y): every piece starts
+ * inside the tip of the tail loft so it is connected. Size = the tail root radius x tipSize.
+ */
+function tailTipPieces(ctx: Ctx, last: JointDef, rootR: number): Piece<Slot>[] {
+  const { res, p5, A } = ctx;
+  const shape = p5.body.tail.shape;
+  if (shape === "taper") return [];
+  const high = res.limbStations > 5;
+  const L = Math.max(1e-4, last.length);
+  const s0 = Math.max(1e-4, rootR) * 0.9 * Math.max(0.4, Math.min(2.5, p5.body.tail.tipSize));
+  const f = boneFrame(last.dir, [0, 1, 0], [0, 0, -1]);
+  const at = (z: number, x = 0, y = 0): V3 => add3(add3(mul3(f.t, z), mul3(f.x, x)), mul3(f.y, y));
+  const r1 = Math.max(1e-4, last.r1);
+  const out: Piece<Slot>[] = [];
+  const along = (z0: number, z1: number, n: number, sec: (u: number) => Section, slot: Slot, caps: [number, number] = [0.6, 0.9], radial = res.limbRadial) => {
+    const st: Station[] = [];
+    for (let i = 0; i < n; i++) {
+      const u = i / (n - 1);
+      st.push({ ...sec(u), z: z0 + (z1 - z0) * u });
+    }
+    out.push({ geo: loftRings(boneRings([0, 0, 0], last.dir, st, f), { radial, capRings: 2, capScale: caps }), slots: [slot] });
+  };
+  const curve = (pts: V3[], sec: (u: number) => Section, slot: Slot, radial = res.smallRadial) =>
+    out.push({ geo: loftRings(curveRings(pts, sec, f.y), { radial, capRings: 1, capScale: [0.5, 0.9] }), slots: [slot] });
+  const nS = high ? 9 : 5;
+  switch (shape) {
+    case "club":
+      along(L - 0.4 * s0, L + 1.7 * s0, nS, (u) => {
+        const r = r1 + (s0 * 1.05 - r1) * Math.sin(Math.PI * Math.min(1, u * 1.15)) ** 0.8;
+        return { rx: r, ry: r * 0.92, exp: 2 + 0.3 * A, lobes: [...pair(0.5, 0.18, 6), ...pair(-0.6, 0.14, 6), { angle: HALF_PI, amp: 0.15, sharp: 6 }] };
+      }, "accent", [0.5, 0.8]);
+      break;
+    case "fin":
+      along(L - 2.6 * s0, L + 0.9 * s0, nS, (u) => ({ rx: s0 * 0.16 + r1 * 0.3, ry: r1 + s0 * 1.5 * Math.sin(Math.PI * (0.08 + 0.84 * u)) ** 0.7, exp: 2 }), "accent", [0.5, 1.2]);
+      break;
+    case "spade":
+      along(L - 0.5 * s0, L + 2.2 * s0, nS, (u) => ({ rx: r1 * 0.6 + s0 * 1.25 * Math.sin(Math.PI * Math.pow(u, 0.55)) ** 1.1, ry: r1 * 0.35 + s0 * 0.16, exp: 2.2 }), "accent", [0.5, 1.6]);
+      break;
+    case "leaf": {
+      const pts: V3[] = [];
+      for (let i = 0; i < nS; i++) {
+        const u = i / (nS - 1);
+        pts.push(at(L - 0.5 * s0 + 3.2 * s0 * u, 0, -0.5 * s0 * u * u));
+      }
+      curve(pts, (u) => ({ rx: r1 * 0.5 + s0 * 1.1 * Math.sin(Math.PI * u) ** 0.8, ry: r1 * 0.3 + s0 * 0.1, lobes: [{ angle: HALF_PI, amp: 0.6, sharp: 14 }] }), "accent", res.limbRadial);
+      break;
+    }
+    case "whip": {
+      const pts: V3[] = [];
+      for (let i = 0; i < nS; i++) {
+        const u = i / (nS - 1);
+        pts.push(at(L - r1 + 4 * s0 * u, 0, 1.2 * s0 * u * u * u));
+      }
+      curve(pts, (u) => ({ rx: r1 * (1 - 0.8 * u) + 0.01 * s0, ry: r1 * (1 - 0.8 * u) + 0.01 * s0 }), "skin");
+      break;
+    }
+    case "flame": {
+      const n = high ? 5 : 3;
+      for (let k = 0; k < n; k++) {
+        const off = n > 1 ? k / (n - 1) - 0.5 : 0;
+        const len = s0 * (2.4 - 1.2 * Math.abs(off) * 2);
+        const pts: V3[] = [];
+        for (let i = 0; i < (high ? 7 : 4); i++) {
+          const u = i / ((high ? 7 : 4) - 1);
+          pts.push(at(L - 0.4 * s0 + len * 0.5 * u, off * s0 * 1.6 * u + 0.25 * s0 * Math.sin(Math.PI * 2 * u + k) * u, len * u * 0.9));
+        }
+        curve(pts, (u) => {
+          const r = s0 * (0.42 - 0.12 * Math.abs(off)) * Math.pow(1 - u, 0.9) * (0.7 + 0.3 * Math.sin(Math.PI * Math.min(1, u * 2.5))) + 0.01 * s0;
+          return { rx: r, ry: r * 0.8 };
+        }, "accent");
+      }
+      break;
+    }
+    case "fan": {
+      const n = high ? 7 : 5;
+      for (let k = 0; k < n; k++) {
+        const a = (k / (n - 1) - 0.5) * 1.8;
+        const dir = norm3(add3(mul3(f.t, Math.cos(a)), add3(mul3(f.x, Math.sin(a)), mul3(f.y, 0.25))));
+        out.push({ geo: feather(at(L - 0.3 * s0), dir, s0 * (3.2 - 0.9 * Math.abs(a)), s0 * 0.9, res), slots: ["accent"] });
+      }
+      break;
+    }
+    case "rattle": {
+      const n = high ? 5 : 3;
+      for (let k = 0; k < n; k++) {
+        const rr = s0 * 0.75 * (1 - 0.12 * k) + r1 * 0.5;
+        const z = L - 0.2 * s0 + k * 0.6 * s0;
+        along(z, z + 0.7 * s0, high ? 5 : 3, (u) => ({ rx: rr * (0.55 + 0.45 * Math.sin(Math.PI * u)), ry: rr * 0.8 * (0.55 + 0.45 * Math.sin(Math.PI * u)) }), "keratin", [0.4, 0.4], res.smallRadial + 2);
+      }
+      break;
+    }
+    case "split": {
+      for (const sd of [-1, 1]) {
+        const pts: V3[] = [];
+        for (let i = 0; i < (high ? 6 : 4); i++) {
+          const u = i / ((high ? 6 : 4) - 1);
+          pts.push(at(L - 0.6 * r1 + 2.4 * s0 * u, sd * 1.1 * s0 * u * u, 0.3 * s0 * u));
+        }
+        curve(pts, (u) => ({ rx: r1 * 1.1 * (1 - 0.85 * u) + 0.02 * s0, ry: r1 * (1 - 0.85 * u) + 0.02 * s0 }), "skin");
+      }
+      break;
+    }
+  }
+  return out;
 }
 
 /** A curved, ridged, tapering horn along a bezier (canonical frame); tines at fractalDepth 3. */
@@ -362,6 +510,14 @@ function hornPieces(ctx: Ctx, j: JointDef): Piece<Slot>[] {
       out.push({ geo: loftRings(curveRings(tp, (v) => ({ rx: rT * (1 - 0.9 * v) + rT * 0.05, ry: rT * (1 - 0.9 * v) + rT * 0.05 }), [0, 0, 1]), { radial: res.smallRadial, capRings: 1, capScale: [0.5, 1] }), slots: ["accent"] });
     });
   }
+  // armFractal on the horn: antler-like sub-branches from the upper horn (depth capped at 3).
+  const af = ctx.p5.body.armFractal;
+  if (af.mode !== "none" && af.depth >= 1) {
+    const u0 = 0.62;
+    const base = bezier3(P0, P1, P2, P3, u0);
+    const tan = norm3(sub3(bezier3(P0, P1, P2, P3, u0 + 0.03), bezier3(P0, P1, P2, P3, u0 - 0.03)));
+    out.push(...fractalPieces(base, norm3(add3(tan, [0, 0.4, 0])), L * 0.42, rAt(u0) * 0.8, { ...af, depth: Math.min(3, af.depth) }, res, high ? 9 : 4, "accent"));
+  }
   return out;
 }
 
@@ -398,18 +554,51 @@ const LIMB_PART: Partial<Record<JointDef["role"], LimbPart>> = {
 };
 const CHAIN_ROLES = new Set<JointDef["role"]>(["root", "spine", "chest", "segment", "neck", "tail"]);
 
+/** The tail chain's joints, root first; for a serpent (no tail role) the rear 40 % of its body chain. */
+export function tailJoints(sk: Skeleton): number[] {
+  const t = sk.joints.flatMap((j, i) => (j.role === "tail" ? [i] : []));
+  if (t.length > 0 || sk.kind !== "serpent") return t;
+  const body = sk.joints.flatMap((j, i) => (j.chain === "body" ? [i] : []));
+  return body.slice(Math.floor(body.length * 0.6));
+}
+
+/** Station range of each limb part along the whole limb (morph ops with region "limb" use it). */
+const LIMB_U: Record<LimbPart, [number, number]> = { upper: [0, 0.4], lower: [0.4, 0.8], foot: [0.8, 1], pod: [0, 0.7], podTip: [0.7, 1], wing: [0, 1] };
+
 export function buildBody(ph: Phenotype, sk: Skeleton, helix: MorphHelix, mats: SkinMaterials, quality: Quality): BodyParts {
   const res = resolution(quality);
-  const ctx: Ctx = { ph, sk, helix, res, F: clamp01(helix.fusion), A: clamp01(helix.angularity), pieces: sk.joints.map(() => []) };
+  const p5 = helix.p5 ?? P5_DEFAULTS;
+  const curv = Math.max(-1, Math.min(1, Number.isFinite(p5.body.curvature) ? p5.body.curvature : 0));
+  const baby = clamp01(sk.dev?.baby ?? 0);
+  const ctx: Ctx = {
+    ph,
+    sk,
+    helix,
+    res,
+    F: clamp01(helix.fusion),
+    A: effectiveAngularity(helix.angularity, curv, baby),
+    p5,
+    curv,
+    baby,
+    ops: (region) => opsFor(p5.body.ops, region),
+    pieces: sk.joints.map(() => []),
+  };
   const J = sk.joints;
   const perJoint: JointMeshes = new Map();
   const extra = new Map<number, THREE.Object3D[]>();
   const wings: THREE.Mesh[] = [];
 
-  // 1. Chains: consecutive runs of the same chain name among trunk / neck / tail roles.
+  // 1. Chains: consecutive runs of the same chain name among trunk / neck / tail roles; tentacles whole.
   const seen = new Set<number>();
   J.forEach((j, i) => {
-    if (seen.has(i) || !CHAIN_ROLES.has(j.role)) return;
+    if (seen.has(i)) return;
+    if (j.chain.startsWith("tent")) {
+      const ids = J.flatMap((c, ci) => (c.chain === j.chain ? [ci] : []));
+      ids.forEach((k) => seen.add(k));
+      chainPieces(ctx, ids);
+      return;
+    }
+    if (!CHAIN_ROLES.has(j.role)) return;
     const ids = [i];
     seen.add(i);
     let cur = i;
@@ -422,6 +611,13 @@ export function buildBody(ph: Phenotype, sk: Skeleton, helix: MorphHelix, mats: 
     }
     chainPieces(ctx, ids);
   });
+
+  // 1b. Tail tip shape on the last tail joint (a serpent's tail is the end of its body chain).
+  const tails = tailJoints(sk);
+  if (tails.length > 0) {
+    const last = tails[tails.length - 1];
+    ctx.pieces[last].push(...tailTipPieces(ctx, J[last], J[tails[0]].r0));
+  }
 
   // 2. Sockets owned by the parent at cross-pivot children (parent frame = parent's canon).
   J.forEach((j) => {
@@ -437,14 +633,29 @@ export function buildBody(ph: Phenotype, sk: Skeleton, helix: MorphHelix, mats: 
   });
 
   // 3. Limbs, horns, ears, digits (lateral parts in the side +1 canon).
+  const limbOps = ctx.ops("limb");
+  const af = p5.body.armFractal;
+  const fractalOn = af.mode !== "none" && af.depth >= 1;
   J.forEach((j, i) => {
+    if (j.chain.startsWith("tent")) return;
     const jc = canonJoint(j);
     const part = j.role === "ankle" && J[j.parent]?.role === "pod" ? "podTip" : LIMB_PART[j.role];
     if (part) {
       const childIdx = J.findIndex((c) => c.parent === i && (LIMB_PART[c.role] !== undefined || c.role === "ankle"));
       const child = childIdx >= 0 ? canonJoint(J[childIdx]) : undefined;
-      ctx.pieces[i].push(...limbPieces(jc, child, part, ph, helix, res));
-      if ((j.role === "ankle" || j.role === "wrist") && part === "foot") extra.set(i, buildDigits(j, ph, helix, mats, quality));
+      ctx.pieces[i].push(...limbPieces(jc, child, part, ph, helix, res, undefined, { ops: limbOps, u: LIMB_U[part], A: ctx.A, baby, style: p5.body.limbStyle }));
+      // armFractal: a fractal HAND replaces the fingers of a wrist; front feet get fractal claws from depth 2.
+      const frontFoot = j.role === "ankle" && J[J[j.parent]?.parent ?? -1]?.role === "shoulder";
+      const fractalHand = fractalOn && j.role === "wrist";
+      if ((j.role === "ankle" || j.role === "wrist") && part === "foot" && !fractalHand) extra.set(i, buildDigits(j, ph, helix, mats, quality));
+      if (fractalHand || (fractalOn && frontFoot && af.depth >= 2)) {
+        const d = norm3(jc.dir);
+        const handUp = norm3(add3(d, [0, 0, 0.35]));
+        const high = res.limbStations > 5;
+        const fr = fractalPieces(mul3(d, jc.length * 0.85), handUp, Math.max(jc.length * 1.5, jc.r1 * 3.2) * (fractalHand ? 1 : 0.6), jc.r1 * (fractalHand ? 0.5 : 0.35), af, res, fractalHand ? (high ? 24 : 10) : (high ? 10 : 5), fractalHand ? "skin" : "keratin");
+        const m = meshOf(fr, mats, `${j.id}:fractal`, j.side < 0);
+        if (m) extra.set(i, [...(extra.get(i) ?? []), m]);
+      }
     } else if (j.role === "horn") ctx.pieces[i].push(...hornPieces(ctx, jc));
     else if (j.role === "ear") ctx.pieces[i].push(...earPieces(ctx, jc));
   });

@@ -1,5 +1,5 @@
 import { assert, assertAlmostEquals, assertEquals } from "./_assert.ts";
-import { applyBattleResult, Battle } from "../src/combat/battle.ts";
+import { applyBattleResult, Battle, MAX_TIME } from "../src/combat/battle.ts";
 import { emptyConditions, noteActivity } from "../src/genome/epigenetics.ts";
 import { ARCHETYPES, arenaSpec, makeArchetype, team } from "../src/combat/scenario.ts";
 import { createGenemon, type Genemon, phenotypeOf } from "../src/genome/genemon.ts";
@@ -31,7 +31,7 @@ Deno.test("battle: completes, stays finite, and is deterministic for a seed", ()
     const r2 = new Battle({ seed: s, arena: arenaSpec(ARENA_KINDS[s % ARENA_KINDS.length], s), teams: [A2, B2] }).run();
     assertEquals(r1.winner, r2.winner, "winner deterministic");
     assertEquals(Math.round(r1.duration * 30), Math.round(r2.duration * 30), "duration deterministic");
-    assert(r1.duration <= 90.05, `duration ${r1.duration}`);
+    assert(r1.duration <= MAX_TIME + 0.05, `duration ${r1.duration}`);
     for (const f of r1.fighters) assert(Number.isFinite(f.hpFrac), "hp finite");
   }
 });

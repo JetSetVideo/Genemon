@@ -8,7 +8,8 @@
  *   cosmetics?: Record<genemonId, Record<slot, itemId>>   one cosmetic per slot per Genemon
  * Equipped / worn items leave the bag and come back when removed, so counts never duplicate.
  */
-import { feed, type Genemon, type LifeCtx } from "../genome/genemon.ts";
+import { feed, feedLife, type Genemon, type LifeCtx } from "../genome/genemon.ts";
+import type { EatResult } from "../genome/lifeTypes.ts";
 import type { FoodId } from "../data/lifestyle.ts";
 import { foodItemId, ITEMS } from "../economy/items.ts";
 import type { Profile } from "./profile.ts";
@@ -69,6 +70,19 @@ export function feedFromBag(p: Profile, g: Genemon, foodId: FoodId, units = 1, c
   if (!take(bagOf(p), foodItemId(foodId), units)) return false;
   feed(g, foodId, units, ctx);
   return true;
+}
+
+/**
+ * Pass 5 [P5-G3]: feed from the bag INTO THE STOMACH (digested over hours by the life loop). The bag is
+ * only charged for the units actually swallowed. null = not enough in the bag; r.ok false = refused
+ * (stomach full; `ignoreCapacity` = the test-demo "no food limit").
+ */
+export function feedFromBagLife(p: Profile, g: Genemon, foodId: FoodId, units: number, now: number, ctx: LifeCtx & { ignoreCapacity?: boolean } = {}): EatResult | null {
+  if (!owns(p, g.id)) return null;
+  if (count(bagOf(p), foodItemId(foodId)) < units) return null;
+  const r = feedLife(g, foodId, units, now, ctx);
+  if (r.ok && r.units > 0) take(bagOf(p), foodItemId(foodId), r.units);
+  return r;
 }
 
 /** Give a Genemon a gear piece from the bag; the piece it held before goes back to the bag. */

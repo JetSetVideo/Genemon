@@ -2,6 +2,7 @@ import type { App } from "../app.ts";
 import type { CameraMode } from "../../render/battleCamera.ts";
 import { h, section, select, toast } from "../dom.ts";
 import { forgetProgress } from "../progressStore.ts";
+import { renderDevPanel } from "../devPanel.ts";
 
 let newName = "";
 
@@ -14,6 +15,7 @@ export function renderSettings(app: App): HTMLElement {
   const profiles = app.store.list();
   return h("div", {},
     h("h1", {}, "Settings"),
+    renderDevPanel(app),
     h("p", { class: "muted" }, `Saved in the profile "${app.profile.name}".`),
     section("Appearance",
       h("div", { class: "row" }, h("button", { class: `btn ${s.theme === "dark" ? "on" : ""}`, "data-theme-set": "dark", onclick: () => app.updateSettings({ theme: "dark" }) }, "🌙 Dark"), h("button", { class: `btn ${s.theme === "light" ? "on" : ""}`, "data-theme-set": "light", onclick: () => app.updateSettings({ theme: "light" }) }, "☀ Light")),

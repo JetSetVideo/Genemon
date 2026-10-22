@@ -8,6 +8,7 @@ import { ELEMENT_IDS, ELEMENTS, type ElementId } from "../data/elements.ts";
 import type { AxisId, AxisVector } from "../data/axes.ts";
 import { createGenemon, type Genemon } from "../genome/genemon.ts";
 import type { GenomeBias } from "../genome/genome.ts";
+import { hashSeed } from "../core/rng.ts";
 
 export type HatchElement = ElementId | "plain" | "any";
 
@@ -40,9 +41,26 @@ export function hatchBias(element: HatchElement = "plain"): GenomeBias {
   return { spread: HATCH_SPREAD, axes };
 }
 
-/** A newborn: level 3, one day old, mostly plain. "any" = plain genes with the usual small spread. */
+/** A newborn: level 3, an EGG (age 0: egg -> fetus at ~0.3 d -> hatchling at ~1 d), mostly plain. "any" = plain genes with the usual small spread. */
 export function hatchGenemon(o: HatchOptions): Genemon {
-  return createGenemon({ seed: o.seed, owner: o.owner, level: o.level ?? HATCH_LEVEL, ageDays: 1, bias: hatchBias(o.element ?? "plain"), bornAt: o.bornAt });
+  return createGenemon({ seed: o.seed, owner: o.owner, level: o.level ?? HATCH_LEVEL, ageDays: 0, bias: hatchBias(o.element ?? "plain"), bornAt: o.bornAt });
+}
+
+/**
+ * A batch of newborns (the test-demo "hatch 10" [P5-D1]): deterministic per seed, never an id that is
+ * already `taken` (nor a duplicate inside the batch). Free: the caller decides what it costs.
+ */
+export function hatchMany(o: { seed: number; owner: string; n: number; element?: HatchElement; bornAt?: number; taken?: Iterable<string> }): Genemon[] {
+  const ids = new Set(o.taken ?? []);
+  const out: Genemon[] = [];
+  const n = Math.max(0, Math.min(100, Math.floor(o.n)));
+  for (let i = 0, tries = 0; out.length < n && tries < n * 8; tries++, i++) {
+    const g = hatchGenemon({ seed: hashSeed(o.seed, "batch", i), owner: o.owner, element: o.element ?? "any", bornAt: o.bornAt });
+    if (ids.has(g.id)) continue;
+    ids.add(g.id);
+    out.push(g);
+  }
+  return out;
 }
 
 /** Elements a player can ask for (the hatch select): any, plain, then every non-neutral element. */

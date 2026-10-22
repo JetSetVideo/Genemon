@@ -6,6 +6,9 @@
  *  - My listings: open lots (Cancel while unbid), lots you lead, recent settlements;
  *  - History: price chart + statistics per traded item, and the house books.
  * Countdowns (elements with data-ends) tick every second; the market steps every 5 s while open.
+ * Pass 5 [P5-U1/U4]: lot cards carry the item ICON, a time-left bar and an "ending soon" state (live);
+ * the player's bids are remembered per profile (localStorage) so My listings / History show OUTBID,
+ * LEADING, WON, LOST, SOLD, EXPIRED outcomes; "Settle now" runs the house clock immediately.
  */
 import type { App } from "../app.ts";
 import { type ElementId, ELEMENTS } from "../../data/elements.ts";
@@ -13,7 +16,7 @@ import { isGenemonItem, ITEM_KINDS, type ItemDef, type ItemKind, type Rarity } f
 import type { Listing, ListingFilter, SellerKind } from "../../economy/market.ts";
 import { phenotypeOf } from "../../genome/genemon.ts";
 import { lineChart } from "../charts.ts";
-import { fmt, h, hex, section, select, toast } from "../dom.ts";
+import { fmt, h, hex, select, toast } from "../dom.ts";
 import {
   formatCountdown,
   getMarket,
@@ -24,7 +27,8 @@ import {
   SALE_DURATIONS,
 } from "../marketStore.ts";
 import type { Profile } from "../profile.ts";
-import { elChip, genemonCard } from "../widgets.ts";
+import { elChip, genemonCard, sec, type SectionFamily } from "../widgets.ts";
+import { itemIcon } from "../icons.ts";
 
 type Tab = "browse" | "sell" | "mine" | "history";
 const TABS: readonly { id: Tab; label: string }[] = [
@@ -56,6 +60,107 @@ const RARITY_COLOR: Record<Rarity, string> = {
 };
 const PROMO_COLOR = "#ff3d77";
 const MAX_CARDS = 60;
+/** Lots closer than this to their end are flagged "ending soon" (and pulse). */
+export const SOON_MS = 2 * 60_000;
+const MYBIDS_KEY = "genemon.market.mybids";
+const MYBIDS_MAX = 120;
+
+/** A section of the Market with a shaded title band (pass-5 panels). */
+function section(title: string, ...children: (Node | string | null | undefined | false)[]): HTMLElement {
+  const fam: SectionFamily = /history|price/i.test(title) ? "stats" : /books/i.test(title) ? "genome" : /lots|sell/i.test(title) ? "objects" : "story";
+  return sec(fam, title, {}, ...children);
+}
+
+// ------------------------------------------------------------------ outcomes (pure)
+export type BidOutcome = "leading" | "outbid" | "won" | "lost" | "ended" | "expired" | "cancelled" | "archived";
+export type SaleOutcome = "listed" | "bidding" | "ended" | "sold" | "expired" | "cancelled";
+
+/** Outcome of a lot the player bid on (null listing = dropped from the house archive). */
+export function bidOutcome(l: Listing | null, me: string, now: number): BidOutcome {
+  if (!l) return "archived";
+  if (l.status === "open") return l.endsAt <= now ? (l.bidderId === me ? "ended" : "lost") : l.bidderId === me ? "leading" : "outbid";
+  if (l.status === "sold") return l.buyerId === me ? "won" : "lost";
+  return l.status === "expired" ? "expired" : "cancelled";
+}
+
+/** Outcome of the player's own lot. */
+export function saleOutcome(l: Listing, now: number): SaleOutcome {
+  if (l.status === "open") return l.endsAt <= now ? "ended" : l.currentBid !== null ? "bidding" : "listed";
+  return l.status;
+}
+
+const OUTCOME_LABEL: Record<BidOutcome | SaleOutcome, string> = {
+  leading: "★ leading", outbid: "⚠ outbid", won: "✓ won", lost: "✗ lost", ended: "⌛ ended · to settle", expired: "expired",
+  cancelled: "cancelled", archived: "closed", listed: "listed", bidding: "bids in", sold: "✓ sold",
+};
+
+function outcomeBadge(o: BidOutcome | SaleOutcome): HTMLElement {
+  return h("span", { class: `ui5-out ${o}` }, OUTCOME_LABEL[o]);
+}
+
+// ------------------------------------------------------------------ my bids (per profile, localStorage)
+interface MyBid {
+  amount: number;
+  at: number;
+}
+type MyBids = Record<string, Record<string, MyBid>>;
+
+function readMyBids(): MyBids {
+  try {
+    const raw = globalThis.localStorage?.getItem(MYBIDS_KEY);
+    const v = raw ? JSON.parse(raw) : {};
+    return v && typeof v === "object" ? v as MyBids : {};
+  } catch {
+    return {};
+  }
+}
+
+function rememberBid(profileId: string, listingId: string, amount: number): void {
+  try {
+    const all = readMyBids();
+    const mine = (all[profileId] ??= {});
+    mine[listingId] = { amount, at: Date.now() };
+    const ids = Object.keys(mine).sort((a, b) => mine[b].at - mine[a].at);
+    for (const id of ids.slice(MYBIDS_MAX)) delete mine[id];
+    globalThis.localStorage?.setItem(MYBIDS_KEY, JSON.stringify(all));
+  } catch (e) {
+    console.warn("market: could not remember the bid", e);
+  }
+}
+
+/** Listings this profile bid on: remembered ones + this session's ledger rows, newest first. */
+function myBidIds(app: App): { id: string; amount: number; at: number }[] {
+  const out = new Map<string, { id: string; amount: number; at: number }>();
+  for (const [id, b] of Object.entries(readMyBids()[app.profile.id] ?? {})) out.set(id, { id, ...b });
+  for (const r of app.ledger.query({ what: "market.bid", who: app.profile.id, limit: 200 })) {
+    const id = String(r.entries.listingId ?? "");
+    const amount = Number(r.entries.amount ?? 0);
+    if (id && (!out.has(id) || out.get(id)!.at < r.when)) out.set(id, { id, amount, at: r.when });
+  }
+  return [...out.values()].sort((a, b) => b.at - a.at);
+}
+
+function settleNow(app: App, m: MarketStore): void {
+  try {
+    const r = m.visit(app.profile, Date.now());
+    toast(r.settled + r.moved > 0 ? `Settled ${r.settled} lot${r.settled === 1 ? "" : "s"}${r.moved ? `, ${r.moved} Genemon delivered` : ""}.` : "Nothing to settle: every ended lot is already closed.", 3200);
+  } catch (e) {
+    toast(marketErrorText(e), 4500);
+  }
+  app.render();
+}
+
+function lotIcon(m: MarketStore, itemId: string, size: number): SVGSVGElement {
+  const e = isGenemonItem(itemId) ? m.escrowEntry(itemId) : undefined;
+  return itemIcon(itemId, size, e ? { color: hex(phenotypeOf(e.genemon).palette.base), title: e.genemon.name } : {});
+}
+
+function timeBar(l: Listing, now: number): HTMLElement {
+  const total = Math.max(1, l.endsAt - l.createdAt);
+  const left = Math.max(0, l.endsAt - now);
+  return h("div", { class: "bar ui5-timebar", "data-tb-ends": l.endsAt, "data-tb-start": l.createdAt, title: "time left" },
+    h("i", { vars: { w: `${(left / total * 100).toFixed(1)}%` } }));
+}
 
 // ------------------------------------------------------------------ screen state (survives re-renders)
 let tab: Tab = "browse";
@@ -113,7 +218,7 @@ export function renderMarket(app: App): HTMLElement {
       "A real auction house shared by every profile on this device: timed lots, bids (+5 % minimum), buyouts, " +
         "anti-sniping (+30 s), company flash promotions and NPC traders. It keeps living while you are away.",
     ),
-    walletBar(m, p),
+    walletBar(app, m, p),
     awayNote ? h("p", { class: "muted" }, awayNote) : null,
     m.saveError ? h("p", { class: "muted" }, `⚠ The market could not be saved (${m.saveError}).`) : null,
     h(
@@ -136,7 +241,7 @@ export function renderMarket(app: App): HTMLElement {
 }
 
 // ------------------------------------------------------------------ header
-function walletBar(m: MarketStore, p: Profile): HTMLElement {
+function walletBar(app: App, m: MarketStore, p: Profile): HTMLElement {
   const listed = m.house.listings({ sellerId: p.id, status: "open" }).length;
   const items = Object.values(m.inventory(p.id)).reduce((s, q) => s + q, 0);
   return h(
@@ -154,6 +259,7 @@ function walletBar(m: MarketStore, p: Profile): HTMLElement {
     ),
     h("span", { class: "chip", title: "Your open lots" }, `📦 ${listed} listed`),
     h("span", { class: "chip", title: "Items you hold at the market" }, `🎒 ${fmt(items)} items`),
+    h("button", { class: "btn small", "data-settle": "", title: "Run the house clock now: close every lot whose time is up and deliver it", onclick: () => settleNow(app, m) }, "⚖ Settle now"),
   );
 }
 
@@ -235,6 +341,7 @@ function lotCard(app: App, m: MarketStore, l: Listing, now: number): HTMLElement
       const v = Number(amount.value);
       if (!Number.isInteger(v) || v < 1) throw new Error("Enter a whole number of credits.");
       const after = m.bid(p, l.id, v, Date.now());
+      rememberBid(p.id, l.id, v);
       if (after.status === "sold") {
         return `Bought ${name} for ${fmt(after.finalPrice ?? v)} credits: your bid reached the buyout.${
           joinNote(l)
@@ -247,13 +354,15 @@ function lotCard(app: App, m: MarketStore, l: Listing, now: number): HTMLElement
   const buy = () =>
     act(app, () => {
       const after = m.buyout(p, l.id, Date.now());
+      rememberBid(p.id, l.id, after.finalPrice ?? 0);
       return `Bought ${name} for ${fmt(after.finalPrice ?? 0)} credits.${joinNote(l)}`;
     });
+  const soon = l.endsAt - now <= SOON_MS;
+  const outbid = !leading && myBidIds(app).some((b) => b.id === l.id);
   return h(
     "div",
-    { class: `gcard ${leading ? "sel" : ""}`, title: def?.note ?? "" },
-    h("span", { class: "swatch", vars: { sw: swatchOf(m, l.itemId, def) } }),
-    h("span", { class: "name" }, name),
+    { class: `gcard ui5-lot ${leading ? "sel" : ""} ${soon ? "ui5-soon" : ""}`, title: def?.note ?? "", "data-lot": l.id, "data-lot-ends": l.endsAt },
+    h("span", { class: "ui5-lot-head" }, lotIcon(m, l.itemId, 40), h("span", { class: "name" }, name)),
     tagRow(m, l.itemId, def),
     h("span", { class: "chip", title: seller.note }, `${seller.icon} ${seller.name}${mine ? " (you)" : ""}`),
     h(
@@ -271,8 +380,10 @@ function lotCard(app: App, m: MarketStore, l: Listing, now: number): HTMLElement
       )
       : h("span", { class: "muted" }, "Auction only (no buyout)"),
     h("span", { class: "muted" }, "⏱ ", countdown(l.endsAt, now), ` · fair ${fmt(q?.fair ?? 0)}`),
+    timeBar(l, now),
+    h("span", { class: "ui5-soon-badge" }, "⏳ ending soon"),
     promoBadge(l, now),
-    leading ? h("span", { class: "muted" }, "★ You lead") : null,
+    leading ? outcomeBadge("leading") : outbid ? outcomeBadge("outbid") : null,
     mine ? h("span", { class: "muted" }, "Your lot: manage it in My listings") : h(
       "span",
       { class: "row" },
@@ -517,7 +628,34 @@ function mineTab(app: App, m: MarketStore, now: number): HTMLElement[] {
     .sort((a, b) => (b.closedAt ?? 0) - (a.closedAt ?? 0))
     .slice(0, 15);
   const waiting = m.escrowedGenemon(me).length;
+  const bids = myBidIds(app).map((b) => ({ ...b, l: m.house.listing(b.id) })).slice(0, 20);
+  const ended = all.filter((l) => l.status === "open" && l.endsAt <= now && (l.sellerId === me || l.bidderId === me)).length;
   return [
+    ...(ended > 0
+      ? [h("div", { class: "ui5-settle" }, h("span", {}, `⌛ ${ended} of your lot${ended > 1 ? "s have" : " has"} ended and wait${ended > 1 ? "" : "s"} for settlement.`), h("button", { class: "btn small primary", onclick: () => settleNow(app, m) }, "Settle now"))]
+      : []),
+    section(
+      `Your bids · ${bids.length}`,
+      bids.length > 0
+        ? h(
+          "div",
+          { class: "ui5-bidlist" },
+          ...bids.map((b) => {
+            const o = bidOutcome(b.l, me, now);
+            const name = b.l ? lotName(b.l, m.describe(b.l.itemId)) : b.id;
+            return h(
+              "div",
+              { class: `ui5-bidrow ${o}` },
+              b.l ? lotIcon(m, b.l.itemId, 30) : itemIcon("?", 30),
+              h("span", { class: "ui5-bidname" }, name),
+              outcomeBadge(o),
+              h("span", { class: "mono", title: "your last bid / the current or final price" }, `${fmt(b.amount)}${b.l ? ` / ${fmt(b.l.finalPrice ?? b.l.currentBid ?? b.l.startPrice)}` : ""}`),
+              b.l && b.l.status === "open" && b.l.endsAt > now ? countdown(b.l.endsAt, now) : h("span", { class: "muted" }, b.l?.closedAt ? whenLabel(b.l.closedAt) : ""),
+            );
+          }),
+        )
+        : h("p", { class: "muted" }, "You have not bid on anything yet. Outbid, won and lost lots show up here."),
+    ),
     section(
       `Your open lots · ${mine.length}`,
       waiting > 0 ? h("p", { class: "muted" }, `${waiting} of your Genemon wait in escrow.`) : null,
@@ -536,7 +674,7 @@ function mineTab(app: App, m: MarketStore, now: number): HTMLElement[] {
             h(
               "tr",
               {},
-              h("td", {}, lotName(l, m.describe(l.itemId))),
+              h("td", {}, h("span", { class: "ui5-lot-head" }, lotIcon(m, l.itemId, 24), lotName(l, m.describe(l.itemId)))),
               h("td", { class: "mono" }, fmt(l.currentBid ?? 0)),
               h("td", {}, countdown(l.endsAt, now)),
             )
@@ -581,11 +719,12 @@ function myLotCard(app: App, m: MarketStore, l: Listing, now: number): HTMLEleme
         isGenemonItem(l.itemId) ? "the Genemon is back in your collection" : "back in your market bag"
       }.`;
     });
+  const soon = l.endsAt - now <= SOON_MS;
   return h(
     "div",
-    { class: "gcard" },
-    h("span", { class: "swatch", vars: { sw: swatchOf(m, l.itemId, def) } }),
-    h("span", { class: "name" }, name),
+    { class: `gcard ui5-lot ${soon ? "ui5-soon" : ""}`, "data-lot": l.id, "data-lot-ends": l.endsAt },
+    h("span", { class: "ui5-lot-head" }, lotIcon(m, l.itemId, 40), h("span", { class: "name" }, name)),
+    outcomeBadge(saleOutcome(l, now)),
     tagRow(m, l.itemId, def),
     h(
       "span",
@@ -604,6 +743,8 @@ function myLotCard(app: App, m: MarketStore, l: Listing, now: number): HTMLEleme
       countdown(l.endsAt, now),
       l.extensions > 0 ? ` · extended ${l.extensions}× by late bids` : "",
     ),
+    timeBar(l, now),
+    h("span", { class: "ui5-soon-badge" }, "⏳ ending soon"),
     h("button", {
       class: "btn small",
       disabled: hasBids,
@@ -617,22 +758,55 @@ function settlementRow(m: MarketStore, l: Listing, me: string): HTMLElement {
   const name = lotName(l, m.describe(l.itemId));
   const price = l.finalPrice ?? 0;
   let outcome = "Cancelled", credits = "0";
+  let badge: BidOutcome | SaleOutcome = "cancelled";
   if (l.status === "sold" && l.sellerId === me) {
-    outcome = `Sold to ${m.party(l.buyerId ?? "").name}`;
+    outcome = `to ${m.party(l.buyerId ?? "").name}`;
     credits = `+${fmt(m.proceeds(price))}`;
+    badge = "sold";
   } else if (l.status === "sold") {
-    outcome = `Bought from ${m.party(l.sellerId).name}`;
+    outcome = `from ${m.party(l.sellerId).name}`;
     credits = `−${fmt(price)}`;
+    badge = "won";
   } else if (l.status === "expired") {
-    outcome = "Expired: returned";
+    outcome = "no bid: returned";
+    badge = "expired";
   }
   return h(
     "tr",
     {},
     h("td", { class: "mono" }, l.closedAt !== null ? whenLabel(l.closedAt) : "-"),
-    h("td", {}, name),
-    h("td", {}, outcome),
+    h("td", {}, h("span", { class: "ui5-lot-head" }, lotIcon(m, l.itemId, 24), name)),
+    h("td", {}, outcomeBadge(badge), " ", h("span", { class: "muted" }, outcome)),
     h("td", { class: "mono" }, credits),
+  );
+}
+
+/** History: every closed lot the player touched (sold, won, lost to a higher bid, expired, cancelled). */
+function outcomesSection(app: App, m: MarketStore, now: number): HTMLElement {
+  const me = app.profile.id;
+  const bidOn = new Set(myBidIds(app).map((b) => b.id));
+  const rows = m.house.listings()
+    .filter((l) => l.status !== "open" && (l.sellerId === me || l.buyerId === me || bidOn.has(l.id)))
+    .sort((a, b) => (b.closedAt ?? 0) - (a.closedAt ?? 0))
+    .slice(0, 30);
+  const tally: Record<string, number> = {};
+  const lines = rows.map((l) => {
+    const o: BidOutcome | SaleOutcome = l.sellerId === me ? saleOutcome(l, now) : bidOutcome(l, me, now);
+    tally[o] = (tally[o] ?? 0) + 1;
+    return h("tr", {},
+      h("td", { class: "mono" }, l.closedAt !== null ? whenLabel(l.closedAt) : "-"),
+      h("td", {}, h("span", { class: "ui5-lot-head" }, lotIcon(m, l.itemId, 24), lotName(l, m.describe(l.itemId)))),
+      h("td", {}, outcomeBadge(o)),
+      h("td", { class: "mono" }, l.finalPrice !== null ? fmt(l.finalPrice) : "-"));
+  });
+  return section(
+    "Your outcomes",
+    rows.length
+      ? h("div", { class: "row" }, ...Object.entries(tally).map(([o, n]) => h("span", { class: `ui5-out ${o}` }, `${OUTCOME_LABEL[o as BidOutcome]} ${n}`)))
+      : null,
+    rows.length
+      ? h("table", { class: "t" }, h("tr", {}, h("th", {}, "When"), h("th", {}, "Lot"), h("th", {}, "Outcome"), h("th", {}, "Price")), ...lines)
+      : h("p", { class: "muted" }, "No closed lot of yours yet: won, lost, sold and expired lots appear here."),
   );
 }
 
@@ -640,8 +814,10 @@ function settlementRow(m: MarketStore, l: Listing, me: string): HTMLElement {
 function historyTab(app: App, m: MarketStore, now: number): HTMLElement[] {
   const ids = m.tradedItems();
   const books = booksSection(m, now);
+  const outcomes = outcomesSection(app, m, now);
   if (ids.length === 0) {
     return [
+      outcomes,
       section(
         "Price history",
         h("p", { class: "muted" }, "No lot has sold yet: prices appear with the first sale."),
@@ -669,6 +845,7 @@ function historyTab(app: App, m: MarketStore, now: number): HTMLElement[] {
   );
   const money = (v: number | null) => (v === null ? "-" : fmt(v, Number.isInteger(v) ? 0 : 2));
   return [
+    outcomes,
     section(
       "Price history",
       h(
@@ -783,12 +960,6 @@ function genemonBits(m: MarketStore, itemId: string): HTMLElement[] {
   return out;
 }
 
-function swatchOf(m: MarketStore, itemId: string, def: ItemDef | undefined): string {
-  const e = isGenemonItem(itemId) ? m.escrowEntry(itemId) : undefined;
-  if (e) return hex(phenotypeOf(e.genemon).palette.base);
-  return def ? RARITY_COLOR[def.rarity] : "#888888";
-}
-
 function joinNote(l: Listing): string {
   return isGenemonItem(l.itemId) ? " It joined your collection." : " It is in your market bag.";
 }
@@ -858,6 +1029,16 @@ function startCountdowns(root: HTMLElement): void {
     const now = Date.now();
     for (const el of root.querySelectorAll<HTMLElement>("[data-ends]")) {
       el.textContent = formatCountdown(Number(el.dataset.ends) - now, el.dataset.done);
+    }
+    for (const el of root.querySelectorAll<HTMLElement>("[data-lot-ends]")) {
+      const left = Number(el.dataset.lotEnds) - now;
+      el.classList.toggle("ui5-soon", left <= SOON_MS);
+      el.classList.toggle("ui5-ended", left <= 0);
+    }
+    for (const el of root.querySelectorAll<HTMLElement>("[data-tb-ends]")) {
+      const end = Number(el.dataset.tbEnds), start = Number(el.dataset.tbStart);
+      const w = Math.max(0, Math.min(1, (end - now) / Math.max(1, end - start)));
+      (el.firstElementChild as HTMLElement | null)?.style.setProperty("--w", `${(w * 100).toFixed(1)}%`);
     }
   }, 1000);
 }

@@ -42,7 +42,11 @@ the ledger as JSONL and a profile as JSON from the Data screen.
 | `battle.conduction` | `Battle.hit` (electric chain) | move, ally, rank, conduction → damage, hp [SPEC X3] |
 | `battle.synergyLost` | `Battle.knockOut` → `dropSynergies` | lost, survivors → remaining [SPEC X4] |
 | `battle.settled` | `App.finishBattle` | seed, ranked, fresh, forfeit, kind → mmrDelta, mmr, winner [SPEC L4] |
-| `genemon.feed` | `feed()` | food, units → hunger, bond |
+| `genemon.feed` | `feed()`, `feedLife()` | food, units → hunger, bond (feedLife: units = portions actually swallowed; the food reaches the diet when digested) |
+| `genemon.feed.refused` | `feedLife()` | food, units → fullness, capacity (stomach full; demo `noFoodLimit` forces past it) [P5-G3] |
+| `genemon.life` | `tickLife()` via `liveTick()` (src/genome/lifeclock.ts) | elapsedDays, timeScale, hour, altitudeM, phaseBefore, hungerBefore → ageDays, phase, phaseChanged, hunger, absorbed, stomach, bloat, fatigue, alertness, asleep, acclimatisedM, events. ONE row per life-clock tick; offline catch-up capped at 30 simulated days [P5-G4, G5, L1] |
+| `genemon.scar` | `scarHit()` | part, from (element or physical), damage (share of max HP) → severity, scars (count) [P5-V8] |
+| `genemon.imprint` | `imprintItem()` | item → trait (axis / sense / coat / glow / color), strength, generation [P5-G6] |
 | `genemon.experience` / `.denied` | `live()` | experience, units, physical → xp / reason |
 | `genemon.exposure` | `expose()` | ground, hours → total hours |
 | `genemon.xp` | `grantXp()` | xp → total, level |
