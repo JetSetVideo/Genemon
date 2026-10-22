@@ -14,6 +14,7 @@ import { buildKit } from "../combat/kit.ts";
 import { type Conditions, emptyConditions, levelOf, noteActivity, xpForLevel } from "./epigenetics.ts";
 import { type Genome, type GenomeBias, randomGenome } from "./genome.ts";
 import { express, nameFor, type Phenotype } from "./phenotype.ts";
+import type { LifeState } from "./lifeTypes.ts";
 import { u01 } from "../core/math.ts";
 
 export interface Genemon {
@@ -27,6 +28,8 @@ export interface Genemon {
   /** Learned type knowledge "fire>plant" -> confidence 0..1 (wise Genemon learn faster). */
   knowledge: Record<string, number>;
   stage: number;
+  /** Pass 5: digestion, scars, imprints, rhythm, altitude (src/genome/lifeTypes.ts). Absent = fresh state. */
+  life?: LifeState;
 }
 
 export const STAGE_NAMES = ["", "Hatchling", "Juvenile", "Adult", "Ascended"] as const;

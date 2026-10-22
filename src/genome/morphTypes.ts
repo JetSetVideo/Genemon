@@ -129,5 +129,143 @@ export interface MorphHelix {
   /** Silhouette angularity: 0 round and soft .. 1 faceted, with sharp inner and outer angles. */
   angularity: number;
   /** Min/max envelopes of every animation channel. */
-  anim: Record<AnimChannel, BoundTrait>;
+  anim: Record<AnimChannel, BoundTrait>;  /** Pass-5 genes (eyes 1..8 and shapes, beaks, growth envelope, operators, coat). Absent = P5_DEFAULTS. */
+  p5?: MorphP5;
 }
+
+// ====================================================================== PASS 5 CONTRACT (types only)
+/**
+ * Pass-5 morph genes [P5-V*]. Optional on MorphHelix (`p5`) so legacy helices and every consumer keep
+ * working: consumers read `helix.p5 ?? P5_DEFAULTS`. Producer: src/genome/helix.ts (lane helix-face).
+ */
+
+/** Eye outline drawn on the sclera shell (not every eye is a circle). */
+export type EyeShape = "round" | "almond" | "tear" | "crescent" | "hooded" | "diamond" | "oval";
+/** How several eyes are laid out on the head. */
+export type EyeLayout = "pair" | "cyclops" | "row" | "arc" | "cluster" | "stacked";
+export interface EyeP5 {
+  shape: EyeShape;
+  layout: EyeLayout;
+  /** 1 .. 8 eyes (1 = cyclops; 2 by far the most common; 3+ rare and recessive). Overrides EyeGenes.count. */
+  count: number;
+  /** Vertical placement on the head, -1 (low, cheek) .. +1 (top of the skull). */
+  height: number;
+  /** Lateral spread 0 (close together, forward-facing predator) .. 1 (wide, side-facing prey). */
+  spread: number;
+  /** Yaw of each eye away from forward, radians (0 forward .. ~1.3 side). Drives field of view. */
+  yaw: number;
+  /** Outline tilt, radians (+ outer corner up). */
+  tilt: number;
+  /** How deep the eye sits in a socket carved into the head 0 (bulging) .. 1 (deep-set). */
+  socketDepth: number;
+  /** Per-axis eyeball scale (x wide, y tall, z bulge) around 1. */
+  scale: [number, number, number];
+  /** Brow ridge 0..1 (overhang over the socket). */
+  brow: number;
+}
+export type BeakKind = "none" | "round" | "hooked" | "flat" | "needle" | "shovel";
+export interface MouthP5 {
+  beak: BeakKind;
+  /** Beak length as a share of the head length (0 .. 0.9). */
+  beakLength: number;
+  /** Beak roundness 0 (sharp cone) .. 1 (blunt ball, parrot / duck). */
+  beakRound: number;
+  /** Mouth scale per axis (x width, y gape height, z depth into the head) around 1. */
+  scale: [number, number, number];
+  /** Mouth vertical position on the head -1 .. 1 (0 = default). */
+  height: number;
+  /** Tongue length as a share of the head length (0 = no tongue .. 1.2 chameleon). */
+  tongueLength: number;
+  /** Forked tongue (snakes, lizards). */
+  tongueFork: boolean;
+  /** Lip / snout curve: -1 frown .. +1 smile. */
+  lipCurve: number;
+}
+/** A morphogenetic OPERATOR applied after growth (grow, then carve / merge / squash the forms). */
+export type MorphOpKind = "carve" | "merge" | "compress" | "decompress" | "difference" | "twist" | "bulge" | "pinch";
+export type MorphRegion = "torso" | "neck" | "head" | "tail" | "limb" | "all";
+export interface MorphOp {
+  kind: MorphOpKind;
+  region: MorphRegion;
+  /** Station along the region 0 (root) .. 1 (tip). */
+  u: number;
+  /** Signed strength (-1 .. 1); carve/difference remove, merge/bulge add, compress/decompress scale. */
+  amount: number;
+  /** Falloff width along the region 0..1. */
+  width: number;
+  /** Angle around the section, radians (0 = dorsal). */
+  angle: number;
+}
+/** Growth envelope of the skeleton nodes: min and max per node, bounded like every helix trait. */
+export interface GrowthGenes {
+  /** Node (bone) length multiplier band. */
+  length: GenePair;
+  /** Node strength (section radius) multiplier band. */
+  strength: GenePair;
+  /** Node bend angle band, radians. */
+  angle: GenePair;
+  /** Fetal spiral turns of the curled embryo (0.6 .. 1.6 turns). */
+  spiral: number;
+  /** Neoteny 0..1: how long baby features (big head, big eyes, short limbs) persist. */
+  neoteny: number;
+}
+export type LimbStyle = "legs" | "tentacles" | "fins" | "stumps";
+export type TailShape = "taper" | "club" | "fin" | "fan" | "spade" | "whip" | "flame" | "leaf" | "rattle" | "split";
+export type CoatKind = "skin" | "fur" | "scales" | "feathers" | "leaves" | "chitin" | "slime" | "bark" | "crystal";
+export interface BodyP5 {
+  /** Shoulder width / height / hump around 1. */
+  shoulder: { width: number; height: number; hump: number };
+  tail: { shape: TailShape; length: number; curl: number; tipSize: number };
+  /** Fractal limb development: depth 0..4, branch count, length ratio per level, twist (radians). */
+  armFractal: { depth: number; branch: number; ratio: number; twist: number; mode: "none" | "branch" | "spiral" | "mandelbrot" };
+  limbStyle: LimbStyle;
+  /** Extra leg pairs on a serpent (0 = none; snakes that can rear up on legs). */
+  serpentLegs: number;
+  /** Symmetric by default; each limb pair may drift from its "goal" by this much (0 .. 0.25). */
+  limbVariation: number;
+  /** Element-driven curvature: + curvy / flowing (water, air), - angular / faceted (rock, metal). */
+  curvature: number;
+  ops: MorphOp[];
+}
+export interface SkinP5 {
+  coat: CoatKind;
+  /** Belly / back contrast 0 (same) .. 1 (strongly countershaded, its own texture). */
+  bellyContrast: number;
+  /** Frills / crests 0..1. */
+  frills: number;
+  /** Stripes overlay strength 0..1 (on top of the base pattern). */
+  stripes: number;
+  /** Cel-shading bands 2..5 (fewer = flatter toon look). */
+  celBands: number;
+  /** Ink outline width 0..1. */
+  outline: number;
+  /** Overlay layer count 0..3 (spots over stripes over mottle...). */
+  overlays: number;
+}
+export interface MorphP5 {
+  version: 5;
+  eyes: EyeP5;
+  mouth: MouthP5;
+  growth: GrowthGenes;
+  body: BodyP5;
+  skin: SkinP5;
+}
+
+/** Fallback for helices without pass-5 genes (legacy and unit fixtures). */
+export const P5_DEFAULTS: MorphP5 = {
+  version: 5,
+  eyes: { shape: "round", layout: "pair", count: 2, height: 0.2, spread: 0.5, yaw: 0.35, tilt: 0, socketDepth: 0.35, scale: [1, 1, 1], brow: 0.2 },
+  mouth: { beak: "none", beakLength: 0, beakRound: 0.5, scale: [1, 1, 1], height: 0, tongueLength: 0.3, tongueFork: false, lipCurve: 0 },
+  growth: { length: { lo: 0.9, hi: 1.1 }, strength: { lo: 0.9, hi: 1.1 }, angle: { lo: -0.1, hi: 0.1 }, spiral: 1, neoteny: 0.3 },
+  body: {
+    shoulder: { width: 1, height: 1, hump: 0 },
+    tail: { shape: "taper", length: 1, curl: 0, tipSize: 1 },
+    armFractal: { depth: 0, branch: 2, ratio: 0.6, twist: 0, mode: "none" },
+    limbStyle: "legs",
+    serpentLegs: 0,
+    limbVariation: 0,
+    curvature: 0,
+    ops: [],
+  },
+  skin: { coat: "skin", bellyContrast: 0.5, frills: 0, stripes: 0, celBands: 3, outline: 0.3, overlays: 1 },
+};

@@ -13,6 +13,8 @@ import type { PostSettings } from "../render/post.ts";
 import type { TeamPresets } from "./teamsStore.ts";
 import type { HatchRecord } from "./hatch.ts";
 
+import type { DevSettings } from "../genome/lifeTypes.ts";
+
 export interface Settings {
   theme: "dark" | "light";
   quality: "low" | "high";
@@ -30,6 +32,8 @@ export interface Settings {
   /** Camera director pace and base field of view (camera menu). */
   camPace?: number;
   camFov?: number;
+  /** Pass 5 test-demo controls (time scale, unlimited credits, no food limit). Absent = DEV_DEFAULTS. */
+  dev?: DevSettings;
 }
 
 export interface BattleRecordLite {
