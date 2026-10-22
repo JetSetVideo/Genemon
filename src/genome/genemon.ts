@@ -10,6 +10,7 @@ import type { ElementId } from "../data/elements.ts";
 import type { GroundId } from "../data/grounds.ts";
 import { EXPERIENCES, type ExperienceId, FOODS, type FoodId } from "../data/lifestyle.ts";
 import { isDamaging, type Move, MOVES, TIER_LEVEL } from "../combat/moves.ts";
+import { buildKit } from "../combat/kit.ts";
 import { type Conditions, emptyConditions, levelOf, noteActivity, xpForLevel } from "./epigenetics.ts";
 import { type Genome, type GenomeBias, randomGenome } from "./genome.ts";
 import { express, nameFor, type Phenotype } from "./phenotype.ts";
@@ -55,6 +56,8 @@ function moveAllowed(m: Move, ph: Phenotype): boolean {
 
 /** Choose up to 4 moves that fit the phenotype: element, preferred distance, focus, abilities. */
 export function learnset(ph: Phenotype, seed: string, size = 4): string[] {
+  // League-style kit [P4-M7]: Q basic, W control, E mobility, R ultimate, gated by body and element.
+  if (size === 4) return buildKit(ph, seed);
   const rng = new Rng(hashSeed(seed, "learnset", ph.level));
   const { primary, secondary, secondaryLevel } = ph.elements;
   const far = u01(ph.axes.reach), focused = u01(ph.axes.focus);

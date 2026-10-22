@@ -205,6 +205,17 @@ export const CONTENT_EVENTS: Record<string, EventSpec> = {
   ),
   "genemon.experience.denied": ev(GENEMON, "emitted", LIFE, { experience: "experience" }, { reason: "text" }, "a physical-only experience attempted from the sofa"),
   "genemon.exposure": ev(GENEMON, "emitted", LIFE, { ground: "ground", hours: "number" }, { totalHours: "number" }, "expose(); one row per session"),
+  // ---- gauntlet (pass 4): one champion against an endless line, HP carried between rounds (src/ui/app.ts).
+  "gauntlet.start": ev("src/ui/app.ts", "emitted", ARENA, { run: "text", level: "number" }, { round: "number", hpCarry: "number" }, "a gauntlet run started; to = the champion"),
+  "gauntlet.round": ev(
+    "src/ui/app.ts",
+    "emitted",
+    ARENA,
+    { run: "text", round: "number", boss: "boolean", level: "number", hpStart: "number" },
+    { won: "boolean", streak: "number", hpCarry: "number", credits: "number", xp: "number", alive: "boolean" },
+    "one gauntlet round settled; only the run's current seed counts",
+  ),
+  "gauntlet.end": ev("src/ui/app.ts", "emitted", ARENA, { run: "text", gaveUp: "boolean" }, { streak: "number", score: "number", rounds: "number" }, "a run ended (lost, drawn or given up)"),
   // ---- life & lab
   "genemon.catch": ev(
     WORLD,
@@ -282,6 +293,7 @@ export const CONTENT_EVENTS: Record<string, EventSpec> = {
       rhythm: "number",
       reaction: "number",
       category: "text",
+      body: "number",
       crit: "boolean",
     },
     { damage: "number", hp: "number", hpFrac: "number" },
@@ -417,6 +429,7 @@ export const CONTENT_EVENTS: Record<string, EventSpec> = {
   "social.trade": ev("src/net", "proposed", ["virtual", "physical"], { partner: "text", kind: "itemKind" }, {}, "trade completed"),
   "social.gift": ev("src/net", "proposed", ["virtual", "physical"], { friend: "text", item: "food", units: "number" }, {}, "gift sent"),
   "social.coop": ev("src/net", "proposed", ["arena"], { mode: "battleMode", players: "number" }, { won: "boolean" }, "co-op battle finished"),
+  "bag.loot": ev("src/ui/app.ts", "emitted", ARENA, { seed: "number", won: "boolean", items: "text" }, { drops: "number", units: "number" }, "battle loot added to the bag (src/economy/loot.ts), paid once per seed like XP"),
   "shop.buy": ev(ECONOMY, "proposed", MARKET, { item: "food", units: "number" }, { credits: "number" }, "virtual shop purchase (sofa)"),
   "market.post": ev(
     ECONOMY,

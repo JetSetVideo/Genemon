@@ -15,6 +15,7 @@ import { clamp, clamp01, u01 } from "../core/math.ts";
 import { type Conditions, epigeneticShift, growthOf, levelOf } from "./epigenetics.ts";
 import { type BodyKind, geneticAxes, type Genome, type PatternKind, PLAN_GENES, type PlanGene, planValue } from "./genome.ts";
 import { hashSeed, Rng } from "../core/rng.ts";
+import { identityOfPhenotype } from "../data/hybrids.ts";
 
 export const SIZE_CLASSES = ["XS", "S", "M", "L", "XL"] as const;
 export type SizeClass = typeof SIZE_CLASSES[number];
@@ -161,6 +162,12 @@ function chooseElements(axes: AxisVector) {
   const second = primary === "neutral" ? null : ranked[1];
   const secondary = second && affinity[second] >= 0.32 ? second : null;
   return { primary, secondary, secondaryLevel: secondary ? clamp01(affinity[secondary]) : 0, affinity };
+}
+
+/** A hybrid identity (Steam, Magma...) takes over the body colour and glow (P4-E2, src/data/hybrids.ts). */
+function hybridPalette(p: Palette, axes: AxisVector, els: { primary: ElementId; secondary: ElementId | null; secondaryLevel: number }): Palette {
+  const id = identityOfPhenotype({ axes, elements: els });
+  return id.hybrid ? { ...p, base: id.color, glow: id.glow } : p;
 }
 
 function paletteOf(g: Genome, axes: AxisVector, primary: ElementId, secondary: ElementId | null): Palette {
@@ -363,7 +370,7 @@ export function express(g: Genome, c: Conditions): Phenotype {
     kind: g.kind,
     plan,
     pattern: g.pattern,
-    palette: paletteOf(g, axes, els.primary, els.secondary),
+    palette: hybridPalette(paletteOf(g, axes, els.primary, els.secondary), axes, els),
     glow,
     heightM,
     massKg,

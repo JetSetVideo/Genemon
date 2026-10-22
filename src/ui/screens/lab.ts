@@ -10,6 +10,8 @@ import { epigeneticPressure } from "../../genome/epigenetics.ts";
 import { hashSeed } from "../../core/rng.ts";
 import { bar, fmt, h, hex, section, select, toast } from "../dom.ts";
 import { axisRow, bodyBlock, elChip, movesBlock, psycheBlock, statsBlock } from "../widgets.ts";
+import { bagOf, count, feedFromBag } from "../bagStore.ts";
+import { foodItemId } from "../../economy/items.ts";
 
 let tab: "overview" | "genome" | "psyche" | "moves" | "life" | "breed" = "overview";
 let food: FoodId = "berries";
@@ -87,11 +89,22 @@ export function renderLab(app: App): HTMLElement {
         h("p", {}, "Life conditions bend the genome: food, places, experiences, time. Some experiences need you to physically move."),
         section("Feed", h("div", { class: "row" }, select<FoodId>(FOOD_IDS.map((f) => ({ value: f, label: `${FOODS[f].name} (${FOODS[f].price}c)` })), food, (v) => (food = v)),
           h("button", { class: "btn", onclick: () => {
-            feed(g, food, 1, { ...ctx(app), why: "fed in the lab" });
+            // Strong elemental foods (price >= 12) come from the bag; staples stay free in the lab pantry.
+            if (FOODS[food].price >= 12) {
+              if (!feedFromBag(app.profile, g, food, 1, { ...ctx(app), why: "fed from the bag" })) {
+                toast(`No ${FOODS[food].name} in the bag (${count(bagOf(app.profile), foodItemId(food))}): win battles to find some.`);
+                return;
+              }
+            } else feed(g, food, 1, { ...ctx(app), why: "fed in the lab" });
             refresh();
           } }, "Feed ×1"),
           h("button", { class: "btn", onclick: () => {
-            feed(g, food, 10, { ...ctx(app), why: "feast in the lab" });
+            if (FOODS[food].price >= 12) {
+              if (!feedFromBag(app.profile, g, food, 10, { ...ctx(app), why: "feast from the bag" })) {
+                toast(`A feast needs 10 ${FOODS[food].name} in the bag (you have ${count(bagOf(app.profile), foodItemId(food))}).`);
+                return;
+              }
+            } else feed(g, food, 10, { ...ctx(app), why: "feast in the lab" });
             refresh();
           } }, "×10"))),
         section("Experience", h("div", { class: "row" }, select<ExperienceId>(EXPERIENCE_IDS.map((e) => ({ value: e, label: `${EXPERIENCES[e].name}${EXPERIENCES[e].physicalOnly ? " (physical)" : ""}` })), exp, (v) => (exp = v)),

@@ -8,7 +8,7 @@ import type { ArenaKind, ArenaSpec } from "../world/arena.ts";
 import type { WeatherId } from "../data/weather.ts";
 import type { BodyKind } from "../genome/genome.ts";
 import { createGenemon, type Genemon, learnset, phenotypeOf } from "../genome/genemon.ts";
-import { MOVE_BY_ID } from "./moves.ts";
+import { ALL_MOVE_BY_ID as MOVE_BY_ID } from "./kit.ts";
 import type { Team } from "./team.ts";
 import { hashSeed } from "../core/rng.ts";
 

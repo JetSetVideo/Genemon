@@ -27,7 +27,8 @@
  * Doc: docs/AI-AND-DATA.md §7 (outcome predictor).
  */
 import { Battle } from "../combat/battle.ts";
-import { isDamaging, MOVE_BY_ID } from "../combat/moves.ts";
+import { isDamaging } from "../combat/moves.ts";
+import { ALL_MOVE_BY_ID as MOVE_BY_ID } from "../combat/kit.ts";
 import { autoTeam, type Team } from "../combat/team.ts";
 import { clamp } from "../core/math.ts";
 import { hashSeed, Rng } from "../core/rng.ts";

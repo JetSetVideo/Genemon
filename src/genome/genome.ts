@@ -7,6 +7,7 @@
 import { AXES, AXIS_IDS, type AxisId, type AxisVector } from "../data/axes.ts";
 import { clamp, clamp01 } from "../core/math.ts";
 import { hashSeed, mix32, Rng } from "../core/rng.ts";
+import type { MorphAlleles } from "./helix.ts";
 
 export const BODY_KINDS = ["quadruped", "biped", "hexapod", "serpent", "avian", "blob"] as const;
 export type BodyKind = typeof BODY_KINDS[number];
@@ -46,6 +47,8 @@ export interface Genome {
   /** Palette hue shift alleles in [0, 1]. */
   hue: Allele;
   mutations: string[];
+  /** Morph helix min/max alleles (src/genome/helix.ts); absent on legacy saves (derived deterministically). Never hashed into the id. */
+  morph?: MorphAlleles;
 }
 
 export interface GenomeBias {

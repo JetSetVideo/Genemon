@@ -30,7 +30,7 @@ export const SLOT_KEY: Record<KitSlot, string> = { basic: "Q", control: "W", mob
 
 const STATUS_SHAPES: ReadonlySet<MoveShape> = new Set<MoveShape>(["buff", "heal", "weather", "terrain", "phase"]);
 const CONTROL_STATUS: ReadonlySet<StatusId> = new Set<StatusId>(["staggered", "frozen", "feared", "paralyzed", "stunned"]);
-const INTERRUPT_STATUS: ReadonlySet<StatusId> = new Set<StatusId>(["stunned", "frozen", "staggered"]);
+const INTERRUPT_STATUS: ReadonlySet<StatusId> = new Set<StatusId>(["stunned", "frozen"]);
 const RANGED_SHAPES: ReadonlySet<MoveShape> = new Set<MoveShape>(["beam", "cone", "zone", "projectile"]);
 
 // ------------------------------------------------------------------ timing

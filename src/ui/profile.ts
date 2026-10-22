@@ -9,6 +9,8 @@ import { autoTeam } from "../combat/team.ts";
 import type { CameraMode } from "../render/battleCamera.ts";
 import type { BodyKind } from "../genome/genome.ts";
 import type { AxisVector } from "../data/axes.ts";
+import type { TeamPresets } from "./teamsStore.ts";
+import type { HatchRecord } from "./hatch.ts";
 
 export interface Settings {
   theme: "dark" | "light";
@@ -58,6 +60,16 @@ export interface Profile {
   friends: string[];
   /** Battle seeds that already paid XP, W/L and rating (most recent first, capped): a rematch pays nothing twice. */
   rewardedSeeds?: number[];
+  /** Saved team presets; the active one is mirrored into team (src/ui/teamsStore.ts). */
+  teams?: TeamPresets;
+  /** Per-day hatch counter (first hatch each day is free). */
+  hatches?: HatchRecord;
+  /** Bag (pass 4): catalogue item id -> count (src/ui/bagStore.ts). */
+  bag?: Record<string, number>;
+  /** Held gear per Genemon id (one piece each). */
+  gear?: Record<string, string>;
+  /** Worn cosmetics per Genemon id, by slot. */
+  cosmetics?: Record<string, Record<string, string>>;
 }
 
 export const DEFAULT_SETTINGS: Settings = {

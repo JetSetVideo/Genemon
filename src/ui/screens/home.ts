@@ -36,7 +36,7 @@ export function renderHome(app: App): HTMLElement {
     section(`Your team · ${sum.slots}/6 slots · power ${fmt(sum.power)}`,
       h("div", { class: "cards" }, ...team.map((g) => genemonCard(g, { onClick: () => app.select(g.id), selected: app.selected === g.id }))),
       sum.synergies.length ? h("p", {}, h("b", {}, "Synergies: "), sum.synergies.map((s) => s.name).join(", ")) : h("p", { class: "muted" }, "No synergy yet - pair water with electric, fire with air..."),
-      h("div", { class: "row" }, h("button", { class: "btn", onclick: () => app.go("team") }, "Edit team"), h("button", { class: "btn", onclick: () => app.go("lab") }, "Open the Lab"))),
+      h("div", { class: "row" }, h("button", { class: "btn", onclick: () => app.go("team") }, "Edit team"), h("button", { class: "btn", onclick: () => app.go("dex") }, "All Genemon & teams"), h("button", { class: "btn", onclick: () => app.go("lab") }, "Open the Lab"))),
     section("Ladder",
       h("p", {}, `MMR ${Math.round(p.mmr)} · ${p.stats.wins}W ${p.stats.losses}L ${p.stats.draws}D · ${p.collection.length} Genemon · ${p.pokedex.length} species seen`),
       p.history[0] ? h("p", { class: "muted" }, `Last: ${p.history[0].won === 0 ? "won" : p.history[0].won === 1 ? "lost" : "draw"} vs ${p.history[0].opponent} in ${p.history[0].arena} (${p.history[0].mmrDelta >= 0 ? "+" : ""}${p.history[0].mmrDelta})`) : null),

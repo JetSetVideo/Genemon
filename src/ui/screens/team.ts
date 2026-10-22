@@ -47,6 +47,7 @@ export function renderTeam(app: App): HTMLElement {
   return h("div", {},
     h("h1", {}, "Team"),
     h("p", {}, "6 slots. Big Genemon cost more (XS/S 1 · M 2 · L 3 · XL 4). The order is the attack/initiative order: #1 leads."),
+    h("div", { class: "row" }, h("button", { class: "btn", onclick: () => app.go("dex") }, "Saved teams · Dex · 🥚 Hatch")),
     section(`Slots ${used}/${TEAM_CAPACITY} · power ${fmt(sum.power)}`, slots,
       h("div", { class: "row" }, h("span", { class: "muted" }, "Auto-build:"), h("button", { class: "btn small", onclick: () => auto("big") }, "Big"), h("button", { class: "btn small", onclick: () => auto("swarm") }, "Swarm"), h("button", { class: "btn small", onclick: () => auto("balanced") }, "Balanced"))),
     section("Attack order",

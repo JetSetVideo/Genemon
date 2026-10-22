@@ -10,7 +10,8 @@
 import { Battle } from "../src/combat/battle.ts";
 import { arenaSpec, team } from "../src/combat/scenario.ts";
 import { autoTeam } from "../src/combat/team.ts";
-import { MOVE_BY_ID, MOVES, moveCost } from "../src/combat/moves.ts";
+import { moveCost } from "../src/combat/moves.ts";
+import { ALL_MOVE_BY_ID as MOVE_BY_ID, ALL_MOVES as MOVES } from "../src/combat/kit.ts";
 import { Ledger } from "../src/core/ledger.ts";
 import { hashSeed } from "../src/core/rng.ts";
 import { ELEMENT_IDS, ELEMENTS, type ElementId } from "../src/data/elements.ts";

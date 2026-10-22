@@ -56,7 +56,8 @@
  */
 import type { GEvent, Scalar, Space, Where } from "../core/ledger.ts";
 import { CONTENT_EVENTS, parseFilterKey, resolveKey, type Trigger } from "../data/achievements.ts";
-import { type Move, MOVE_BY_ID } from "../combat/moves.ts";
+import type { Move } from "../combat/moves.ts";
+import { ALL_MOVE_BY_ID as MOVE_BY_ID } from "../combat/kit.ts";
 
 export interface DeriveCtx {
   /** Profile whose progress is counted: Profile.id, which is also the Team.owner battles log. */

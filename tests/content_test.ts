@@ -29,7 +29,8 @@ import { ELEMENT_IDS, REACTIONS, reactionBetween, typeMultiplier } from "../src/
 import { GROUND_IDS, GROUNDS, transformGround } from "../src/data/grounds.ts";
 import { WEATHER_IDS, WEATHERS } from "../src/data/weather.ts";
 import { EXPERIENCE_IDS, FOOD_IDS } from "../src/data/lifestyle.ts";
-import { MOVE_BY_ID, MOVES, STATUS_IDS, TIER_LEVEL } from "../src/combat/moves.ts";
+import { STATUS_IDS, TIER_LEVEL } from "../src/combat/moves.ts";
+import { ALL_MOVE_BY_ID as MOVE_BY_ID, ALL_MOVES as MOVES } from "../src/combat/kit.ts";
 import { type Abilities, express, POWER_BUDGET, SIZE_CLASSES, SLOT_COST } from "../src/genome/phenotype.ts";
 import { BODY_KINDS, PATTERNS, randomGenome } from "../src/genome/genome.ts";
 import { type Conditions, emptyConditions, xpForLevel } from "../src/genome/epigenetics.ts";

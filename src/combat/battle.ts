@@ -20,8 +20,9 @@ import { EVASION_CAP } from "../genome/phenotype.ts";
 import { noteActivity } from "../genome/epigenetics.ts";
 import { type Arena, type ArenaSpec, generateArena } from "../world/arena.ts";
 import { applyImpulse, type Body, makeBody, stepPhysics } from "../world/physics.ts";
-import { isDamaging, type MetaUsage, type Move, MOVE_BY_ID, moveCost, type StatusId } from "./moves.ts";
+import { isDamaging, type MetaUsage, type Move, moveCost, type StatusId } from "./moves.ts";
 import { type Synergy, synergies, type Team } from "./team.ts";
+import { ALL_MOVE_BY_ID, bodyFactor, counterValue } from "./kit.ts";
 
 export type Phase = "idle" | "charge" | "active" | "rest";
 
@@ -371,7 +372,7 @@ export class Battle {
         // The bench stands outside the ring behind its trainer; benched bodies are not simulated.
         const bx = (ti === 0 ? -1 : 1) * (R + 2.5 + 1.2 * (i - n)), bz = R * 0.55;
         body.pos = benched ? v3(bx, 0, bz) : v3(x, this.arena.surfaceAt(x, z), z);
-        const moves = g.moves.map((id) => MOVE_BY_ID[id]).filter(Boolean);
+        const moves = g.moves.map((id) => ALL_MOVE_BY_ID[id]).filter(Boolean);
         const idx = this.fighters.length;
         this.fighters.push({
           idx,
@@ -576,7 +577,7 @@ export class Battle {
     const stab = f.types.includes(m.element) ? 1.2 : 1;
     const wx = this.weatherDef.elementMult[m.element] ?? 1;
     const cond = m.element === "electric" ? this.conduction(t) : 1;
-    return m.power * atkF * defF * this.knownType(f, m.element, t) * stab * wx * cond * this.teamMult(f, m.element);
+    return m.power * bodyFactor(m, f.ph) * atkF * defF * this.knownType(f, m.element, t) * stab * wx * cond * this.teamMult(f, m.element);
   }
 
   private hitChance(f: Fighter, t: Fighter, m: Move): number {
@@ -652,11 +653,13 @@ export class Battle {
             const caught = enemies.filter((o) => o !== e && Math.abs(angleDiff(Math.atan2(o.body.pos.x - f.body.pos.x, o.body.pos.z - f.body.pos.z), a0)) < arc && distXZ(o.body.pos, f.body.pos) < m.range + o.body.radius).length;
             u *= 1 + 0.6 * caught;
           }
-          // Interrupts: a stun or freeze landing on a long enemy charge cancels it [P4-M6].
-          if (e.phase === "charge" && e.move && m.effects.some((x) => x.status && INTERRUPTING.has(x.status) && (x.chance ?? 1) >= 0.4)) {
+          // Counters [P4-M6]: a stun on a long charge, a dash through a ranged charge, a heavy hit on a rest.
+          // An interrupt only counts if it lands before the enemy's charge ends.
+          {
             const left = Math.max(0, e.phaseDur - e.phaseT);
             const travel = m.shape === "projectile" && m.speed > 0 ? d / m.speed : 0;
-            if (left > m.charge / Math.max(0.3, f.stats.rate) + travel) u *= 1 + Math.min(1.5, (e.move.power / 70) * left);
+            const inTime = e.phase !== "charge" || left > m.charge / Math.max(0.3, f.stats.rate) + travel;
+            if (inTime) u *= counterValue(m, e.move, e.phase, e.phaseDur > 0 ? e.phaseT / e.phaseDur : 0, left);
           }
           u *= 1 + 0.25 * temper * (m.power / 70);
           const sameTarget = this.lastTarget[f.team] === e.idx && this.t - this.lastTargetAt[f.team] < 2.5;
@@ -1118,7 +1121,8 @@ export class Battle {
     critP = clamp(critP, 0, 0.5);
     const crit = f.rng.chance(critP);
     const spread = f.rng.range(0.88, 1.12);
-    const dmg = Math.max(1, PACE * m.power * atkF * defF * typeK * stab * wx * gAff * cond * size * prox * emo * team * rhythm * liquidK * frozenK * wetFire * reactK * scale * spread * (crit ? 1.6 : 1));
+    const body = bodyFactor(m, f.ph);
+    const dmg = Math.max(1, PACE * m.power * body * atkF * defF * typeK * stab * wx * gAff * cond * size * prox * emo * team * rhythm * liquidK * frozenK * wetFire * reactK * scale * spread * (crit ? 1.6 : 1));
     t.hp = Math.max(0, t.hp - dmg);
     f.tally.dealt += dmg;
     f.tally.hits++;
@@ -1151,6 +1155,7 @@ export class Battle {
       rhythm: r3(rhythm),
       reaction: r3(reactK),
       category: cat,
+      body: r3(body),
       crit,
     }, { damage: r3(dmg), hp: r3(t.hp), hpFrac: r3(t.hp / t.maxHp) });
     // Statuses, knockback, pull.

@@ -9,6 +9,7 @@
 import { AXIS_IDS, type AxisId } from "../data/axes.ts";
 import { clamp, clamp01 } from "../core/math.ts";
 import { hashSeed, Rng } from "../core/rng.ts";
+import { ensureMorph, inheritMorph } from "./helix.ts";
 import { type Allele, BODY_KINDS, type Genome, geneticAxes, PATTERNS, PLAN_GENES, type PlanGene, sealGenome } from "./genome.ts";
 
 export interface BreedOptions {
@@ -67,6 +68,7 @@ export function breed(a: Genome, b: Genome, seed: number, o: BreedOptions = {}):
     plan,
     hue: [rng.pick(a.hue), rng.pick(b.hue)],
     mutations,
+    morph: inheritMorph(a, b, rng.fork("morph"), Math.min(0.2, rate + 0.01)),
   });
 }
 
@@ -80,7 +82,7 @@ export function mutate(g: Genome, seed: number, strength = 0.3, focus?: AxisId[]
     axes[id][i] = clamp(axes[id][i] + rng.normal(0, strength), -1, 1);
     mutations.push(`mut:${id}`);
   }
-  return sealGenome({ ...structuredClone(g), axes, mutations, generation: g.generation });
+  return sealGenome({ ...structuredClone(g), axes, mutations, generation: g.generation, morph: ensureMorph(g) });
 }
 
 /** Continuous blend between genomes (t=0 -> a, t=1 -> b). Discrete genes switch at t=0.5. */
@@ -104,6 +106,7 @@ export function morph(a: Genome, b: Genome, t: number): Genome {
     plan,
     hue: mixA(a.hue, b.hue, 0, 1),
     mutations: [...a.mutations, `morph:${k.toFixed(2)}`],
+    morph: structuredClone(k < 0.5 ? ensureMorph(a) : ensureMorph(b)),
   });
 }
 
@@ -131,6 +134,7 @@ export function fuse(a: Genome, b: Genome, seed: number): Genome {
     plan,
     hue: [a.hue[0], b.hue[1]],
     mutations: ["fusion"],
+    morph: inheritMorph(a, b, rng.fork("morph"), 0),
   });
 }
 

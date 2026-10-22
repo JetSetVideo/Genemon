@@ -7,15 +7,20 @@ import { Ledger } from "../core/ledger.ts";
 import { hashSeed } from "../core/rng.ts";
 import { Battle, type BattleEvent, type BattleResult, applyBattleResult } from "../combat/battle.ts";
 import { autoTeam, type Team } from "../combat/team.ts";
-import { MOVE_BY_ID } from "../combat/moves.ts";
+import { ALL_MOVE_BY_ID as MOVE_BY_ID } from "../combat/kit.ts";
 import { ELEMENTS } from "../data/elements.ts";
 import { WEATHERS, type WeatherId } from "../data/weather.ts";
-import { createGenemon, type Genemon, phenotypeOf } from "../genome/genemon.ts";
+import { createGenemon, type Genemon, grantXp, phenotypeOf } from "../genome/genemon.ts";
+import { abandonRun, arenaFor, battleSeed, GAUNTLET_OWNER, isBoss, opponentFor, recordRound, roundReward, startRun } from "../combat/gauntlet.ts";
+import { GauntletStore } from "./gauntletStore.ts";
+import type { GauntletDeps } from "./gauntletPanel.ts";
 import { ARENA_INFO, type ArenaKind } from "../world/arena.ts";
 import { BattleView, SIDE_COLORS } from "../render/battleView.ts";
 import { isRated, rankedConditions } from "../ladder/ranked.ts";
 import { getLadder, recordBattle } from "./ladderStore.ts";
 import { getProgress, resetProgress } from "./progressStore.ts";
+import { battleLoot } from "../economy/loot.ts";
+import { addItems, bagOf } from "./bagStore.ts";
 import type { CameraMode } from "../render/battleCamera.ts";
 import { GenospaceView } from "../render/genospaceView.ts";
 import { LabView } from "../render/labView.ts";
@@ -29,7 +34,7 @@ export interface BattleOptions {
   arena: ArenaKind;
   weather: WeatherId | "auto";
   hour: number | "real";
-  opponent: "rival" | "profile" | "mirror" | "wild";
+  opponent: "rival" | "profile" | "mirror" | "wild" | "gauntlet";
   opponentProfile?: string;
   seed?: number;
   /** Rated battle: conditions drawn by the ladder (App.startRanked), never picked. */
@@ -61,9 +66,12 @@ export class App {
   labView: LabView | null = null;
   genoView: GenospaceView | null = null;
   lastResult: BattleResult | null = null;
+  /** Drops of the last settled battle (shown on the result screen). */
+  lastLoot: { itemId: string; qty: number; rarity: string }[] = [];
   lastBattle: { opts: BattleOptions; seed: number } | null = null;
   selected: string | null = null;
   private wild: Genemon[] | null = null;
+  private gauntletStore: GauntletStore | null = null;
   private hudTimer = 0;
   private feed: { text: string; color: string; t: number }[] = [];
 
@@ -285,6 +293,12 @@ export class App {
       }
       case "mirror":
         return { id: "mirror", owner: "mirror", name: "Mirror", members: mine.map((g) => ({ ...structuredClone(g), id: g.id + "-m" })) };
+      case "gauntlet": {
+        const run = this.gauntlet().current();
+        const champ = run ? this.profile.collection.find((g) => g.id === run.championId) : undefined;
+        if (run && champ) return { id: `gauntlet-${run.id}-${run.round}`, owner: GAUNTLET_OWNER, name: `Gauntlet round ${run.round}${isBoss(run.round) ? " (boss)" : ""}`, members: [opponentFor(run, phenotypeOf(champ).level)] };
+        break;
+      }
       case "wild": {
         const pool = Array.from({ length: 6 }, (_, i) => createGenemon({ seed: hashSeed(seed, "wild", i), owner: "wild", level: avgLevel }));
         return autoTeam(pool, "wild", seed, "swarm");
@@ -297,7 +311,8 @@ export class App {
 
   startBattle(o: BattleOptions): void {
     const seed = o.seed ?? (Date.now() % 2147483647);
-    const mine = o.mine ?? teamOf(this.profile);
+    const gRun = o.opponent === "gauntlet" ? this.gauntlet().current() : null;
+    const mine = o.mine ?? (o.opponent === "gauntlet" ? this.profile.collection.filter((g) => g.id === gRun?.championId) : teamOf(this.profile));
     if (mine.length === 0) {
       toast("Your team is empty - add Genemon in the Team screen.");
       return;
@@ -306,7 +321,7 @@ export class App {
     const B = o.opponentTeam ?? this.opponentTeam(o, seed);
     const weather = o.weather === "auto" ? (ARENA_INFO[o.arena].weathers.includes(this.rw.weather) ? this.rw.weather : ARENA_INFO[o.arena].weathers[0]) : o.weather;
     const hour = o.hour === "real" ? this.hourNow() : o.hour;
-    const battle = new Battle({ seed, arena: { seed, kind: o.arena, weather, hour }, teams: [A, B], ledger: this.ledger, when0: Date.now(), field: FORMAT_FIELD[o.format ?? "brawl"], startHp: o.startHp });
+    const battle = new Battle({ seed, arena: { seed, kind: o.arena, weather, hour }, teams: [A, B], ledger: this.ledger, when0: Date.now(), field: FORMAT_FIELD[o.format ?? "brawl"], startHp: o.startHp ?? (gRun ? { [gRun.championId]: gRun.hpCarry } : undefined) });
     this.labView = null;
     this.genoView = null;
     const s = this.profile.settings;
@@ -396,6 +411,34 @@ export class App {
       if (r.winner === 0) st.wins++;
       else if (r.winner === 1) st.losses++;
       else st.draws++;
+      // Loot (P4-E1): paid once per seed like XP; read the streak BEFORE this battle joins history.
+      if (!forfeit) {
+        let streak = 0;
+        while (streak < this.profile.history.length && this.profile.history[streak].won === 0) streak++;
+        const won = r.winner === 0;
+        const drops = battleLoot({
+          seed,
+          arena: r.arena,
+          won,
+          streak: won ? streak + 1 : 0,
+          opponentLevel: Math.max(1, ...teams[1].members.map((m) => phenotypeOf(m).level)),
+          dayIndex: Math.floor(Date.now() / 86_400_000),
+          boss: opts?.opponent === "gauntlet" && teams[1].name.includes("boss"),
+        });
+        this.profile.bag = addItems(bagOf(this.profile), drops);
+        this.lastLoot = drops;
+        this.ledger.emit({
+          when: Date.now(),
+          where: { x: 0, y: 0, z: 0, zone: r.arena, space: "arena" },
+          who: this.profile.id,
+          what: "bag.loot",
+          why: won ? "battle won" : "consolation drop",
+          from: teams[1].owner,
+          to: this.profile.id,
+          entries: { seed, won, items: drops.map((d) => `${d.itemId}x${d.qty}`).join(",") },
+          exits: { drops: drops.length, units: drops.reduce((s, d) => s + d.qty, 0) },
+        });
+      }
     }
     const kind = forfeit ? "forfeit" : ranked ? "ranked" : fresh ? "practice" : "replay";
     this.profile.history.unshift({ when: Date.now(), arena: r.arena, weather: r.weatherStart, hour: Math.round(r.hour), won: r.winner, opponent: teams[1].name, duration: Math.round(r.duration), reactions: Object.values(r.reactions).reduce<number>((s, v) => s + (v ?? 0), 0), mvp: b.fighters.find((f) => f.id === r.mvp)?.name ?? "", mmrDelta: delta, kind });
@@ -411,8 +454,78 @@ export class App {
       entries: { seed, ranked, fresh, forfeit, kind },
       exits: { mmrDelta: delta, mmr: this.profile.mmr, winner: r.winner },
     });
+    if (opts?.opponent === "gauntlet") this.settleGauntlet(r, teams[1], seed);
     this.save();
     this.render();
+  }
+
+  // ---------------------------------------------------------------- gauntlet (P4-B1)
+  /** The active profile's gauntlet store (re-targeted when the profile changes). */
+  gauntlet(): GauntletStore {
+    if (!this.gauntletStore || this.gauntletStore.profileId !== this.profile.id) this.gauntletStore = new GauntletStore(localStorage, this.profile.id);
+    return this.gauntletStore;
+  }
+
+  gauntletDeps(): GauntletDeps {
+    return { store: this.gauntlet(), start: (id) => this.startGauntlet(id), next: () => this.nextGauntlet(), abandon: () => this.abandonGauntlet() };
+  }
+
+  /** New run with one champion (a live run is given up first), then its first fight. */
+  startGauntlet(championId: string): void {
+    const champ = this.profile.collection.find((g) => g.id === championId);
+    if (!champ) return;
+    const gs = this.gauntlet(), now = Date.now();
+    const old = gs.current();
+    if (old?.alive) {
+      const done = gs.finish(abandonRun(old), now);
+      this.endGauntlet(done.id, done.streak, true);
+    }
+    const run = startRun(champ, this.profile.id, hashSeed(this.profile.id, champ.id, now), now);
+    gs.setCurrent(run);
+    this.ledger.emit({ when: now, where: { x: 0, y: 0, z: 0, zone: "gauntlet", space: "arena" }, who: this.profile.id, what: "gauntlet.start", why: "player started a gauntlet run", from: this.profile.id, to: champ.id, entries: { run: run.id, level: run.startLevel }, exits: { round: run.round, hpCarry: run.hpCarry } });
+    this.nextGauntlet();
+  }
+
+  /** Fight the current run's next round: champion alone, carried HP, round seed and arena from the run. */
+  nextGauntlet(): void {
+    const run = this.gauntlet().current();
+    if (!run?.alive) return;
+    this.startBattle({ arena: arenaFor(run), weather: "auto", hour: "real", opponent: "gauntlet", seed: battleSeed(run) });
+  }
+
+  abandonGauntlet(): void {
+    const gs = this.gauntlet(), run = gs.current();
+    if (!run) return;
+    const done = gs.finish(abandonRun(run), Date.now());
+    this.endGauntlet(done.id, done.streak, true);
+    this.render();
+  }
+
+  private endGauntlet(runId: string, streak: number, gaveUp: boolean): void {
+    const best = this.gauntlet().recent().find((r) => r.id === runId);
+    this.ledger.emit({ when: Date.now(), where: { x: 0, y: 0, z: 0, zone: "gauntlet", space: "arena" }, who: this.profile.id, what: "gauntlet.end", why: gaveUp ? "player gave up" : "round lost or drawn", from: this.profile.id, to: best?.championId ?? "", entries: { run: runId, gaveUp }, exits: { streak, score: best?.score ?? 0, rounds: best?.history.length ?? 0 } });
+  }
+
+  /** Fold a finished gauntlet battle into its run. Only the battle of the run's CURRENT round counts (a rematch of an old seed changes nothing). */
+  private settleGauntlet(r: BattleResult, opp: Team, seed: number): void {
+    const gs = this.gauntlet(), run = gs.current();
+    if (!run || !run.alive || seed !== battleSeed(run)) return;
+    const round = run.round, foe = opp.members[0], level = foe ? phenotypeOf(foe).level : 0;
+    const won = r.winner === 0;
+    const next = recordRound(run, { won, hpFrac: r.fighters.find((f) => f.id === run.championId)?.hpFrac ?? r.hpFrac[0], opponent: foe?.name ?? "?", level, durationS: r.duration });
+    const pay = won ? roundReward(round) : { credits: 0, xp: 0 };
+    const champ = this.profile.collection.find((g) => g.id === run.championId);
+    if (won) {
+      this.profile.credits += pay.credits;
+      if (champ) grantXp(champ, pay.xp, { ledger: this.ledger, who: this.profile.id, why: "gauntlet round won" });
+    }
+    this.ledger.emit({ when: Date.now(), where: { x: 0, y: 0, z: 0, zone: r.arena, space: "arena" }, who: this.profile.id, what: "gauntlet.round", why: won ? "round won: HP carries over" : "round lost or drawn: the run ends", from: run.championId, to: foe?.id ?? GAUNTLET_OWNER, entries: { run: run.id, round, boss: isBoss(round), level, hpStart: run.hpCarry }, exits: { won, streak: next.streak, hpCarry: next.hpCarry, credits: pay.credits, xp: pay.xp, alive: next.alive } });
+    if (next.alive) gs.setCurrent(next);
+    else {
+      gs.finish(next, Date.now());
+      this.endGauntlet(next.id, next.streak, false);
+      toast(`Gauntlet over: ${run.championName} won ${next.streak} round(s).`);
+    }
   }
 
   /** Leave a running battle. A RANKED battle abandoned after it started is a forfeit loss (X1). */

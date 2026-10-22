@@ -2,7 +2,8 @@
 import { AXES, type AxisId } from "../data/axes.ts";
 import { ELEMENTS, type ElementId } from "../data/elements.ts";
 import { type Genemon, phenotypeOf, STAGE_NAMES } from "../genome/genemon.ts";
-import { MOVE_BY_ID, moveCostBreakdown } from "../combat/moves.ts";
+import { moveCostBreakdown } from "../combat/moves.ts";
+import { ALL_MOVE_BY_ID as MOVE_BY_ID } from "../combat/kit.ts";
 import type { Phenotype } from "../genome/phenotype.ts";
 import { bar, fmt, h, hex } from "./dom.ts";
 

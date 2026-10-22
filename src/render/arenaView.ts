@@ -72,7 +72,9 @@ export class ArenaView {
         roughness: lava ? 0.6 : 0.08,
         metalness: 0.1,
       });
-      this.water = new THREE.Mesh(new THREE.CircleGeometry(arena.half * 1.05, 64).rotateX(-Math.PI / 2), wm);
+      // The lava sheet fills the CRATER only (crater > 0.45 <=> d < ~0.11 R): drawn arena-wide at the lava
+      // level it hid 98 % of the walkable ash ground (arena-preview lane finding, pass 4).
+      this.water = new THREE.Mesh(new THREE.CircleGeometry(lava ? arena.radius * 0.135 : arena.half * 1.05, 64).rotateX(-Math.PI / 2), wm);
       this.water.position.y = arena.waterLevel;
       this.water.receiveShadow = shadows;
       this.group.add(this.water);

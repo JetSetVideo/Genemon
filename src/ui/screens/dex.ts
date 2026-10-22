@@ -7,7 +7,7 @@ import type { App } from "../app.ts";
 import { ELEMENT_IDS, ELEMENTS, type ElementId } from "../../data/elements.ts";
 import { type Genemon, phenotypeOf, STAGE_NAMES } from "../../genome/genemon.ts";
 import { SIZE_CLASSES, type SizeClass } from "../../genome/phenotype.ts";
-import { MOVE_BY_ID } from "../../combat/moves.ts";
+import { ALL_MOVE_BY_ID as MOVE_BY_ID } from "../../combat/kit.ts";
 import { synergies, TEAM_CAPACITY } from "../../combat/team.ts";
 import { hashSeed } from "../../core/rng.ts";
 import type { Profile } from "../profile.ts";
