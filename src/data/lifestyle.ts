@@ -34,6 +34,21 @@ export const FOOD_IDS = [
   "coffeeBean",
   "glowFruit",
   "ashRoot",
+  // Strong elemental foods (pass 4, P4-E2): ~4x the per-unit nudge of the staples above, so a
+  // deliberate diet can steer a plain Genemon into an element (and two diets into a hybrid).
+  "emberChili",
+  "springWater",
+  "stormBerry",
+  "frostMint",
+  "ironNut",
+  "toxicCap",
+  "sunPetal",
+  "nightPlum",
+  "mindLeaf",
+  "voidSalt",
+  "stoneBread",
+  "cloudPuff",
+  "seedCake",
 ] as const;
 export type FoodId = typeof FOOD_IDS[number];
 
@@ -52,6 +67,19 @@ export const FOODS: Record<FoodId, Food> = {
   coffeeBean: { id: "coffeeBean", name: "Coffee bean", nutrition: 0.2, joy: 0.03, nudge: { tempo: 0.006, rhythm: 0.004, conviction: 0.002 }, price: 5 },
   glowFruit: { id: "glowFruit", name: "Glow fruit", nutrition: 1, joy: 0.06, nudge: { luminance: 0.008, focus: 0.003 }, price: 14 },
   ashRoot: { id: "ashRoot", name: "Ash root", nutrition: 0.9, joy: 0, nudge: { substance: -0.006, luminance: -0.003, form: 0.003 }, price: 16 },
+  emberChili: { id: "emberChili", name: "Ember chili", nutrition: 0.5, joy: 0.03, nudge: { heat: 0.032, temper: 0.016 }, price: 18 },
+  springWater: { id: "springWater", name: "Spring water", nutrition: 0.3, joy: 0.02, nudge: { moisture: 0.028, form: 0.014 }, price: 12 },
+  stormBerry: { id: "stormBerry", name: "Storm berry", nutrition: 0.8, joy: 0.05, nudge: { conductivity: 0.028, tempo: 0.016 }, price: 20 },
+  frostMint: { id: "frostMint", name: "Frost mint", nutrition: 0.4, joy: 0.04, nudge: { heat: -0.03, tempo: -0.006 }, price: 16 },
+  ironNut: { id: "ironNut", name: "Iron nut", nutrition: 0.9, joy: 0, nudge: { hardness: 0.026, conductivity: 0.018, weight: 0.008 }, price: 22 },
+  toxicCap: { id: "toxicCap", name: "Toxic cap", nutrition: 0.6, joy: -0.02, nudge: { vitality: -0.03, structure: -0.01 }, price: 24 },
+  sunPetal: { id: "sunPetal", name: "Sun petal", nutrition: 0.6, joy: 0.06, nudge: { luminance: 0.032, rhythm: 0.01 }, price: 26 },
+  nightPlum: { id: "nightPlum", name: "Night plum", nutrition: 0.9, joy: 0.03, nudge: { luminance: -0.028, rhythm: -0.018 }, price: 26 },
+  mindLeaf: { id: "mindLeaf", name: "Mind leaf", nutrition: 0.5, joy: 0.02, nudge: { wisdom: 0.028, focus: 0.014 }, price: 28 },
+  voidSalt: { id: "voidSalt", name: "Void salt", nutrition: 0.2, joy: 0, nudge: { substance: -0.03, phase: 0.01 }, price: 40 },
+  stoneBread: { id: "stoneBread", name: "Stone bread", nutrition: 1.6, joy: 0.01, nudge: { hardness: 0.02, weight: 0.02, altitude: -0.016 }, price: 14 },
+  cloudPuff: { id: "cloudPuff", name: "Cloud puff", nutrition: 0.5, joy: 0.07, nudge: { altitude: 0.03, weight: -0.02 }, price: 18 },
+  seedCake: { id: "seedCake", name: "Seed cake", nutrition: 1.2, joy: 0.04, nudge: { vitality: 0.03, structure: 0.006 }, price: 12 },
 };
 
 export const EXPERIENCE_IDS = [

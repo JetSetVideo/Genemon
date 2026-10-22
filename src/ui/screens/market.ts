@@ -44,6 +44,7 @@ const KIND_LABEL: Record<ItemKind, string> = {
   incubator: "Incubator",
   ticket: "Ticket",
   map: "Map",
+  gear: "Gear",
   genemon: "Genemon",
 };
 const RARITY_COLOR: Record<Rarity, string> = {

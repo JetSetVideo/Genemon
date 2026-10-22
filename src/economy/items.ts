@@ -3,7 +3,7 @@
  *
  * - ITEMS holds every food from FOODS (same list price) plus potions, one lure per element, one egg
  *   per rarity tier, evolution/mutation/fusion stones, cosmetics, territory flags, incubators, arena
- *   and dungeon tickets and treasure maps. `effects` is a flat bag that the consuming system reads
+ *   and dungeon tickets and treasure maps, and fighting GEAR held by a Genemon (pass 4). `effects` is a flat bag that the consuming system reads
  *   (food -> genemon.feed, stone.voidShard -> breeding.mutate, stone.fusionCore -> breeding.fuse...).
  * - A Genemon is tradeable too: its item id is `genemon:<genemonId>`, it is unique (never stackable)
  *   and its reference price comes from appraiseGenemon (level, power, element rarity, generation...).
@@ -20,6 +20,7 @@ export type ItemKind =
   | "egg"
   | "stone"
   | "cosmetic"
+  | "gear"
   | "territoryFlag"
   | "incubator"
   | "ticket"
@@ -34,6 +35,7 @@ export const ITEM_KINDS: readonly ItemKind[] = [
   "egg",
   "stone",
   "cosmetic",
+  "gear",
   "territoryFlag",
   "incubator",
   "ticket",
@@ -320,6 +322,37 @@ function buildCatalogue(): Record<string, ItemDef> {
     { slot: "trail", particles: 24 },
     "Particle trail while moving. Visual only.",
   );
+
+  // More cosmetics (pass 4): hats, scarves, glows, patterns. Visual only; read by the renderer.
+  const cos = (id: string, name: string, price: number, r: Rarity, effects: Record<string, number | string>) =>
+    add(`cosmetic.${id}`, name, "cosmetic", price, r, false, effects, "Visual only.");
+  cos("wizardHat", "Wizard hat", 120, "uncommon", { slot: "head", style: "wizard-hat" });
+  cos("flowerCrown", "Flower crown", 60, "common", { slot: "head", style: "flower-crown" });
+  cos("silkScarf", "Silk scarf", 140, "uncommon", { slot: "neck", style: "silk" });
+  cos("lantern", "Paper lantern", 110, "uncommon", { slot: "held", style: "lantern", light: 0.4 });
+  cos("emberGlow", "Ember glow", 220, "rare", { slot: "glow", color: 0xff5a1f, glow: 0.35 });
+  cos("frostGlow", "Frost glow", 220, "rare", { slot: "glow", color: 0x9ee7ff, glow: 0.35 });
+  cos("tigerStripes", "Tiger stripes", 180, "rare", { slot: "pattern", pattern: "stripes" });
+  cos("starSpots", "Star spots", 420, "epic", { slot: "pattern", pattern: "spots", glow: 0.15 });
+
+  // Gear (pass 4): fighting items HELD by one Genemon. A flat bag of percentages the battle reads
+  // (`specialPct` applies to moves of `element`). Balance contract [SPEC B1]: every piece pays for its
+  // edge with a cost (a negative entry), so gear changes HOW a Genemon fights, not how strong it is.
+  const gear = (id: string, name: string, price: number, r: Rarity, effects: Record<string, number | string>, note: string) =>
+    add(`gear.${id}`, name, "gear", price, r, true, { slot: "held", ...effects }, note);
+  gear("emberFang", "Ember fang", 160, "uncommon", { element: "fire", specialPct: 10, offElementPct: -5 }, "+10% fire specials, -5% other specials.");
+  gear("tideCharm", "Tide charm", 160, "uncommon", { element: "water", specialPct: 10, offElementPct: -5 }, "+10% water specials, -5% other specials.");
+  gear("thornBracer", "Thorn bracer", 160, "uncommon", { element: "plant", specialPct: 10, offElementPct: -5 }, "+10% plant specials, -5% other specials.");
+  gear("frostScale", "Frost scale", 190, "uncommon", { element: "ice", specialPct: 10, offElementPct: -5 }, "+10% ice specials, -5% other specials.");
+  gear("thunderBand", "Thunder band", 260, "rare", { element: "electric", stunDurationPct: 25, energyRegenPct: -6 }, "+25% stun duration, -6% energy regen.");
+  gear("ironHide", "Iron hide", 140, "common", { defPct: 12, speedPct: -6 }, "+12% defence, -6% speed.");
+  gear("swiftAnklet", "Swift anklet", 140, "common", { dashRangePct: 20, defPct: -5 }, "+20% dash range, -5% defence.");
+  gear("focusLens", "Focus lens", 180, "uncommon", { accuracyPct: 8, critPct: -3 }, "+8% accuracy, -3% crit chance.");
+  gear("powerBand", "Power band", 200, "uncommon", { atkPct: 8, defPct: -6 }, "+8% attack, -6% defence.");
+  gear("vitalSeed", "Vital seed", 220, "rare", { regenPct: 15, atkPct: -5 }, "+15% regeneration, -5% attack.");
+  gear("shadowVeil", "Shadow veil", 520, "epic", { evasionPct: 5, hpPct: -5 }, "+5% evasion (still capped), -5% HP.");
+  gear("coneNozzle", "Cone nozzle", 300, "rare", { coneArcPct: 20, rangePct: -10 }, "+20% breath/spray arc, -10% range.");
+  gear("quakeBoots", "Quake boots", 340, "rare", { knockbackResistPct: 30, speedPct: -6 }, "+30% knockback resistance, -6% speed.");
 
   // Territory flags: claim a world-map area (world designer owns the claim rules).
   add("flag.wood", "Wooden flag", "territoryFlag", 50, "common", true, {

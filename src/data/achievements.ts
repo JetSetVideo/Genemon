@@ -53,7 +53,7 @@ export const CONTENT_VOCAB = {
   dodgeReason: ["roll", "airborne", "burrowed", "evasive", "obscured", "range"],
   ladderTier: ["bronze", "silver", "gold", "platinum", "diamond", "master"],
   /** Mirror of src/economy/items.ts ITEM_KINDS (kept here so this data module needs no economy import; the test pins them equal). */
-  itemKind: ["food", "potion", "lure", "egg", "stone", "cosmetic", "territoryFlag", "incubator", "ticket", "map", "genemon"],
+  itemKind: ["food", "potion", "lure", "egg", "stone", "cosmetic", "gear", "territoryFlag", "incubator", "ticket", "map", "genemon"],
   /** Mirror of src/world/arena.ts ARENA_KINDS (same reason, same test). */
   arenaKind: ["meadow", "lake", "volcano", "canyon", "tundra", "swamp", "crystal", "city", "beach", "forest"],
 } as const;
@@ -250,8 +250,8 @@ export const CONTENT_EVENTS: Record<string, EventSpec> = {
     "emitted",
     ARENA,
     { seed: "number", arena: "arenaKind", weather: "weather", hour: "hour", teamA: "text", teamB: "text" },
-    { synergiesA: "text", synergiesB: "text", fighters: "number" },
-    "teams locked in; who = system, from/to = the two owners",
+    { synergiesA: "text", synergiesB: "text", fighters: "number", field: "number" },
+    "teams locked in; who = system, from/to = the two owners; field = fighters per side on the field (0 = brawl, everyone)",
     { requested: { entries: { mode: "battleMode" } } },
   ),
   "battle.decide": ev(
@@ -281,6 +281,7 @@ export const CONTENT_EVENTS: Record<string, EventSpec> = {
       team: "number",
       rhythm: "number",
       reaction: "number",
+      category: "text",
       crit: "boolean",
     },
     { damage: "number", hp: "number", hpFrac: "number" },
@@ -321,6 +322,22 @@ export const CONTENT_EVENTS: Record<string, EventSpec> = {
     { requested: { entries: { ground: "ground", weather: "weather" }, exits: { allies: "number" } }, envelope: { from: "element", to: "element" } },
   ),
   "battle.status": ev(COMBAT, "emitted", ARENA, { status: "status", duration: "number" }, { active: "number" }, "status applied; to = the target"),
+  "battle.switch": ev(
+    COMBAT,
+    "emitted",
+    ARENA,
+    { team: "number", replacement: "boolean" },
+    { hp: "number" },
+    "a trainer threw a Genemon in (pass 4 bench formats): replacement = after a KO, else a switch; from = the leaver, to = the newcomer",
+  ),
+  "battle.interrupt": ev(
+    COMBAT,
+    "emitted",
+    ARENA,
+    { move: "move", power: "number", status: "status" },
+    { energyLost: "number" },
+    "a stun or freeze landed on a charging move and cancelled it (the counter to long wind-ups); who = the interrupter, to = the victim",
+  ),
   "battle.terrain": ev(
     COMBAT,
     "emitted",
