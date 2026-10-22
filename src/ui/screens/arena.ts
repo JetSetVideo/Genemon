@@ -7,6 +7,7 @@ import { ArenaPreview } from "../../render/arenaPreview.ts";
 import { arenaStats, previewSeed } from "../../world/arenaStats.ts";
 import { renderArenaDossier } from "../arenaDossier.ts";
 import { renderGauntletPanel } from "../gauntletPanel.ts";
+import { ITEMS } from "../../economy/items.ts";
 
 const opts: BattleOptions = { arena: "meadow", weather: "auto", hour: "real", opponent: "rival", format: "brawl" };
 
@@ -117,7 +118,8 @@ export function renderArena(app: App): HTMLElement {
           h("dt", {}, "MVP"), h("dd", {}, b?.fighters.find((f) => f.id === res.mvp)?.name ?? "-"),
           h("dt", {}, "Reactions"), h("dd", {}, Object.entries(res.reactions).map(([k, v]) => `${k}×${v}`).join(", ") || "none"),
           h("dt", {}, "Weather"), h("dd", {}, res.weatherStart === res.weatherEnd ? res.weatherStart : `${res.weatherStart} → ${res.weatherEnd}`),
-          h("dt", {}, "MMR"), h("dd", {}, rec ? `${rec.mmrDelta >= 0 ? "+" : ""}${rec.mmrDelta} → ${Math.round(app.profile.mmr)}` : "-")),
+          h("dt", {}, "MMR"), h("dd", {}, rec ? `${rec.mmrDelta >= 0 ? "+" : ""}${rec.mmrDelta} → ${Math.round(app.profile.mmr)}` : "-"),
+          h("dt", {}, "Loot"), h("dd", { "data-loot": "" }, app.lastLoot.length ? app.lastLoot.map((d) => `${ITEMS[d.itemId]?.name ?? d.itemId} ×${d.qty} (${d.rarity})`).join(", ") : "nothing this time")),
         h("table", { class: "t" },
           h("tr", {}, h("th", {}, "Genemon"), h("th", {}, "Side"), h("th", {}, "Dealt"), h("th", {}, "Hits"), h("th", {}, "Crits"), h("th", {}, "KOs"), h("th", {}, "HP")),
           ...res.fighters.map((f) => h("tr", {}, h("td", {}, f.name), h("td", {}, f.team === 0 ? "you" : "opp"), h("td", {}, fmt(f.tally.dealt)), h("td", {}, `${f.tally.hits}/${f.tally.hits + f.tally.misses}`), h("td", {}, String(f.tally.crits)), h("td", {}, String(f.tally.kos)), h("td", {}, `${Math.round(f.hpFrac * 100)}%`))))),
@@ -139,12 +141,15 @@ export function renderArena(app: App): HTMLElement {
     h("h1", {}, "Arena"),
     h("p", {}, "Instant battle: your team (in attack order) against an opponent, in a physical 3D arena with its own ground types, topography and weather."),
     section("Arena",
-      h("div", { class: "cards" }, ...ARENA_KINDS.map((k) => h("button", { class: `gcard ${opts.arena === k ? "sel" : ""}`, "data-arena": k, title: ARENA_INFO[k].note, onclick: () => {
+      // Compact picker (one click), then the dossier of the picked arena right under it: the
+      // statistics are visible without scrolling past ten cards [P4-A1, P4-U1].
+      h("div", { class: "row arena-pick" }, ...ARENA_KINDS.map((k) => h("button", { class: `btn small ${opts.arena === k ? "on" : ""}`, "data-arena": k, title: ARENA_INFO[k].note, onclick: () => {
         if (opts.arena !== k) dossier.highlight = null;
         opts.arena = k as ArenaKind;
         showArenaPreview(app);
         keepScroll(app);
-      } }, h("span", { class: "name" }, ARENA_INFO[k].name), h("span", { class: "muted" }, ARENA_INFO[k].note)))),
+      } }, ARENA_INFO[k].name))),
+      h("p", { class: "muted" }, ARENA_INFO[opts.arena].note),
       arenaDossier(app),
     ),
     section("Conditions",

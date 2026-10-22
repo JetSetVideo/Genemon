@@ -330,6 +330,7 @@ export class App {
     this.stage.setView(this.battleView);
     this.lastBattle = { opts: o, seed };
     this.lastResult = null;
+    this.lastLoot = [];
     this.feed = [];
     this.buildHud();
     this.buildViewTools();

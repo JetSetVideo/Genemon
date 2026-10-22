@@ -4,7 +4,7 @@
  * pokedex and achievements. Profiles can be exported/imported as JSON.
  */
 import { hashSeed } from "../core/rng.ts";
-import { createGenemon, type Genemon } from "../genome/genemon.ts";
+import { createGenemon, type Genemon, learnset, phenotypeOf } from "../genome/genemon.ts";
 import { autoTeam } from "../combat/team.ts";
 import type { CameraMode } from "../render/battleCamera.ts";
 import type { BodyKind } from "../genome/genome.ts";
@@ -70,6 +70,19 @@ export interface Profile {
   gear?: Record<string, string>;
   /** Worn cosmetics per Genemon id, by slot. */
   cosmetics?: Record<string, Record<string, string>>;
+  /** Learnset generation the stored moves were built with (2 = pass-4 Q/W/E/R kits). */
+  kitVersion?: number;
+}
+
+/** Current learnset generation: saves built before it get their moves rebuilt once on load. */
+export const KIT_VERSION = 2;
+
+/** Rebuild every Genemon's moves with the current kit builder (pass 4: Q basic, W control, E mobility, R ultimate). */
+export function migrateKits(p: Profile): boolean {
+  if ((p.kitVersion ?? 1) >= KIT_VERSION) return false;
+  for (const g of p.collection) g.moves = learnset(phenotypeOf(g), g.genome.id);
+  p.kitVersion = KIT_VERSION;
+  return true;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -127,6 +140,7 @@ export function newProfile(name: string, kind: "human" | "ai", now: number, sett
     achievements: [],
     home: null,
     friends: [],
+    kitVersion: KIT_VERSION,
   };
 }
 
@@ -169,6 +183,7 @@ export class ProfileStore {
       const p = JSON.parse(raw) as Profile;
       p.settings = { ...DEFAULT_SETTINGS, ...p.settings };
       this.cache.set(id, p);
+      if (migrateKits(p)) this.save(p);
       return p;
     } catch {
       return null;
@@ -217,6 +232,7 @@ export class ProfileStore {
     const p = JSON.parse(text) as Profile;
     if (!p || typeof p.id !== "string" || !Array.isArray(p.collection)) throw new Error("not a Genemon profile");
     p.settings = { ...DEFAULT_SETTINGS, ...p.settings };
+    migrateKits(p);
     this.save(p);
     return p;
   }
