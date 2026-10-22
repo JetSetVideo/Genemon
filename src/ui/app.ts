@@ -34,7 +34,20 @@ export interface BattleOptions {
   seed?: number;
   /** Rated battle: conditions drawn by the ladder (App.startRanked), never picked. */
   ranked?: boolean;
+  /**
+   * Battle format [P4-B2]: brawl = everyone at once (legacy); 1v1 / 2v2 / 3v3 = that many on the
+   * field per side, the rest on the bench, thrown in on a KO or switched by the trainer.
+   */
+  format?: BattleFormat;
+  /** Override my side (e.g. the gauntlet champion alone) and/or the opponent team. */
+  mine?: Genemon[];
+  opponentTeam?: Team;
+  /** Starting HP fraction per Genemon id (gauntlet carries HP between rounds). */
+  startHp?: Record<string, number>;
 }
+
+export type BattleFormat = "brawl" | "1v1" | "2v2" | "3v3";
+export const FORMAT_FIELD: Record<BattleFormat, number | undefined> = { brawl: undefined, "1v1": 1, "2v2": 2, "3v3": 3 };
 
 export class App {
   readonly ledger = new Ledger("app", 60000);
@@ -284,16 +297,16 @@ export class App {
 
   startBattle(o: BattleOptions): void {
     const seed = o.seed ?? (Date.now() % 2147483647);
-    const mine = teamOf(this.profile);
+    const mine = o.mine ?? teamOf(this.profile);
     if (mine.length === 0) {
       toast("Your team is empty - add Genemon in the Team screen.");
       return;
     }
     const A: Team = { id: `team-${this.profile.id}`, owner: this.profile.id, name: `${this.profile.name}'s team`, members: mine };
-    const B = this.opponentTeam(o, seed);
+    const B = o.opponentTeam ?? this.opponentTeam(o, seed);
     const weather = o.weather === "auto" ? (ARENA_INFO[o.arena].weathers.includes(this.rw.weather) ? this.rw.weather : ARENA_INFO[o.arena].weathers[0]) : o.weather;
     const hour = o.hour === "real" ? this.hourNow() : o.hour;
-    const battle = new Battle({ seed, arena: { seed, kind: o.arena, weather, hour }, teams: [A, B], ledger: this.ledger, when0: Date.now() });
+    const battle = new Battle({ seed, arena: { seed, kind: o.arena, weather, hour }, teams: [A, B], ledger: this.ledger, when0: Date.now(), field: FORMAT_FIELD[o.format ?? "brawl"], startHp: o.startHp });
     this.labView = null;
     this.genoView = null;
     const s = this.profile.settings;
@@ -424,7 +437,12 @@ export class App {
     const side = (t: 0 | 1) => h("div", { class: `hud-team ${t ? "right" : ""}`, vars: { side: SIDE_COLORS[t] } },
       h("div", { class: "hud-head" }, t === 0 ? "YOU" : `RIVAL · ${opp.name}`),
       ...b.fighters.filter((f) => f.team === t).map((f) =>
-        h("div", { class: "fcard", "data-f": f.idx, title: `${f.name} · size ${f.ph.sizeClass} (${f.ph.slots} slot${f.ph.slots > 1 ? "s" : ""}) · ${f.types.join("/")}` },
+        h("div", {
+          class: "fcard",
+          "data-f": f.idx,
+          title: `${f.name} · size ${f.ph.sizeClass} (${f.ph.slots} slot${f.ph.slots > 1 ? "s" : ""}) · ${f.types.join("/")}${t === 0 && b.setup.field ? " · on the bench: click to throw it in" : ""}`,
+          onclick: t === 0 ? () => this.switchIn(f.idx) : undefined,
+        },
           h("div", { class: "top" }, h("span", { class: "el", vars: { el: hex(ELEMENTS[f.types[0]].color) } }, f.types[0]), h("span", { class: "nm" }, `${f.name}`), h("span", { class: "ph" }, "")),
           h("div", { class: "bars" }, h("div", { class: "bar hp" }, h("i", {})), h("div", { class: "bar en" }, h("i", {}))),
           h("div", { class: "st" }, ""))
@@ -445,6 +463,22 @@ export class App {
     tools.append(h("button", { class: "btn small", title: "Pause / resume (Space)", onclick: () => this.togglePause() }, "⏯"));
   }
 
+  /**
+   * Throw a benched Genemon of mine into the field [P4-B2]: it replaces the active fighter with the
+   * lowest HP share (the one that most needs a rest). One click on its HUD card.
+   */
+  switchIn(benchIdx: number): void {
+    const b = this.battleView?.battle;
+    if (!b) return;
+    const inn = b.fighters[benchIdx];
+    if (!inn || inn.team !== 0 || !inn.benched) return;
+    const out = b.fighters.filter((f) => f.team === 0 && !f.benched && !f.ko).sort((x, y) => x.hp / x.maxHp - y.hp / y.maxHp)[0];
+    if (!out) return;
+    const r = b.requestSwitch(0, out.idx, inn.idx);
+    toast(r.ok ? `${out.name}, come back! Go, ${inn.name}!` : `Cannot switch: ${r.why}`, 1400);
+    this.log("battle.switch.request", r.ok ? "trainer switched" : r.why, inn.id, `${out.name} -> ${inn.name}`);
+  }
+
   togglePause(): void {
     this.stage.paused = !this.stage.paused;
     toast(this.stage.paused ? "Paused" : "Resumed", 900);
@@ -463,6 +497,7 @@ export class App {
       const card = document.querySelector<HTMLElement>(`.fcard[data-f="${f.idx}"]`);
       if (!card) continue;
       card.classList.toggle("ko", f.ko);
+      card.classList.toggle("bench", f.benched && !f.ko);
       const hp = f.hp / f.maxHp;
       (card.querySelector(".hp i") as HTMLElement).style.setProperty("--w", `${(hp * 100).toFixed(1)}%`);
       (card.querySelector(".hp i") as HTMLElement).style.setProperty("--c", hp > 0.5 ? "#3ddc84" : hp > 0.25 ? "#ffd166" : "#ff4d6d");
@@ -470,7 +505,7 @@ export class App {
       (card.querySelector(".en i") as HTMLElement).style.setProperty("--c", "#4cc9f0");
       const ph = card.querySelector(".ph") as HTMLElement;
       ph.className = `ph ${f.phase}`;
-      ph.textContent = f.ko ? "KO" : f.phase === "idle" ? "" : `${f.phase}${f.move ? " · " + f.move.name : ""}`;
+      ph.textContent = f.ko ? "KO" : f.benched ? "bench ↥" : f.phase === "idle" ? "" : `${f.phase}${f.move ? " · " + f.move.name : ""}`;
       const st = [...f.status.keys()].join(" · ");
       const emo = f.emotions.anger > 0.55 ? "😠" : f.emotions.fear > 0.55 ? "😨" : f.emotions.joy > 0.7 ? "😄" : "";
       (card.querySelector(".st") as HTMLElement).textContent = [emo, st].filter(Boolean).join(" ");

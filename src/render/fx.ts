@@ -201,6 +201,41 @@ export class FxDirector {
     this.transients.push({ obj: l, life, max: life, kind: "bolt" });
   }
 
+  /**
+   * Breath / spray cone [P4-M2]: particles leave the mouth along directions inside the arc. Called
+   * once at the strike and every frame of the active phase (sustained breath). Smoky elements use the
+   * normal-blended pool so the cone reads in daylight, glowing ones the additive pool.
+   */
+  cone(from: THREE.Vector3, yaw: number, el: ElementId, range: number, arc: number, n: number, size: number): void {
+    const smoky = el === "earth" || el === "shadow" || el === "void" || el === "poison" || el === "neutral";
+    const pool = smoky ? this.smoke : this.glow;
+    for (let k = 0; k < n; k++) {
+      const a = yaw + this.rng.range(-arc, arc) * 0.9, up = this.rng.range(-0.12, 0.18);
+      const sp = (range / 0.42) * this.rng.range(0.55, 1.05);
+      pool.spawn(from.x, from.y, from.z, Math.sin(a) * sp, up * sp, Math.cos(a) * sp, this.col(el, k % 3 === 0), size * this.rng.range(0.6, 1.4), this.rng.range(0.32, 0.5), { grow: 2.2, drag: 1.6 });
+    }
+  }
+
+  /** Dash streak from the start to the arrival point (dust at the feet + an element streak). */
+  dashTrail(from: { x: number; y: number; z: number }, to: { x: number; y: number; z: number }, el: ElementId, size: number): void {
+    for (let k = 0; k <= 16; k++) {
+      const t = k / 16, x = from.x + (to.x - from.x) * t, z = from.z + (to.z - from.z) * t, y = from.y + (to.y - from.y) * t;
+      this.glow.spawn(x, y + size * 0.6, z, this.rng.range(-0.3, 0.3), this.rng.range(0, 0.6), this.rng.range(-0.3, 0.3), this.col(el, k % 2 === 0), size * 0.8, 0.35 + 0.25 * t, { drag: 3 });
+      if (k % 3 === 0) this.dust({ x, y, z }, 2, 0xb8a68a, size * 0.6);
+    }
+  }
+
+  /** A trainer throws a Genemon in: a light column + a ring in the side colour where it lands. */
+  throwIn(at: { x: number; y: number; z: number }, color: number, height: number): void {
+    this.ring(at, color, 2.2 + height, 0.6);
+    this.c.setHex(color);
+    for (let k = 0; k < 60; k++) {
+      const a = this.rng.range(0, Math.PI * 2), r = this.rng.range(0, 0.5 + height * 0.4);
+      this.glow.spawn(at.x + Math.cos(a) * r, at.y + this.rng.range(0, height * 1.4), at.z + Math.sin(a) * r, 0, this.rng.range(1, 3.5), 0, this.c, 0.35, this.rng.range(0.4, 0.9), { drag: 1.5 });
+    }
+    this.onFlash(0.18, color);
+  }
+
   /** React to the battle's new events (positions in world space). */
   consume(b: Battle, events: BattleEvent[], headOf: (idx: number) => THREE.Vector3): void {
     for (const e of events) {
@@ -247,6 +282,26 @@ export class FxDirector {
         case "phase":
           if (e.label === "beam" && e.pos && e.a !== undefined) this.beam(headOf(e.a), new THREE.Vector3(e.pos.x, e.pos.y + b.fighters[e.b!].ph.heightM * 0.4, e.pos.z), el, 0.18);
           if (e.label === "emerge" && e.pos) this.dust(e.pos, 30, 0x8a6a44, 1.2);
+          if (e.label === "cone" && e.pos && e.a !== undefined) {
+            const f = b.fighters[e.a], tg = b.fighters[e.b ?? e.a];
+            const yaw = Math.atan2(tg.body.pos.x - f.body.pos.x, tg.body.pos.z - f.body.pos.z);
+            this.cone(new THREE.Vector3(e.pos.x, e.pos.y, e.pos.z), yaw, el, e.value ?? 5, f.move?.arc ?? 0.45, 90, 0.5 + 0.15 * f.ph.heightM);
+          }
+          if (e.label === "dash" && e.pos && e.a !== undefined) {
+            const f = b.fighters[e.a];
+            this.dashTrail(f.body.pos, e.pos, el, 0.4 + 0.3 * f.ph.heightM);
+          }
+          break;
+        case "interrupt":
+          if (e.pos && e.b !== undefined) {
+            const h = headOf(e.b);
+            this.ring({ x: h.x, y: h.y - 0.2, z: h.z }, 0xffffff, 2.4, 0.5);
+            this.burst({ x: h.x, y: h.y, z: h.z }, el, 24, 4, 0.3, 0.45);
+            this.onFlash(0.22, 0xffffff);
+          }
+          break;
+        case "switch":
+          if (e.pos && e.a !== undefined) this.throwIn(e.pos, b.fighters[e.a].team === 0 ? 0x38bdf8 : 0xfb923c, b.fighters[e.a].ph.heightM);
           break;
         case "reaction":
           if (e.pos) {

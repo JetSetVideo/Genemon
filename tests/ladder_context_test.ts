@@ -95,6 +95,8 @@ function fakeResult(winner: 0 | 1 | 2, reason: "ko" | "timeout", alive: [boolean
     damageTakenBy: {},
     moveUses: {},
     synergies: [[], []],
+    switches: [],
+    interrupts: 0,
   };
 }
 

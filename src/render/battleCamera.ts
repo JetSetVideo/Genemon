@@ -61,13 +61,13 @@ export class BattleCamera {
     const f = this.focus;
     if (f) {
       const A = b.fighters[f.a], T = b.fighters[f.t];
-      if (A && T && !A.ko && !T.ko && this.t < f.until) return f;
+      if (A && T && !A.ko && !T.ko && !A.benched && !T.benched && this.t < f.until) return f;
     }
     let best: Fighter | null = null, bestScore = 0;
     for (const x of b.fighters) {
-      if (x.ko || !x.move || x.move.power <= 0 || (x.phase !== "charge" && x.phase !== "active")) continue;
+      if (x.ko || x.benched || !x.move || x.move.power <= 0 || (x.phase !== "charge" && x.phase !== "active")) continue;
       const tgt = b.fighters[x.target];
-      if (!tgt || tgt.ko || tgt === x) continue;
+      if (!tgt || tgt.ko || tgt.benched || tgt === x) continue;
       const score = x.move.power * (x.phase === "active" ? 1.3 : 1) * (1 + x.ph.slots * 0.05);
       if (score > bestScore) {
         bestScore = score;
@@ -93,7 +93,7 @@ export class BattleCamera {
 
   update(b: Battle, dt: number): void {
     this.t += Math.min(dt, 1);
-    const alive = b.fighters.filter((f) => !f.ko);
+    const alive = b.fighters.filter((f) => !f.ko && !f.benched);
     if (alive.length === 0) return;
     const at = (f: Fighter) => new THREE.Vector3(f.body.pos.x, f.body.pos.y + f.ph.heightM * displayScale(f.ph.heightM) * 0.5, f.body.pos.z);
     // Subjects: the action pair in AUTO when something is happening, otherwise everyone.

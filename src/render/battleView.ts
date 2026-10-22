@@ -204,8 +204,9 @@ export class BattleView implements View {
       const body = f.body;
       cv.root.position.set(body.pos.x, body.pos.y, body.pos.z);
       cv.root.rotation.y = body.yaw;
-      cv.root.visible = body.mode !== "burrow";
-      const target = b.fighters[f.target] && f.target !== f.idx ? b.fighters[f.target] : b.fighters.find((o) => o.team !== f.team && !o.ko);
+      // Benched Genemon wait with their trainer, off the field [P4-B2].
+      cv.root.visible = body.mode !== "burrow" && !f.benched;
+      const target = b.fighters[f.target] && f.target !== f.idx ? b.fighters[f.target] : b.fighters.find((o) => o.team !== f.team && !o.ko && !o.benched);
       let lookYaw = 0, lookPitch = 0;
       if (target) {
         const dx = target.body.pos.x - body.pos.x, dz = target.body.pos.z - body.pos.z;
@@ -259,9 +260,10 @@ export class BattleView implements View {
       const frac = Math.max(0, f.hp / f.maxHp);
       for (const s of [mk.tag, mk.hpBack, mk.hp]) {
         s.position.set(body.pos.x, top, body.pos.z);
-        s.visible = !f.ko;
+        s.visible = !f.ko && !f.benched;
       }
-      mk.hp.visible = !f.ko && frac > 0;
+      mk.ring.visible = !f.benched;
+      mk.hp.visible = !f.ko && !f.benched && frac > 0;
       mk.hp.scale.set(PIP_W * Math.max(0.01, frac), PIP_H, 1);
       // Fill anchored on the left edge of the background bar.
       mk.hp.center.set(0.5 / Math.max(0.01, frac), 0);
@@ -270,6 +272,18 @@ export class BattleView implements View {
         const c = new THREE.Color(ELEMENTS[f.move.element].color);
         const a = Math.random() * Math.PI * 2, r = f.ph.heightM * 0.9;
         this.fx.glow.spawn(h.x + Math.cos(a) * r, h.y + (Math.random() - 0.3) * r, h.z + Math.sin(a) * r, -Math.cos(a) * r * 2, 0.2, -Math.sin(a) * r * 2, c, 0.25 + 0.3 * (f.phaseT / Math.max(0.01, f.phaseDur)), 0.45, { drag: 1 });
+      }
+      // Sustained breath for the whole active phase of a cone move [P4-M2].
+      if (f.phase === "active" && f.move?.shape === "cone" && !f.ko) {
+        const h = this.headOf(i), aim = target ? Math.atan2(target.body.pos.x - body.pos.x, target.body.pos.z - body.pos.z) : body.yaw;
+        h.x += Math.sin(aim) * f.body.radius * this.ds[i] * 0.8;
+        h.z += Math.cos(aim) * f.body.radius * this.ds[i] * 0.8;
+        this.fx.cone(h, aim, f.move.element, f.move.range, f.move.arc ?? 0.45, 10, 0.45 + 0.12 * f.ph.heightM);
+      }
+      // Stunned: dizzy sparks circling the head.
+      if (f.status.has("stunned") && !f.ko && Math.random() < 0.7) {
+        const h = this.headOf(i), a = t * 6 + i, r = 0.25 + f.ph.heightM * this.ds[i] * 0.35;
+        this.fx.glow.spawn(h.x + Math.cos(a) * r, h.y + 0.25, h.z + Math.sin(a) * r, 0, 0.2, 0, new THREE.Color(0xfff3a0), 0.22, 0.3, { drag: 2 });
       }
       if (body.mode === "burrow" && Math.random() < 0.5) this.fx.dust({ x: body.pos.x, y: b.arena.heightAt(body.pos.x, body.pos.z), z: body.pos.z }, 2, 0x7a5a3a, 0.7);
     });
@@ -314,7 +328,9 @@ export class BattleView implements View {
         strain: Math.round(this.strain[i] * 1000) / 1000,
         stability: Math.round(this.stability[i] * 1000) / 1000,
         triangles: this.creatures[i].triangles(),
+        benched: f.benched,
       })),
+      switches: b.result().switches.length,
       zones: b.zones.map((z) => z.kind),
       projectiles: b.projectiles.length,
     };

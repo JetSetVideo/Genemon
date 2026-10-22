@@ -75,6 +75,12 @@ export interface Fighter {
   heals: number;
   /** A flyer committing to a melee dive stays low and hittable by ground melee until this time. */
   swoopUntil: number;
+  /** On the trainer's bench (not on the field): not targetable, not simulated, keeps its HP [P4-B2]. */
+  benched: boolean;
+  /** A dash in flight: the body travels from -> to during the active phase and strikes on arrival. */
+  dash: { from: V3; to: V3; t0: number; dur: number } | null;
+  /** Times this fighter was interrupted (a stun or freeze landed on its charge). */
+  interrupted: number;
 }
 
 export interface Projectile {
@@ -125,6 +131,8 @@ export type BattleEventType =
   | "lightning"
   | "fail"
   | "physics"
+  | "switch"
+  | "interrupt"
   | "end";
 
 export interface BattleEvent {
@@ -153,7 +161,31 @@ export interface BattleSetup {
   meta?: MetaUsage;
   /** Epoch ms of t=0 for ledger timestamps. */
   when0?: number;
+  /**
+   * Fighters per side ON THE FIELD at once [P4-B2]. Undefined = everyone at once (the brawl format).
+   * The rest wait on the bench and are thrown in when a fighter is knocked out or when the trainer
+   * switches (requestSwitch, or the AI trainer for side 1).
+   */
+  field?: number;
+  /** Starting HP fraction per Genemon id (gauntlet carries HP between rounds) [P4-B1]. */
+  startHp?: Record<string, number>;
+  /** Scripted switches to replay a recorded battle deterministically: { t, team, out, in } by fighter idx. */
+  script?: SwitchOrder[];
+  /** Side 1's trainer AI may switch (default true when field is set). */
+  aiSwitch?: boolean;
 }
+
+/** One trainer switch: fighter `out` goes to the bench, `in` is thrown into the field. */
+export interface SwitchOrder {
+  t: number;
+  team: 0 | 1;
+  out: number;
+  in: number;
+}
+
+/** Seconds a thrown-in Genemon needs before it can act (the throw), and the per-side switch cooldown. */
+export const SWITCH_ENTRY = 0.7;
+export const SWITCH_COOLDOWN = 3;
 
 export interface BattleResult {
   winner: 0 | 1 | 2;
@@ -172,6 +204,9 @@ export interface BattleResult {
   damageTakenBy: Record<string, Partial<Record<ElementId, number>>>;
   moveUses: Record<string, number>;
   synergies: [string[], string[]];
+  /** Every switch that happened (manual, AI or KO replacement), replayable via setup.script. */
+  switches: SwitchOrder[];
+  interrupts: number;
 }
 
 /**
@@ -221,7 +256,19 @@ export const MELEE_LUNGE = 0.9;
 export const HEAL_DECAY = 0.6;
 
 /** Statuses that hurt their bearer (tenacity applies to these only). */
-const HARMFUL = new Set<StatusId>(["burn", "wet", "frozen", "paralyzed", "poisoned", "slowed", "blinded", "feared", "confused", "staggered", "softened"]);
+const HARMFUL = new Set<StatusId>(["burn", "wet", "frozen", "paralyzed", "poisoned", "slowed", "blinded", "feared", "confused", "staggered", "softened", "stunned"]);
+/** Statuses that cancel a charge they land on (the counter to long wind-ups) [P4-M6]. */
+const INTERRUPTING = new Set<StatusId>(["stunned", "frozen"]);
+
+/**
+ * Damage category of a move [P4-M1]: an explicit `category`, else physical for contact moves,
+ * special for other damaging moves, status otherwise.
+ */
+export function moveCategory(m: Move): "physical" | "special" | "status" {
+  if (m.category) return m.category;
+  if (m.tags.includes("contact")) return "physical";
+  return isDamaging(m) ? "special" : "status";
+}
 
 const IMMUNE: Partial<Record<StatusId, ElementId[]>> = {
   burn: ["fire"],
@@ -230,6 +277,15 @@ const IMMUNE: Partial<Record<StatusId, ElementId[]>> = {
   paralyzed: ["electric", "earth"],
   wet: ["fire"],
 };
+
+function angleDiff(a: number, b: number): number {
+  let d = a - b;
+  while (d > Math.PI) d -= Math.PI * 2;
+  while (d < -Math.PI) d += Math.PI * 2;
+  return d;
+}
+
+const f2 = (x: number) => Math.round(x * 100) / 100;
 
 function bodyRadius(ph: Phenotype): number {
   const k = { quadruped: 0.5, biped: 0.3, hexapod: 0.5, serpent: 0.42, avian: 0.33, blob: 0.48 }[ph.kind];
@@ -262,6 +318,10 @@ export class Battle {
   private lastTarget: [number, number] = [-1, -1];
   private lastTargetAt: [number, number] = [-9, -9];
   private lightningT = 3;
+  private switches: SwitchOrder[] = [];
+  private pendingSwitches: SwitchOrder[] = [];
+  private switchCd: [number, number] = [0, 0];
+  private interruptCount = 0;
 
   constructor(setup: BattleSetup) {
     this.setup = setup;
@@ -280,19 +340,22 @@ export class Battle {
     const heights = setup.teams.flatMap((t) => t.members.map((g) => phenotypeOf(g).heightM));
     const meanH = heights.reduce((s, x) => s + x, 0) / Math.max(1, heights.length);
     const halfGap = clamp(2 + 3.5 * meanH, 2.5, R * 0.3), rowGap = clamp(1 + 1.5 * meanH, 1.5, 2.5);
+    const field = setup.field && setup.field > 0 ? Math.floor(setup.field) : Infinity;
     setup.teams.forEach((team, ti) => {
-      const n = team.members.length;
+      const n = Math.min(team.members.length, field);
       // Team ORDER is initiative (first-action stagger below) AND formation: the leading members
       // (all of a duo, half of a bigger team rounded up) hold the front row; the rest stand a row
       // behind them, so the lead takes the first contact and the back row shoots over it.
       const front = n <= 2 ? n : Math.ceil(n / 2);
       team.members.forEach((g, i) => {
         const ph = phenotypeOf(g);
+        const benched = i >= n;
         const stats: Stats = { ...ph.stats };
         for (const s of this.synergies[ti]) {
           for (const [k, v] of Object.entries(s.statMult ?? {}) as [keyof Stats, number][]) stats[k] *= v;
         }
-        const row = i < front ? 0 : 1, inRow = row === 0 ? front : n - front, k = row === 0 ? i : i - front;
+        const slot = benched ? 0 : i;
+        const row = slot < front ? 0 : 1, inRow = row === 0 ? front : n - front, k = row === 0 ? slot : slot - front;
         const x = (ti === 0 ? -1 : 1) * (halfGap + row * rowGap), z = (k - (inRow - 1) / 2) * Math.max(1.3, 0.9 + 1.4 * ph.heightM);
         const body = makeBody(g.id, {
           mass: Math.max(0.5, ph.massKg),
@@ -305,7 +368,9 @@ export class Battle {
           swimmer: ph.abilities.swim,
           yaw: ti === 0 ? Math.PI / 2 : -Math.PI / 2,
         });
-        body.pos = v3(x, this.arena.surfaceAt(x, z), z);
+        // The bench stands outside the ring behind its trainer; benched bodies are not simulated.
+        const bx = (ti === 0 ? -1 : 1) * (R + 2.5 + 1.2 * (i - n)), bz = R * 0.55;
+        body.pos = benched ? v3(bx, 0, bz) : v3(x, this.arena.surfaceAt(x, z), z);
         const moves = g.moves.map((id) => MOVE_BY_ID[id]).filter(Boolean);
         const idx = this.fighters.length;
         this.fighters.push({
@@ -319,7 +384,7 @@ export class Battle {
           types: [ph.elements.primary, ...(ph.elements.secondary ? [ph.elements.secondary] : [])],
           stats,
           body,
-          hp: stats.hp,
+          hp: stats.hp * clamp(setup.startHp?.[g.id] ?? 1, 0.01, 1),
           maxHp: stats.hp,
           energy: stats.energy * 0.6,
           moves,
@@ -344,6 +409,9 @@ export class Battle {
           strain: 0,
           heals: 0,
           swoopUntil: -9,
+          benched,
+          dash: null,
+          interrupted: 0,
         });
       });
     });
@@ -358,7 +426,9 @@ export class Battle {
       synergiesA: this.synergies[0].map((s) => s.id).join(",") || "none",
       synergiesB: this.synergies[1].map((s) => s.id).join(",") || "none",
       fighters: this.fighters.length,
+      field: Number.isFinite(field) ? field : 0,
     }, true);
+    if (setup.script) this.pendingSwitches = setup.script.slice().sort((a, b) => a.t - b.t);
   }
 
   // ------------------------------------------------------------------ logging
@@ -395,7 +465,35 @@ export class Battle {
   }
 
   enemiesOf(f: Fighter): Fighter[] {
-    return this.fighters.filter((o) => o.team !== f.team && !o.ko);
+    return this.fighters.filter((o) => o.team !== f.team && !o.ko && !o.benched);
+  }
+
+  /** On the field and conscious. */
+  private live(o: Fighter): boolean {
+    return !o.ko && !o.benched;
+  }
+
+  /** Bench of a side: conscious Genemon waiting to be thrown in, in team order. */
+  bench(team: 0 | 1): Fighter[] {
+    return this.fighters.filter((o) => o.team === team && o.benched && !o.ko);
+  }
+
+  /** Can side `team` switch `out` for `inn` right now? (reason when not) */
+  canSwitch(team: 0 | 1, out: number, inn: number): { ok: boolean; why: string } {
+    const a = this.fighters[out], b = this.fighters[inn];
+    if (this.winner !== null) return { ok: false, why: "battle over" };
+    if (!a || !b || a.team !== team || b.team !== team) return { ok: false, why: "not your Genemon" };
+    if (a.ko || a.benched) return { ok: false, why: `${a.name} is not on the field` };
+    if (b.ko || !b.benched) return { ok: false, why: `${b.name} is not on the bench` };
+    if (this.switchCd[team] > 0) return { ok: false, why: `switch ready in ${this.switchCd[team].toFixed(1)} s` };
+    return { ok: true, why: "" };
+  }
+
+  /** Queue a trainer switch for the next tick (UI or AI). Deterministic: replays use setup.script. */
+  requestSwitch(team: 0 | 1, out: number, inn: number): { ok: boolean; why: string } {
+    const c = this.canSwitch(team, out, inn);
+    if (c.ok) this.pendingSwitches.push({ t: this.t, team, out, in: inn });
+    return c;
   }
 
   private isDay(): boolean {
@@ -449,6 +547,10 @@ export class Battle {
         return m.range;
       case "burst":
         return m.area * 0.95 + f.body.radius;
+      case "cone":
+        return m.range + f.body.radius;
+      case "dash":
+        return m.range + f.stats.reach + f.body.radius;
       case "dig":
         return 16;
       default:
@@ -478,7 +580,7 @@ export class Battle {
   }
 
   private hitChance(f: Fighter, t: Fighter, m: Move): number {
-    const ranged = m.shape !== "melee" && m.shape !== "burst";
+    const ranged = m.shape !== "melee" && m.shape !== "burst" && m.shape !== "cone" && m.shape !== "dash";
     let p = m.accuracy * f.stats.accuracy * Math.pow(this.weatherDef.visibility, ranged ? 1 : 0.3);
     if (f.status.has("blinded")) p *= 0.65;
     if (f.status.has("focused")) p *= 1.05;
@@ -487,8 +589,10 @@ export class Battle {
     // never more than EVASION_CAP of them (subtractive evasion made 82 % dodge fortresses, X5).
     let ev = t.stats.evasion * (t.status.has("evasive") ? 1.6 : 1) + (t.status.has("evasive") ? 0.06 : 0);
     if (t.phase === "rest") ev *= 0.5;
-    if (t.status.has("frozen") || t.status.has("staggered")) ev = 0;
-    return clamp(p * (1 - Math.min(EVASION_CAP, ev)), 0.05, 0.99);
+    if (t.status.has("frozen") || t.status.has("staggered") || t.status.has("stunned")) ev = 0;
+    // A body in the middle of a dash is hard to pin down: the dash is the dodge [P4-M6].
+    const dashing = t.dash && m.shape !== "burst" && m.shape !== "zone" ? 0.45 : 1;
+    return clamp(p * (1 - Math.min(EVASION_CAP, ev)) * dashing, 0.05, 0.99);
   }
 
   private decide(f: Fighter): void {
@@ -514,6 +618,8 @@ export class Battle {
           const d = distXZ(f.body.pos, e.body.pos);
           // Melee and burst only resolve at strike time: skip options the fighter cannot close in
           // during the charge (it approaches first and re-decides) instead of whiffing from afar.
+          if (m.shape === "cone" && d - e.body.radius > m.range + f.body.radius + f.stats.spd * m.charge * 0.35) continue;
+          if (m.shape === "dash" && d - f.body.radius - e.body.radius > m.range + f.stats.reach + MELEE_LUNGE) continue;
           if (m.shape === "melee" || m.shape === "burst") {
             const short = m.shape === "melee" ? d - f.body.radius - e.body.radius - (f.stats.reach + m.range + MELEE_LUNGE) : d - e.body.radius - m.area;
             const closing = f.stats.spd * (m.charge / Math.max(0.3, f.stats.rate)) * (m.shape === "melee" ? 0.95 : 0.35) * 0.8;
@@ -528,18 +634,30 @@ export class Battle {
             const others = enemies.filter((o) => o !== e && distXZ(o.body.pos, e.body.pos) < m.area).length;
             u *= 1 + 0.6 * others;
             if (m.shape === "burst") {
-              const allies = this.fighters.filter((o) => o.team === f.team && o !== f && !o.ko && distXZ(o.body.pos, f.body.pos) < m.area).length;
+              const allies = this.fighters.filter((o) => o.team === f.team && o !== f && this.live(o) && distXZ(o.body.pos, f.body.pos) < m.area).length;
               u *= Math.max(0.3, 1 - 0.25 * allies);
             }
           }
           if (m.element === "electric" && (this.inWater(e) || e.status.has("wet"))) {
             // The current also reaches wet bodies near the target: more enemies is better, allies hurt.
             const wetNear = (mine: boolean) =>
-              this.fighters.filter((o) => o !== e && o !== f && !o.ko && (o.team === f.team) === mine && distXZ(o.body.pos, e.body.pos) <= 4.5 && (this.inWater(o) || o.status.has("wet"))).length;
+              this.fighters.filter((o) => o !== e && o !== f && this.live(o) && (o.team === f.team) === mine && distXZ(o.body.pos, e.body.pos) <= 4.5 && (this.inWater(o) || o.status.has("wet"))).length;
             u *= (1.25 + 0.2 * Math.min(2, wetNear(false))) * Math.max(0.2, 1 - 0.4 * wetNear(true));
           }
-          if (m.shape === "melee") u *= 1 + 0.35 * (1 - far) + 0.25 * temper - 0.4 * fear;
+          if (m.shape === "melee" || m.shape === "dash") u *= 1 + 0.35 * (1 - far) + 0.25 * temper - 0.4 * fear;
           else u *= 1 + 0.35 * far + 0.2 * fear;
+          if (m.shape === "cone") {
+            // A cone catches every enemy inside its arc: value the crowd it would cover.
+            const arc = m.arc ?? 0.45, dx0 = e.body.pos.x - f.body.pos.x, dz0 = e.body.pos.z - f.body.pos.z, a0 = Math.atan2(dx0, dz0);
+            const caught = enemies.filter((o) => o !== e && Math.abs(angleDiff(Math.atan2(o.body.pos.x - f.body.pos.x, o.body.pos.z - f.body.pos.z), a0)) < arc && distXZ(o.body.pos, f.body.pos) < m.range + o.body.radius).length;
+            u *= 1 + 0.6 * caught;
+          }
+          // Interrupts: a stun or freeze landing on a long enemy charge cancels it [P4-M6].
+          if (e.phase === "charge" && e.move && m.effects.some((x) => x.status && INTERRUPTING.has(x.status) && (x.chance ?? 1) >= 0.4)) {
+            const left = Math.max(0, e.phaseDur - e.phaseT);
+            const travel = m.shape === "projectile" && m.speed > 0 ? d / m.speed : 0;
+            if (left > m.charge / Math.max(0.3, f.stats.rate) + travel) u *= 1 + Math.min(1.5, (e.move.power / 70) * left);
+          }
           u *= 1 + 0.25 * temper * (m.power / 70);
           const sameTarget = this.lastTarget[f.team] === e.idx && this.t - this.lastTargetAt[f.team] < 2.5;
           if (sameTarget) u *= 1.15 + this.synergies[f.team].reduce((s, x) => s + (x.combo ?? 0), 0);
@@ -585,7 +703,7 @@ export class Battle {
             const w = fx?.weather;
             if (w && w !== this.weather) {
               const gain = (team: 0 | 1) =>
-                this.fighters.filter((o) => o.team === team && !o.ko).reduce((s, o) => s + (WEATHERS[w].elementMult[o.types[0]] ?? 1) - (this.weatherDef.elementMult[o.types[0]] ?? 1), 0);
+                this.fighters.filter((o) => o.team === team && this.live(o)).reduce((s, o) => s + (WEATHERS[w].elementMult[o.types[0]] ?? 1) - (this.weatherDef.elementMult[o.types[0]] ?? 1), 0);
               const net = gain(f.team) - gain(f.team === 0 ? 1 : 0);
               if (net > 0) relative.push({ m, t: enemies[0].idx, k: net * ((fx?.duration ?? 14) / 2.5) * 0.35 * (0.6 + 0.8 * wise), cost });
             }
@@ -631,7 +749,7 @@ export class Battle {
     const pick = f.rng.weighted(opts, weights);
     let target = pick.t;
     if (f.status.has("confused") && f.rng.chance(0.25)) {
-      const all = this.fighters.filter((o) => !o.ko && o !== f);
+      const all = this.fighters.filter((o) => this.live(o) && o !== f);
       target = f.rng.pick(all).idx;
     }
     this.startMove(f, pick.m, target);
@@ -765,6 +883,39 @@ export class Battle {
         this.emit({ type: "zone", a: f.idx, value: z.id, element: m.element, pos: at, move: m.id });
         break;
       }
+      case "cone": {
+        // Breath / spray from the mouth: every enemy inside the arc and the range, weaker at the edge.
+        const arc = m.arc ?? 0.45;
+        const aim = Math.atan2(t.body.pos.x - fp.x, t.body.pos.z - fp.z);
+        let any = false;
+        for (const o of this.enemiesOf(f)) {
+          if (!this.canReach(f, o, m)) continue;
+          const d = distXZ(fp, o.body.pos) - o.body.radius;
+          if (d > m.range + f.body.radius) continue;
+          const da = Math.abs(angleDiff(Math.atan2(o.body.pos.x - fp.x, o.body.pos.z - fp.z), aim));
+          if (da > arc + Math.atan2(o.body.radius, Math.max(0.5, d))) continue;
+          any = true;
+          this.hit(f, o, m, 1 - 0.35 * clamp(d / Math.max(1, m.range), 0, 1), "cone", o.body.pos);
+        }
+        const mid = v3(fp.x + Math.sin(aim) * m.range * 0.6, fp.y, fp.z + Math.cos(aim) * m.range * 0.6);
+        for (const z of this.zones) {
+          if (reactionBetween(m.element, z.element) && distXZ(z.pos, mid) < z.radius + m.range * 0.5) this.react(f, m.element, z.element, z.pos, `breath through ${z.kind}`);
+        }
+        this.groundImpact(f, m, mid, Math.max(1, m.range * Math.tan(arc) * 0.6));
+        this.emit({ type: "phase", a: f.idx, b: t.idx, label: "cone", move: m.id, element: m.element, pos: head, value: m.range });
+        if (!any) this.miss(f, t, m, "nobody inside the cone");
+        break;
+      }
+      case "dash": {
+        // The body travels toward the target (at most the move's range) during the active phase and
+        // strikes on arrival (advancePhase). Its own momentum: heavy bodies hit harder (massScaled).
+        const dx = t.body.pos.x - fp.x, dz = t.body.pos.z - fp.z, dl = Math.hypot(dx, dz) || 1;
+        const go = clamp(dl - f.body.radius - t.body.radius - 0.15, 0, m.range);
+        const to = v3(fp.x + (dx / dl) * go, fp.y, fp.z + (dz / dl) * go);
+        f.dash = { from: { ...fp }, to, t0: this.t, dur: Math.max(0.12, m.active) };
+        this.emit({ type: "phase", a: f.idx, b: t.idx, label: "dash", move: m.id, element: m.element, pos: { ...to }, value: go });
+        break;
+      }
       case "dig": {
         if (!GROUNDS[f.body.groundId].diggable) {
           this.emit({ type: "fail", a: f.idx, label: "ground too hard to dig", pos: fp, move: m.id });
@@ -850,7 +1001,7 @@ export class Battle {
       for (const z of this.zones) if (["smoke", "mist", "dust", "contamination"].includes(z.kind) && distXZ(z.pos, at) < 5) z.ttl = Math.min(z.ttl, 0.3);
     }
     if (r.id === "eclipse") {
-      for (const o of this.fighters) if (!o.ko && distXZ(o.body.pos, at) < 4) this.addStatus(o, "blinded", 1, f);
+      for (const o of this.fighters) if (this.live(o) && distXZ(o.body.pos, at) < 4) this.addStatus(o, "blinded", 1, f);
     }
     this.emit({ type: "reaction", a: f?.idx, label: r.id, element: a, pos: { ...at }, value: r.damageMult });
     this.log("battle.reaction", f?.id ?? "environment", why, a, b, at, { a, b }, { reaction: r.id, damageMult: r.damageMult, zone: r.zone?.kind ?? "none" }, true);
@@ -890,6 +1041,7 @@ export class Battle {
     t.status.set(s, Math.max(t.status.get(s) ?? 0, dur));
     if (s === "frozen") t.body.mode = "frozen";
     if (s === "staggered") t.body.stagger = Math.max(t.body.stagger, dur);
+    if (INTERRUPTING.has(s) && t.phase === "charge" && t.move && by && by.team !== t.team) this.interrupt(t, by, s);
     if (s === "wet" && t.status.has("burn")) {
       t.status.delete("burn");
       this.react(by, "water", "fire", t.body.pos, "wet body quenched a burn");
@@ -941,7 +1093,11 @@ export class Battle {
       const r = reactionBetween(m.element, z.element);
       if (r && r.id !== z.kind) reactK *= this.react(f, m.element, z.element, t.body.pos, `${m.element} into ${z.kind}`);
     }
-    const atkF = f.stats.atk / 40;
+    // Physical vs special [P4-M1]: each body splits its (budgeted) attack and guard between the two
+    // categories with a geometric mean of 1, so the split shapes a Genemon without adding power.
+    const cat = moveCategory(m);
+    const offK = cat === "status" ? 1 : f.ph.offense?.[cat] ?? 1, guardK = cat === "status" ? 1 : t.ph.guard?.[cat] ?? 1;
+    const atkF = (f.stats.atk / 40) * offK / guardK;
     const defEff = t.stats.def * (t.status.has("shielded") ? 1.6 : 1) * (t.status.has("softened") ? 0.75 : 1);
     const defF = 100 / (100 + defEff);
     const typeK = typeMultiplier(m.element, t.types);
@@ -994,6 +1150,7 @@ export class Battle {
       team: r3(team),
       rhythm: r3(rhythm),
       reaction: r3(reactK),
+      category: cat,
       crit,
     }, { damage: r3(dmg), hp: r3(t.hp), hpFrac: r3(t.hp / t.maxHp) });
     // Statuses, knockback, pull.
@@ -1021,7 +1178,7 @@ export class Battle {
     if (m.element === "electric" && (this.inWater(t) || t.status.has("wet")) && source !== "conduction") {
       const raw = dmg / (typeK * defF * cond * liquidK * frozenK * (crit ? 1.6 : 1));
       const near = this.fighters
-        .filter((o) => o !== t && o !== f && !o.ko && distXZ(o.body.pos, t.body.pos) <= 4.5 && (this.inWater(o) || o.status.has("wet")))
+        .filter((o) => o !== t && o !== f && this.live(o) && distXZ(o.body.pos, t.body.pos) <= 4.5 && (this.inWater(o) || o.status.has("wet")))
         .sort((a, b) => distXZ(a.body.pos, t.body.pos) - distXZ(b.body.pos, t.body.pos))
         .slice(0, 2);
       near.forEach((o, i) => {
@@ -1079,12 +1236,16 @@ export class Battle {
     if (by && by.team !== t.team) by.tally.kos++;
     if (by) by.emotions.joy = clamp(by.emotions.joy + 0.3, 0, 1);
     for (const ally of this.fighters) {
-      if (ally.team === t.team && !ally.ko) {
+      if (ally.team === t.team && this.live(ally)) {
         ally.emotions.sadness = clamp(ally.emotions.sadness + 0.3 * u01(ally.ph.axes.sociality), 0, 1);
         ally.emotions.fear = clamp(ally.emotions.fear + 0.1 * (1 - u01(ally.ph.axes.conviction)), 0, 1);
       }
     }
+    t.dash = null;
     this.emit({ type: "ko", a: by?.idx, b: t.idx, pos: { ...t.body.pos } });
+    // The trainer throws the next Genemon from the bench into the freed place [P4-B2].
+    const next = this.bench(t.team)[0];
+    if (next && !this.pendingSwitches.some((x) => x.in === next.idx)) this.pendingSwitches.push({ t: this.t + SWITCH_ENTRY, team: t.team, out: t.idx, in: next.idx });
     this.log("battle.ko", by?.id ?? "environment", "hp reached 0", by?.id ?? "env", t.id, t.body.pos, { t: r3(this.t) }, { team: t.team }, true);
   }
 
@@ -1104,7 +1265,7 @@ export class Battle {
       this.lightningT -= dt;
       if (this.lightningT <= 0) {
         this.lightningT = 3 + this.rng.range(0, 3);
-        const alive = this.fighters.filter((o) => !o.ko);
+        const alive = this.fighters.filter((o) => this.live(o));
         if (alive.length) {
           const wts = alive.map((o) => 1 + (o.status.has("wet") ? 1 : 0) + (o.types.includes("metal") ? 1.5 : 0) + (o.body.mode === "fly" ? 1 : 0));
           const v = this.rng.weighted(alive, wts);
@@ -1126,8 +1287,9 @@ export class Battle {
       const x = this.rng.range(-this.arena.radius, this.arena.radius), z = this.rng.range(-this.arena.radius, this.arena.radius);
       if (this.arena.groundIdAt(x, z) === "water") this.arena.setGround(x, z, 1.2, "ice");
     }
+    this.runSwitches(dt);
     for (const f of this.fighters) {
-      if (f.ko) continue;
+      if (f.ko || f.benched) continue;
       this.tickStatuses(f, dt, W.wetness, W.id);
       if (f.ko) continue;
       f.energy = Math.min(f.stats.energy, f.energy + f.stats.regen * dt * (f.phase === "rest" ? 1.5 : 1) - (f.body.mode === "fly" ? 1.5 * dt : 0));
@@ -1141,11 +1303,11 @@ export class Battle {
         f.emotions[k] += (f.ph.psyche.emotions[k] - f.emotions[k]) * dt * 0.08;
       }
       f.emotions.energy = f.energy / f.stats.energy;
-      const disabled = f.status.has("frozen") || f.status.has("staggered") || f.body.stagger > 0.05;
+      const disabled = f.status.has("frozen") || f.status.has("stunned") || f.status.has("staggered") || f.body.stagger > 0.05;
       if (f.phase === "idle") {
         f.cooldown -= dt;
         if (!disabled && f.cooldown <= 0) this.decide(f);
-      } else if (!f.status.has("frozen")) {
+      } else if (!f.status.has("frozen") && !f.status.has("stunned")) {
         f.phaseT += dt;
         if (f.phaseT >= f.phaseDur) this.advancePhase(f);
       }
@@ -1153,7 +1315,8 @@ export class Battle {
     }
     this.updateProjectiles(dt);
     this.updateZones(dt);
-    const physEv = stepPhysics(this.fighters.filter((f) => !f.ko).map((f) => f.body), this.arena, W, dt);
+    const physEv = stepPhysics(this.fighters.filter((f) => this.live(f)).map((f) => f.body), this.arena, W, dt);
+    for (const f of this.fighters) if (f.dash && this.live(f)) this.dashStep(f);
     for (const e of physEv) {
       if (e.kind === "bump" || e.kind === "land" || e.kind === "splash") {
         const f = this.fighters.find((x) => x.id === e.a);
@@ -1211,6 +1374,100 @@ export class Battle {
     if (f.hp <= 0) this.knockOut(f, null);
   }
 
+  /** A stun / freeze landed on a charge: the move is cancelled, its energy is lost [P4-M6]. */
+  private interrupt(t: Fighter, by: Fighter, s: StatusId): void {
+    const m = t.move!;
+    t.phase = "idle";
+    t.move = null;
+    t.phaseT = 0;
+    t.cooldown = 0.25;
+    t.interrupted++;
+    this.interruptCount++;
+    this.emit({ type: "interrupt", a: by.idx, b: t.idx, move: m.id, element: m.element, label: s, pos: { ...t.body.pos } });
+    this.log("battle.interrupt", by.id, `${s} cancelled a charging ${m.name}`, by.id, t.id, t.body.pos, { move: m.id, power: m.power, status: s }, { energyLost: f2(t.costs[t.moves.indexOf(m)] ?? 0) }, true);
+  }
+
+  private dashStep(f: Fighter): void {
+    const d = f.dash!;
+    const k = clamp((this.t - d.t0) / d.dur, 0, 1), e = k * k * (3 - 2 * k);
+    const x = d.from.x + (d.to.x - d.from.x) * e, z = d.from.z + (d.to.z - d.from.z) * e;
+    f.body.pos.x = x;
+    f.body.pos.z = z;
+    f.body.pos.y = Math.max(f.body.pos.y, this.arena.surfaceAt(x, z));
+    f.body.vel.x = f.body.vel.z = 0;
+  }
+
+  private dashArrive(f: Fighter, m: Move): void {
+    f.dash = null;
+    const t = this.fighters[f.target];
+    if (!t || !this.live(t) || t.team === f.team) return;
+    const gap = distXZ(f.body.pos, t.body.pos) - f.body.radius - t.body.radius;
+    if (gap <= f.stats.reach + MELEE_LUNGE && this.canReach(f, t, m)) this.hit(f, t, m, 1, "dash", t.body.pos);
+    else this.miss(f, t, m, `dash fell short (gap ${r3(gap)} m)`);
+  }
+
+  /** Apply due switches (KO replacements, trainer orders, replay script) and run the AI trainer. */
+  private runSwitches(dt: number): void {
+    for (const k of [0, 1] as const) this.switchCd[k] = Math.max(0, this.switchCd[k] - dt);
+    if (this.setup.field && (this.setup.aiSwitch ?? true) && this.tick % 15 === 0) this.aiTrainer(1);
+    const due = this.pendingSwitches.filter((x) => x.t <= this.t + 1e-9);
+    if (due.length === 0) return;
+    this.pendingSwitches = this.pendingSwitches.filter((x) => !due.includes(x));
+    for (const o of due) {
+      const out = this.fighters[o.out], inn = this.fighters[o.in];
+      if (!out || !inn || inn.ko || !inn.benched) continue;
+      const replacement = out.ko;
+      if (!replacement && (out.benched || this.switchCd[o.team] > 0)) continue;
+      // The newcomer lands where the leaver stood (a KO'd body stays where it fell; land beside it).
+      const p = out.body.pos, side = o.team === 0 ? -1 : 1;
+      const x = replacement ? p.x + side * 1.2 : p.x, z = p.z;
+      inn.benched = false;
+      inn.body.pos = v3(x, this.arena.surfaceAt(x, z), z);
+      inn.body.vel = v3();
+      inn.cooldown = SWITCH_ENTRY;
+      inn.phase = "idle";
+      if (!replacement) {
+        out.benched = true;
+        out.phase = "idle";
+        out.move = null;
+        out.dash = null;
+        // Recalled Genemon shed their transient states on the bench (HP is kept).
+        for (const st of ["airborne", "burrowed", "liquid", "frozen", "stunned", "staggered", "feared", "confused"] as StatusId[]) out.status.delete(st);
+        out.body.mode = "ground";
+        out.body.pos = v3(side * (this.arena.radius + 2.5), 0, this.arena.radius * 0.55);
+        this.switchCd[o.team] = SWITCH_COOLDOWN;
+      }
+      // Exact tick time (not rounded): a replay applies the order on the very same tick.
+      const rec: SwitchOrder = { t: this.t, team: o.team, out: o.out, in: o.in };
+      this.switches.push(rec);
+      this.emit({ type: "switch", a: inn.idx, b: out.idx, label: replacement ? "replace" : "switch", pos: { ...inn.body.pos } });
+      this.log("battle.switch", this.teams[o.team].owner, replacement ? "a fighter was knocked out" : "trainer switched", out.id, inn.id, inn.body.pos, { team: o.team, replacement }, { hp: r3(inn.hp / inn.maxHp) }, true);
+    }
+  }
+
+  /**
+   * The AI trainer (side 1, and side 0 when nobody drives it in a sim): recall a badly matched or
+   * badly hurt fighter for a bench member that the enemy's types hit less hard.
+   */
+  aiTrainer(team: 0 | 1): void {
+    if (this.switchCd[team] > 0) return;
+    const bench = this.bench(team);
+    if (bench.length === 0) return;
+    const foes = this.fighters.filter((o) => o.team !== team && this.live(o));
+    if (foes.length === 0) return;
+    const threat = (g: Fighter) => foes.reduce((s, e) => s + Math.max(...e.moves.filter(isDamaging).map((mm) => typeMultiplier(mm.element, g.types)), 1), 0) / foes.length;
+    for (const f of this.fighters.filter((o) => o.team === team && this.live(o))) {
+      if (f.phase !== "idle") continue;
+      const mine = threat(f);
+      const best = bench.slice().sort((a, b) => threat(a) - threat(b))[0];
+      const hurt = f.hp / f.maxHp < 0.25 && best.hp / best.maxHp > 0.6;
+      if ((mine >= 2 && threat(best) <= 1) || hurt) {
+        this.requestSwitch(team, f.idx, best.idx);
+        return;
+      }
+    }
+  }
+
   private emerge(f: Fighter): void {
     f.body.mode = "ground";
     f.body.pos.y = this.arena.surfaceAt(f.body.pos.x, f.body.pos.z);
@@ -1237,6 +1494,7 @@ export class Battle {
       }
       this.strike(f);
     } else if (f.phase === "active") {
+      if (m.shape === "dash") this.dashArrive(f, m);
       f.phase = "rest";
       f.phaseT = 0;
       f.phaseDur = m.rest / speed;
@@ -1253,7 +1511,7 @@ export class Battle {
   private steer(f: Fighter): void {
     const b = f.body;
     const enemies = this.enemiesOf(f);
-    if (enemies.length === 0 || f.status.has("frozen")) {
+    if (enemies.length === 0 || f.status.has("frozen") || f.status.has("stunned") || f.dash) {
       b.intent = { x: 0, z: 0, speed: 0 };
       return;
     }
@@ -1334,7 +1592,7 @@ export class Battle {
         continue;
       }
       for (const o of this.fighters) {
-        if (o.ko || o.team === p.team || o.status.has("burrowed")) continue;
+        if (!this.live(o) || o.team === p.team || o.status.has("burrowed")) continue;
         const cy = o.body.pos.y + o.ph.heightM * 0.45;
         if (Math.hypot(o.body.pos.x - p.pos.x, cy - p.pos.y, o.body.pos.z - p.pos.z) < o.body.radius + p.radius + o.ph.heightM * 0.25) {
           p.alive = false;
@@ -1435,6 +1693,8 @@ export class Battle {
       damageTakenBy,
       moveUses: { ...this.moveUses },
       synergies: [this.synergies[0].map((s) => s.id), this.synergies[1].map((s) => s.id)],
+      switches: this.switches.slice(),
+      interrupts: this.interruptCount,
     };
   }
 }

@@ -185,12 +185,14 @@ export class Animator {
     let charge = 0;
     if (i.move && i.phase !== "idle") {
       const m = i.move, p = i.progress;
-      const melee = m.shape === "melee" || m.shape === "dig";
-      const ranged = m.shape === "projectile" || m.shape === "beam" || m.shape === "zone";
+      const melee = m.shape === "melee" || m.shape === "dig" || m.shape === "dash";
+      const ranged = m.shape === "projectile" || m.shape === "beam" || m.shape === "zone" || m.shape === "cone";
+      // Big moves read big: the wind-up and the strike grow with the move's power (ultimates ~1.5x) [P4-M5].
+      const weight = 0.8 + 0.45 * clamp(m.power / 90, 0, 1.6);
       const selfMove = !melee && !ranged && m.shape !== "burst";
       if (i.phase === "charge") {
         charge = p;
-        const w = Math.sin((Math.PI / 2) * p) * amp;
+        const w = Math.sin((Math.PI / 2) * p) * amp * weight;
         for (const s of this.spine) add(s, -0.22 * w / Math.max(1, this.spine.length / 2));
         for (const lg of this.legs) add(lg.knee, 0.35 * w), add(lg.hip, (lg.front ? 0.15 : -0.1) * w);
         if (melee) add("neck0", 0.2 * w), add("head", -0.25 * w), add("jaw", 0.25 * w);
@@ -204,7 +206,7 @@ export class Animator {
         for (const t of this.tail) add(t, -0.25 * w);
         for (const [k, s] of this.segs.entries()) add(s, 0, Math.sin(k * 1.1) * 0.25 * w);
       } else if (i.phase === "active") {
-        const s = impulse(p, 0.25) * amp;
+        const s = impulse(p, m.shape === "cone" ? 0.12 : 0.25) * amp * weight;
         charge = 1 - p;
         if (melee) {
           for (const sp2 of this.spine) add(sp2, 0.3 * s / Math.max(1, this.spine.length / 2));
@@ -214,7 +216,8 @@ export class Animator {
           for (const lg of this.legs) if (lg.front) add(lg.hip, -0.7 * s), add(lg.knee, -0.1 * s);
         } else if (ranged) {
           add("neck0", 0.3 * s);
-          add("jaw", 0.65 * s);
+          // A breath holds the jaw wide open for the whole active phase.
+          add("jaw", m.shape === "cone" ? 0.65 * amp : 0.65 * s);
           for (const sp2 of this.spine) add(sp2, -0.12 * s);
         } else if (m.shape === "burst") {
           for (const lg of this.legs) add(lg.hip, (lg.front ? -0.4 : 0.4) * s);

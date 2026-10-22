@@ -1,9 +1,16 @@
-import type { App, BattleOptions } from "../app.ts";
+import type { App, BattleFormat, BattleOptions } from "../app.ts";
 import { ARENA_INFO, ARENA_KINDS, type ArenaKind } from "../../world/arena.ts";
 import { WEATHER_IDS, WEATHERS, type WeatherId } from "../../data/weather.ts";
 import { fmt, h, section, select } from "../dom.ts";
 
-const opts: BattleOptions = { arena: "meadow", weather: "auto", hour: "real", opponent: "rival" };
+const opts: BattleOptions = { arena: "meadow", weather: "auto", hour: "real", opponent: "rival", format: "brawl" };
+
+const FORMAT_HINT: Record<BattleFormat, string> = {
+  brawl: "Everyone at once: the whole team fights together.",
+  "1v1": "Stadium duel: one Genemon each on the field; the rest wait on the bench. Click a bench card in the HUD to throw it in.",
+  "2v2": "Doubles: two on the field per side, the rest on the bench, thrown in on a KO or when you switch.",
+  "3v3": "Triples: three on the field per side, with a bench.",
+};
 
 export function renderArena(app: App): HTMLElement {
   const bv = app.battleView;
@@ -75,6 +82,13 @@ export function renderArena(app: App): HTMLElement {
           opts.hour = v === "real" ? "real" : Number(v);
         }))),
       h("p", { class: "muted" }, opts.weather === "auto" ? `Auto uses today's real weather (${WEATHERS[app.rw.weather].name}) when it fits the arena.` : WEATHERS[opts.weather as WeatherId].note)),
+    section("Format",
+      h("div", { class: "row" }, ...(Object.keys(FORMAT_HINT) as BattleFormat[]).map((f) =>
+        h("button", { class: `btn small ${opts.format === f ? "on" : ""}`, "data-format": f, title: FORMAT_HINT[f], onclick: () => {
+          opts.format = f;
+          app.render();
+        } }, f === "brawl" ? "Brawl" : f))),
+      h("p", { class: "muted" }, FORMAT_HINT[opts.format ?? "brawl"])),
     section("Opponent",
       h("label", { class: "field" }, "Who", select(["rival", "profile", "wild", "mirror"] as const, opts.opponent, (v) => {
         opts.opponent = v;

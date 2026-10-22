@@ -117,6 +117,13 @@ export interface Phenotype {
   psyche: Psyche;
   /** Normalised combat power index (budget x quality x level x growth x 100). */
   power: number;
+  /**
+   * Physical / special split of the attack [P4-M1]: geometric mean 1 (budget-neutral). Mighty, heavy
+   * bodies hit harder with their body; focused, wise ones channel their element better.
+   */
+  offense: { physical: number; special: number };
+  /** Physical / special split of the guard (higher = takes less), geometric mean 1: hard, heavy hides vs wise, vital minds. */
+  guard: { physical: number; special: number };
 }
 
 const SHAPE_K: Record<BodyKind, number> = { quadruped: 0.16, biped: 0.09, hexapod: 0.1, serpent: 0.07, avian: 0.07, blob: 0.22 };
@@ -340,6 +347,9 @@ export function express(g: Genome, c: Conditions): Phenotype {
   };
   if (abilities.fly) stats.balance = Math.max(0.2, stats.balance - 0.1);
 
+  const wis01 = u01(axes.wisdom);
+  const offBias = clamp(0.22 * ((might01 - 0.5) + 0.5 * (weight01 - 0.5) - (focus01 - 0.5) - 0.5 * (wis01 - 0.5)), -0.3, 0.3);
+  const guardBias = clamp(0.2 * ((hard01 - 0.5) + 0.5 * (weight01 - 0.5) - (wis01 - 0.5) - 0.5 * (vit01 - 0.5)), -0.3, 0.3);
   const glowEls: ElementId[] = ["fire", "electric", "light", "psychic", "void"];
   const glow = clamp01(
     Math.max(0, axes.luminance) * 0.7 + (glowEls.includes(els.primary) ? 0.35 : 0) +
@@ -369,6 +379,8 @@ export function express(g: Genome, c: Conditions): Phenotype {
     abilities,
     psyche: psycheOf(axes, types),
     power: powerIndex(stats),
+    offense: { physical: Math.exp(offBias), special: Math.exp(-offBias) },
+    guard: { physical: Math.exp(guardBias), special: Math.exp(-guardBias) },
   };
 }
 
