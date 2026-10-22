@@ -116,3 +116,15 @@ Honest gaps after pass 2:
   - The "heatwave / fog / sandstorm" arena shots were captured during a storm a move triggered.
   - The panel's weather line was stale. Fixed after round 3: it now reads "started in ...".
 - Eyes were judged on round-3 images, which predate the eye fix (`1a9b31c`): still to verify.
+
+## Pass 4 - kits, anatomy, collection, arenas, gauntlet, economy (2026-10-22)
+
+- Brief: `docs/team/PASS4-BRIEF.md` (requirement ids P4-*). Ten builder lanes plus the orchestrator; every lane's tests run in the real tree.
+- Tests: `deno task test` ok | 301 passed | 0 failed; `deno task check` clean.
+- Scenarios (`deno task scenarios`, n=120): SC-01..SC-06 PASS (SC-06 side parity 42.5 %, CI 34-51; at 1,200 seeds 47.8 %, CI 45-51).
+- Balance (`deno task balance 72`): elements 40-62 % (13/13); big vs swarm 55 / 56 / 46 %; top cast share Void Orb 5.7 %; 3/141 moves never learned; median 24.8 s, draws 0 %.
+- Capture round 6 (`artifacts/qa/round-6/`, real headless Chrome on Metal): 62 shots, 0 console errors, 0 overflow, 55 fps at 1440x900.
+- Round-5 review findings fixed in round 6: the camera menu covered the fighters and the rival HUD (now closed, bottom-right); depth of field blurred the foreground (gentler defaults); big wings on non-fliers stood up like a frame (now drape along the flanks).
+- Engine smoke in a browser: 1v1 volcano battle 37.8 s with 10 throw-ins and switches, loot added to the bag.
+- Open: fighters still small and hidden by weather effects in storm battle shots (C2); 27 lopsided element pairs; hexapods never get wings; the folded wing reads as a thin blade from the side; learn-lock reasons not shown in the UI; investments not in the game; boss gauntlet UI not browser-checked.
+

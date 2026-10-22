@@ -10,8 +10,38 @@ Every requirement from the founding brief, with an id, its bound, the file that 
 A requirement silently dropped reads as delivered: OPEN rows are the honest gap list. Update a row only with
 evidence (a test name, a harness number, a capture file). Numbers come from the tools, never typed by hand.
 
-Last updated: 2026-10-12 (pass 2). Measurements: `artifacts/balance/REPORT.md`, `artifacts/scenarios/`,
+Last updated: 2026-10-22 (pass 4; section P4 below). Measurements: `artifacts/balance/REPORT.md`, `artifacts/scenarios/`,
 `artifacts/qa/round-2/REPORT.md` (when written), `docs/EVIDENCE.md`.
+
+## P4 - Pass 4 (founder's requests of 2026-10-22, decoded in `docs/team/PASS4-BRIEF.md`)
+
+| id | requirement | bound | owner | status |
+|---|---|---|---|---|
+| P4-R1 | Random Hatch button; most newborns plain | first hatch per day free, then 40, 60, 90...; plain egg 76 % neutral (500 hatches) | `src/ui/hatch.ts`, Collection screen | TESTED `tests/hatch_test.ts`; screen captured round 6 (`screen-dex.png`), hatch click not browser-driven yet |
+| P4-R2 | Better Dex | seen vs owned grid, silhouettes for seen-not-owned | `src/ui/screens/dex.ts` | built; captured round 6 (`screen-dex.png`) |
+| P4-R3 | Find the team fast; several saved teams; all my Genemon; readable names and moves | up to 8 presets, active mirrored into `profile.team`; move cards with Q/W/E/R badge and phase bar | `src/ui/teamsStore.ts`, `moveCard.ts`, `dex.ts` | TESTED `tests/teams_store_test.ts`; LIVE (Collection tab) |
+| P4-M1 | Physical / special / status moves | offense and guard splits with geometric mean 1 (budget-neutral) | `phenotype.ts` offense/guard, `battle.ts` moveCategory | TESTED `tests/battle_pass4_test.ts` |
+| P4-M2 | Power bound to the body part (breath = mouth, slam = mass...) | bodyFactor in [0.7, 1.35], mean per part 1.00-1.02 | `src/combat/kit.ts` bodyFactor; cones in `battle.ts` | TESTED `tests/kit_test.ts`, cone hit test |
+| P4-M3 | Limited learnsets with reasons | level, element affinity, size, energy, body-part gates | `kit.ts` learnCheck | TESTED; the lock reasons are not shown in the UI yet: OPEN |
+| P4-M4 | Moves interact with arenas and weather | weather calls back in kits (all 9 learned, ~0.95 cast / battle); cones react with zones | `kit.ts` utilityValue, `battle.ts` | MEASURED (balance 72) |
+| P4-M5 | Phase law: big moves charge, act and rest long | `phaseLaw(power, area, effects)`, legacy damaging rows re-timed | `src/combat/moves.ts` lawTimed | TESTED |
+| P4-M6 | Counters (stun interrupts a charge, dash dodges) | interrupts only on stunned/frozen; AI weighs counterValue | `battle.ts` interrupt, `kit.ts` counterValue | TESTED |
+| P4-M7 | Q/W/E/R kits | 4 moves: basic, control, mobility (or utility for supports), ultimate; 59 kit moves | `kit.ts` buildKit, `movesKit.ts` | TESTED; ultimates 1.4 % of casts |
+| P4-A1 | Arena seen from outside + stats dossier | composition, elevation, slope, liquid/dig/conduction shares, favoured elements, weather, hints | `src/world/arenaStats.ts`, `render/arenaPreview.ts`, `ui/arenaDossier.ts` | TESTED `tests/arena_stats_test.ts`; LIVE (Arena tab, round 6 `07-arena-setup.png`) |
+| P4-U1 | Three-click rule | Arena tab shows the dossier at once; Collection tab -> card -> drawer shows moves | screens | built; no automated click-count audit: OPEN |
+| P4-U2 | Glass minimal design | translucent panels, hairlines, readable names | `web/styles.css` pass-4 layer | captured round 6 |
+| P4-U3 | All camera options in one collapsible menu | closed by default, bottom-right | `src/ui/cameraPanel.ts` | TESTED `tests/post_test.ts`; LIVE round 6 |
+| P4-V1 | Fused anatomy, skin shaders, bump, depth of field, fog | lofted bodies, normal-mapped physical skin, rim term, EffectComposer DOF/bloom/vignette | `src/render/anatomy/*`, `render/post.ts` | TESTED (`anatomy_test`, `face_test`, `post_test`); LIVE round 6: 0 console errors, 55 fps at 1440x900 |
+| P4-V2 | Helix DNA with min/max genes bounding traits and animation | value = lo + (hi - lo) * smoothstep(drive) | `src/genome/helix.ts`, `render/animator.ts` | TESTED `tests/helix_test.ts`; LIVE (animator envelopes) |
+| P4-V3 | Rare asymmetry, digits, bigger wings, teeth, manga eyes, eye smoke | asymmetry 8.6 %, 8 eye styles, 7 teeth kinds, avian span >= 2x | `helix.ts`, `anatomy/body.ts`, `face.ts`, `eyeAura.ts` | TESTED; captured round 6 (creature sheet). Hexapods never get wings (no wing chain): OPEN |
+| P4-B1 | Gauntlet: one Genemon against endless opponents | HP carried, boss every 5th round | `src/combat/gauntlet.ts`, `ui/gauntletPanel.ts` | TESTED `tests/gauntlet_test.ts`; browser run past round 1 (lane); boss UI not browser-checked: OPEN |
+| P4-B2 | Throwing Genemon in, switching during the battle | 1v1 / 2v2 / 3v3 with a bench, KO throw-ins, trainer switch (cooldown 3 s), AI trainer, replayable script | `battle.ts`, `app.ts` switchIn | TESTED `tests/battle_pass4_test.ts`; browser: a 1v1 volcano battle made 10 switches |
+| P4-E1 | Evolve by feeding and battle loot; rotating items; investments | 1-3 drops per win; 7-day element rotation; investment returns | `src/economy/loot.ts`, `rotation.ts`, `ui/bagStore.ts` | loot LIVE (bag + result screen); investments not in the game yet: OPEN |
+| P4-E2 | Diet changes the element; strict colour code | plain -> fire after 13-23 ember chilis -> Steam after 12-16 spring waters (8 seeds) | `src/data/hybrids.ts`, `lifestyle.ts`, `phenotype.ts` hybridPalette | TESTED `tests/hybrids_test.ts` |
+
+Pass-4 balance (`deno task balance 72`): 13/13 elements in 40-62 %; big vs swarm 55 / 56 / 46 %; top move 5.7 % of casts;
+3/141 moves never learned; median battle 24.8 s, 0 draws; 27 of 78 element pairs still below 10 % or above 90 % (type
+chart double resists): OPEN.
 
 ## G - Genome and creatures
 
