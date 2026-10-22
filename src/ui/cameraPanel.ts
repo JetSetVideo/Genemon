@@ -153,7 +153,8 @@ function segmented<T extends string | number>(
 /** Build the panel. Re-render it on a new battle; use syncCameraPanel for key-driven changes. */
 export function renderCameraPanel(o: CameraPanelOptions): HTMLElement {
   const post: PostSettings = { ...o.post };
-  const open = o.open ?? !o.compact;
+  // Closed by default everywhere: the battle stays readable; one click opens every option [P4-U3].
+  const open = o.open ?? false;
   const modeEl = h("b", { class: "campanel-mode" }, modeLabel(o.mode));
   const root = h("details", { class: "campanel", open },
     h("summary", { class: "campanel-sum", title: "Camera and view options" }, h("span", { "aria-hidden": "true" }, "🎥"), " Camera · ", modeEl));

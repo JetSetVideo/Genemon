@@ -14,6 +14,7 @@
 import { clamp, clamp01, u01 } from "../core/math.ts";
 import { hashSeed, Rng } from "../core/rng.ts";
 import { type ElementId, typeMultiplier } from "../data/elements.ts";
+import { WEATHERS } from "../data/weather.ts";
 import type { MorphHelix } from "../genome/morphTypes.ts";
 import type { Abilities, Phenotype, SizeClass } from "../genome/phenotype.ts";
 import { type BodyPart, isDamaging, type KitSlot, type Move, type MoveCategory, moveCost, MOVES, type MoveShape, type StatusId, TIER_LEVEL } from "./moves.ts";
@@ -191,6 +192,38 @@ export function learnCheck(m: Move, ph: Phenotype, helix?: MorphHelix): { ok: bo
 
 const CC_WEIGHT: Partial<Record<StatusId, number>> = { stunned: 1.5, frozen: 1.4, paralyzed: 0.8, staggered: 0.7, feared: 0.8, slowed: 0.3 };
 
+/** Score a utility move needs (x the creature's support psyche) to take a kit slot. */
+export const UTILITY_BAR = 0.62;
+
+/**
+ * Worth of a utility move to this creature, ~[0, 1.4]: a weather call by how much its sky raises the
+ * creature's primary (and half its secondary) element multiplier, a terraform for its standing bonus,
+ * a heal by the creature's regeneration, a buff flat; own-element utilities are preferred.
+ */
+export function utilityValue(m: Move, ph: Phenotype): number {
+  const { primary, secondary } = ph.elements;
+  const own = m.element === "neutral" ? 0.9 : m.element === primary ? 1 : m.element === secondary ? 0.95 : 0.8;
+  switch (m.shape) {
+    case "weather": {
+      const w = m.effects.find((e) => e.weather)?.weather;
+      if (!w) return 0;
+      const mult = WEATHERS[w].elementMult;
+      const gain = (mult[primary] ?? 1) - 1 + (secondary ? 0.5 * ((mult[secondary] ?? 1) - 1) : 0);
+      return gain > 0 ? 0.45 + 2 * gain : 0;
+    }
+    case "terrain":
+      return own * (1 + (m.effects.some((e) => e.kind === "status" && e.self) ? 0.15 : 0));
+    case "heal":
+      return own * (0.6 + 0.35 * clamp01((ph.stats.regen - 8.5) / 5));
+    case "buff":
+      return own * 0.7;
+    case "phase":
+      return 0.68;
+    default:
+      return 0;
+  }
+}
+
 /**
  * Four move ids ordered [Q basic, W control, E mobility, R ultimate], each slot taken by the best
  * learnable move (score = STAB x bodyFactor x range fit x slot value, +-2 % seeded tiebreak).
@@ -211,11 +244,17 @@ export function buildKit(ph: Phenotype, seed: string, helix?: MorphHelix, pool: 
   const cc = (m: Move) =>
     m.effects.reduce((s, e) => s + (e.kind === "status" && !e.self && e.status ? (CC_WEIGHT[e.status] ?? 0.2) * (e.chance ?? 1) * (e.duration ?? 3) : 0), 0);
   const cycle = (m: Move) => m.charge + m.active + m.rest;
-  const sQ = (m: Move) => base(m) * (m.power * (1 + 0.1 * Math.min(3, m.area)) + 10 * fx(m)) / Math.max(0.5, cycle(m));
+  // Q is the reliable bread-and-butter hit: damage per second of its cycle. Under the phase law that
+  // rate is nearly flat in power, so area (only a placed zone or a cone, never a self-centred burst)
+  // and the status rider are small multipliers, not additive bonuses that made weak status bursts win.
+  const spread = (m: Move) => (m.shape === "zone" || m.shape === "cone" ? 0.06 * Math.min(3, m.area) : 0);
+  const sQ = (m: Move) => base(m) * m.power * (1 + spread(m)) * (1 + 0.2 * fx(m)) / Math.max(0.5, cycle(m));
   // W is the stun slot: a move that can interrupt a charge is preferred over a long fear or slow.
   const sW = (m: Move) => base(m) * (cc(m) + m.power / 100 + (interrupts(m) ? 0.6 : 0));
   const sE = (m: Move) => base(m) * (m.shape === "dash" ? 0.3 + m.power / 60 : m.shape === "fly" ? 0.95 : 0.8 + m.power / 100);
-  const sR = (m: Move) => base(m) * m.power * (1 + 0.1 * Math.min(4, m.area)) * (1 + 0.3 * fx(m));
+  // R: the biggest hit, damped by the square root of its cycle so a slightly smaller but quicker
+  // ultimate stays a real alternative.
+  const sR = (m: Move) => base(m) * m.power * (1 + 0.05 * Math.min(4, m.area)) * (1 + 0.2 * fx(m)) / Math.sqrt(Math.max(1, cycle(m)));
   const used = new Set<string>();
   const best = (cands: Move[], score: (m: Move) => number): Move | null => {
     let top: Move | null = null, ts = -Infinity;
@@ -237,6 +276,18 @@ export function buildKit(ph: Phenotype, seed: string, helix?: MorphHelix, pool: 
   const r = take(best(learn.filter((m) => slotOf(m) === "ultimate"), sR) ?? best(dmg.filter((m) => m.tier === 2), sR));
   const kit: (Move | null)[] = [q, w, e, r];
   for (let i = 0; i < 4; i++) if (!kit[i]) kit[i] = take(best(dmg, sR) ?? best(learn, sR));
+  // Utility rule [P4-M4]: a SUPPORT psyche (wisdom, a weather shaper) gives one slot to a weather
+  // call, a terraform, a heal or a buff. The weather call is valued by how much that sky raises the
+  // creature's own elements; the slot given up is E (W when E is the creature's flight).
+  const u = best(learn.filter((m) => slotOf(m) === "utility"), (m) => utilityValue(m, ph) * jitter(m));
+  if (u) {
+    const support = 0.35 + 0.65 * u01(ph.axes.wisdom) + (ph.abilities.weatherShaper ? 0.15 : 0);
+    const i = kit[2] && kit[2].shape === "fly" ? 1 : 2;
+    if (utilityValue(u, ph) * support >= UTILITY_BAR && kit[i]) {
+      used.delete(kit[i]!.id);
+      kit[i] = take(u);
+    }
+  }
   // Special-effect rule (tiebreak): if none of the four carries a DoT / status, swap Q (else R, else E)
   // for a same-slot move that does and scores within 15 %.
   if (!kit.some((m) => m && hasSpecialEffect(m))) {

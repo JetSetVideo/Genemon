@@ -195,11 +195,12 @@ export class Animator {
       } else if (this.sk.kind === "serpent") {
         for (const [k, s] of this.segs.entries()) add(s, 0, Math.sin(i.t * 1.2 - k * 0.6) * 0.12);
       }
-      // Folded wings: sweep back (+y on the left = -y on the right: side * y) and lift the tips slightly.
+      // Folded wings: sweep back (side * y) and DRAPE down along the flanks (big pass-4 wings standing
+      // up read as a sail / frame on the back - round-5 capture), the hand folds back under the arm.
       for (const j of this.sk.joints) {
-        if (j.role === "wingRoot") add(j.id, 0, j.side * 0.6, j.side * 0.3);
-        if (j.role === "wingMid") add(j.id, 0, j.side * 1.1, -j.side * 0.15);
-        if (j.role === "wingTip") add(j.id, 0, j.side * 0.5, 0);
+        if (j.role === "wingRoot") add(j.id, 0, j.side * 0.7, -j.side * 0.35);
+        if (j.role === "wingMid") add(j.id, 0, j.side * 1.2, -j.side * 0.25);
+        if (j.role === "wingTip") add(j.id, 0, j.side * 0.6, 0);
       }
     }
     let lift = this.sk.kind === "biped" || this.sk.kind === "avian" ? Math.abs(Math.sin(this.gait)) * 0.04 * H * sp : 0;

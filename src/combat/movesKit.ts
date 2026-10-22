@@ -4,47 +4,14 @@
  * `bodyFactor` in ./kit.ts) and a League-style SLOT (Q basic, W control, E mobility, R ultimate).
  *
  * Timing follows the PHASE LAW [P4-M5]: every row's charge / active / rest is computed from its
- * power, area and number of effects by `phaseLaw` (defined here so this table can use it without an
- * import cycle; ./kit.ts re-exports it). Strong moves are slow in all three phases, fast moves are
- * short in all three, hit little and spread little.
+ * power, area and number of effects by `phaseLaw` (defined in ./moves.ts, which also re-times the
+ * legacy damaging rows with it; ./kit.ts re-exports it). Strong moves are slow in all three phases,
+ * fast moves are short in all three, hit little and spread little.
  */
 import type { ElementId } from "../data/elements.ts";
-import { type BodyPart, type KitSlot, kb, type Move, type MoveCategory, type MoveEffect, type MoveShape, mv, pull, st } from "./moves.ts";
+import { type BodyPart, type KitSlot, kb, type Move, type MoveCategory, type MoveEffect, type MoveShape, mv, phaseLaw, pull, st } from "./moves.ts";
 
-/** Piecewise-linear interpolation through sorted knots [x, y]. */
-function interp(knots: readonly (readonly [number, number])[], x: number, tailSlope: number): number {
-  if (x <= knots[0][0]) return knots[0][1];
-  for (let i = 1; i < knots.length; i++) {
-    const [x1, y1] = knots[i];
-    if (x <= x1) {
-      const [x0, y0] = knots[i - 1];
-      return y0 + (y1 - y0) * (x - x0) / (x1 - x0);
-    }
-  }
-  const [xl, yl] = knots[knots.length - 1];
-  return yl + tailSlope * (x - xl);
-}
-
-const CHARGE_KNOTS = [[0, 0.22], [28, 0.25], [60, 0.6], [100, 1.4], [140, 2.4]] as const;
-const ACTIVE_KNOTS = [[0, 0.1], [28, 0.12], [60, 0.25], [100, 0.55], [140, 0.9]] as const;
-const REST_KNOTS = [[0, 0.25], [28, 0.3], [60, 0.6], [100, 1.25], [140, 2.0]] as const;
-
-/**
- * The phase law [P4-M5]: (charge, active, rest) in seconds as a function of power, area radius (m)
- * and the number of effects. Monotone non-decreasing in each argument. Anchors: ~(0.25, 0.12, 0.3)
- * at power 28, ~(0.6, 0.25, 0.6) at 60, ~(2.4, 0.9, 2.0) at 140 (slow growth beyond). Area and
- * effects lengthen every phase slightly (up to +18 % and +12 %).
- */
-export function phaseLaw(power: number, area = 0, effects = 0): { charge: number; active: number; rest: number } {
-  const p = Math.max(0, power);
-  const k = 1 + 0.03 * Math.min(6, Math.max(0, area)) + 0.04 * Math.min(3, Math.max(0, effects));
-  const r = (x: number) => Math.round(x * 1000) / 1000;
-  return {
-    charge: r(interp(CHARGE_KNOTS, p, 0.005) * k),
-    active: r(interp(ACTIVE_KNOTS, p, 0.003) * k),
-    rest: r(interp(REST_KNOTS, p, 0.004) * k),
-  };
-}
+export { phaseLaw };
 
 interface KitExtra {
   category: MoveCategory;
@@ -121,18 +88,18 @@ export const KIT_MOVES: readonly Move[] = [
   dash("galeDash", "Gale Dash", "air", 42, 10, 22, [kb(2)]),
   dash("iceSlide", "Ice Slide", "ice", 44, 9, 20, [st("slowed", 0.3, 2)]),
   dash("shadowStep", "Shadow Step", "shadow", 46, 9, 30, [st("evasive", 1, 1.5, true)], 2, "legs", ["highCrit"]),
-  dash("hornCharge", "Horn Charge", "neutral", 60, 8, 15, [kb(4), st("stunned", 0.3, 1)], 2, "horns"),
-  dash("rollingCharge", "Rolling Charge", "neutral", 64, 9, 13, [kb(5), st("staggered", 0.3, 1)], 2, "mass", ["massScaled"]),
+  dash("hornCharge", "Horn Charge", "neutral", 54, 8, 15, [kb(4), st("stunned", 0.3, 1)], 2, "horns"),
+  dash("rollingCharge", "Rolling Charge", "neutral", 56, 9, 13, [kb(5), st("staggered", 0.3, 1)], 2, "mass", ["massScaled"]),
 
   // ------------------------------------------------ control (W): stuns, binds, fear [P4-M6]
   km("thunderClap", "Thunder Clap", "electric", "burst", 36, 0.97, 0, 3, 0, [st("stunned", 0.55, 1)], 2, S("aura", "control")),
   km("headbutt", "Headbutt", "neutral", "melee", 45, 0.93, 0, 0, 0, [st("stunned", 0.5, 0.8)], 1, P("mass", "control")),
   km("shieldBash", "Shield Bash", "metal", "melee", 42, 0.94, 0, 0, 0, [st("stunned", 0.5, 1), kb(2)], 1, P("mass", "control")),
   km("tailSweep", "Tail Sweep", "neutral", "burst", 38, 0.96, 0, 2, 0, [st("stunned", 0.45, 0.9), kb(2)], 1, P("tail", "control")),
-  km("petrifyGaze", "Petrify Gaze", "earth", "beam", 30, 0.92, 11, 0, 0, [st("stunned", 0.6, 1.4)], 2, S("eyes", "control")),
-  km("frostBind", "Frost Bind", "ice", "zone", 30, 0.95, 10, 1.8, 14, [st("frozen", 0.7, 1.5)], 2, S("aura", "control")),
+  km("petrifyGaze", "Petrify Gaze", "earth", "beam", 30, 0.92, 11, 0, 0, [st("stunned", 0.55, 1.2)], 2, S("eyes", "control")),
+  km("frostBind", "Frost Bind", "ice", "zone", 30, 0.95, 10, 1.8, 14, [st("frozen", 0.55, 1.2)], 2, S("aura", "control")),
   km("vineSnare", "Vine Snare", "plant", "zone", 28, 0.95, 10, 1.8, 14, [st("slowed", 0.8, 3), st("stunned", 0.5, 0.8)], 2, S("aura", "control")),
-  km("mindLock", "Mind Lock", "psychic", "beam", 25, 0.95, 12, 0, 0, [st("stunned", 0.65, 1.6)], 2, S("eyes", "control")),
+  km("mindLock", "Mind Lock", "psychic", "beam", 25, 0.95, 11, 0, 0, [st("stunned", 0.55, 1.2)], 2, S("eyes", "control")),
   km("dreadHowl", "Dread Howl", "shadow", "burst", 25, 1, 0, 4, 0, [st("feared", 0.7, 3), st("stunned", 0.3, 0.8)], 2, S("mouth", "control")),
 
   // ------------------------------------------------ ultimates (R, tier 3, very long phases) [P4-M5]

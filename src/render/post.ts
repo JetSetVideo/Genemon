@@ -48,12 +48,12 @@ export interface PostRange {
 
 /** Every numeric post setting with its declared range: the clamp, the defaults and the UI sliders read this. */
 export const POST_RANGES: readonly PostRange[] = [
-  { key: "aperture", min: 0, max: 10, def: 2.5, step: 0.1, unit: "", note: "lens opening; bigger = shallower depth of field" },
-  { key: "maxBlur", min: 0, max: 0.02, def: 0.008, step: 0.001, unit: "uv", note: "cap on the blur radius (fraction of the frame)" },
+  { key: "aperture", min: 0, max: 10, def: 1.2, step: 0.1, unit: "", note: "lens opening; bigger = shallower depth of field" },
+  { key: "maxBlur", min: 0, max: 0.02, def: 0.004, step: 0.001, unit: "uv", note: "cap on the blur radius (fraction of the frame)" },
   { key: "focusDistance", min: 1, max: 80, def: 14, step: 0.5, unit: "m", note: "manual focus distance (view depth)" },
   { key: "bloomStrength", min: 0, max: 2, def: 0.6, step: 0.05, unit: "", note: "glow of HDR emissives (threshold fixed >= 1)" },
   { key: "fogDensity", min: 0, max: 3, def: 1, step: 0.05, unit: "x", note: "multiplier on the weather's fog density" },
-  { key: "vignette", min: 0, max: 1, def: 0.25, step: 0.05, unit: "", note: "corner darkening" },
+  { key: "vignette", min: 0, max: 1, def: 0.18, step: 0.05, unit: "", note: "corner darkening" },
 ];
 
 /** Bokeh uniform per UI aperture unit per metre of defocus (10 m off-focus at aperture 2.5 = 0.0025 uv). */
