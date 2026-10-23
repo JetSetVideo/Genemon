@@ -11,7 +11,8 @@ import type { GroundId } from "../data/grounds.ts";
 import { EXPERIENCES, type ExperienceId, FOODS, type FoodId } from "../data/lifestyle.ts";
 import { isDamaging, type Move, MOVES, TIER_LEVEL } from "../combat/moves.ts";
 import { buildKit } from "../combat/kit.ts";
-import { type Conditions, emptyConditions, levelOf, noteActivity, xpForLevel } from "./epigenetics.ts";
+import { type Conditions, emptyConditions, noteActivity } from "./epigenetics.ts";
+import { evolutionPlanOf, fertileNow, levelCurve, MATURE_FORMS } from "./evolution.ts";
 import { type Genome, type GenomeBias, randomGenome } from "./genome.ts";
 import { express, nameFor, type Phenotype } from "./phenotype.ts";
 import type { EatResult, Imprint, LifeState, LifeTickCtx, LifeTickReport, Scar } from "./lifeTypes.ts";
@@ -35,7 +36,11 @@ export interface Genemon {
   life?: LifeState;
 }
 
-export const STAGE_NAMES = ["", "Hatchling", "Juvenile", "Adult", "Ascended"] as const;
+/**
+ * Pass 6 [P6-E1]: `g.stage` is the EVOLUTION PHASE of the lineage's plan (1 .. 6, src/genome/evolution.ts);
+ * its real name comes from the plan (stageName). STAGE_NAMES stays as a generic fallback indexed by phase.
+ */
+export const STAGE_NAMES = ["", "Phase I", "Phase II", "Phase III", "Phase IV", "Phase V", "Phase VI"] as const;
 
 const cache = new Map<string, Phenotype>();
 function conditionKey(g: Genemon): string {
@@ -118,8 +123,11 @@ export interface CreateOptions {
 export function createGenemon(o: CreateOptions): Genemon {
   const genome = o.genome ?? randomGenome(o.seed, hashSeed(o.seed, "env"), o.bias);
   const conditions = emptyConditions();
-  const level = o.level ?? 5;
-  conditions.xp = xpForLevel(level);
+  // The lineage's XP curve [P6-E2]: createGenemon({ level: n }) yields exactly level n on every curve
+  // (n is capped at the curve's maxLevel: long curves stop at 80).
+  const plan = evolutionPlanOf(genome);
+  const level = Math.min(o.level ?? 5, plan.maxLevel);
+  conditions.xp = levelCurve(plan).xpForLevel(level);
   conditions.ageDays = o.ageDays ?? 6 + level * 1.5;
   const g: Genemon = {
     id: `g-${genome.id.slice(3)}-${(hashSeed(o.seed, o.owner ?? "wild") % 1679616).toString(36)}`,
@@ -139,11 +147,29 @@ export function createGenemon(o: CreateOptions): Genemon {
   return g;
 }
 
+/** The evolution phase (1-based) the creature has reached: level AND age thresholds of its plan [P6-E1]. */
 export function stageOf(g: Genemon, ph = phenotypeOf(g)): number {
-  if (ph.growth < 0.35) return 1;
-  if (ph.growth < 0.7 || ph.level < 16) return 2;
-  if (ph.level >= 40 && g.conditions.bond >= 0.6 && g.conditions.battles.won >= 25) return 4;
-  return 3;
+  return ph.evo?.phase ?? 1;
+}
+
+/** The phase's own name ("Larva", "Cocoon", "Imago", "Prime"...), falling back to STAGE_NAMES. */
+export function stageName(g: Genemon, ph = phenotypeOf(g)): string {
+  return ph.evo?.name ?? STAGE_NAMES[g.stage] ?? `Phase ${g.stage}`;
+}
+
+/** Fertility of one Genemon right now [P6-E5] (phase + cycle window). */
+export function fertilityOf(g: Genemon): { fertile: boolean; why: string; nextWindowDay: number | null; until: number | null } {
+  const ph = phenotypeOf(g);
+  return fertileNow(evolutionPlanOf(g.genome), ph.evo?.phase ?? 1, g.conditions.ageDays);
+}
+
+/** Two Genemon can breed only when both are inside a fertility window [P6-E5]; the reason names who is not. */
+export function canBreed(a: Genemon, b: Genemon): { ok: boolean; why: string } {
+  if (a.id === b.id) return { ok: false, why: "a Genemon cannot breed with itself" };
+  const fa = fertilityOf(a), fb = fertilityOf(b);
+  if (!fa.fertile) return { ok: false, why: `${a.name || a.id}: ${fa.why}` };
+  if (!fb.fertile) return { ok: false, why: `${b.name || b.id}: ${fb.why}` };
+  return { ok: true, why: "both are in a fertile window" };
 }
 
 export interface LifeCtx {
@@ -179,7 +205,24 @@ function settle(g: Genemon, before: { level: number; stage: number; primary: Ele
   }
   const stage = stageOf(g, ph);
   if (stage !== g.stage) {
-    log(ctx, g, "genemon.evolve", { fromStage: g.stage, growth: r3(ph.growth), level: ph.level }, { toStage: stage, height: r3(ph.heightM), sizeClass: ph.sizeClass }, "growth/level/bond thresholds");
+    // One row per phase change [P6-E1]: the new form, its own unlocks and the cumulative ones.
+    const evo = ph.evo;
+    const plan = evolutionPlanOf(g.genome);
+    const def = plan.phases[stage - 1];
+    log(ctx, g, "genemon.evolve", { fromStage: g.stage, growth: r3(ph.growth), level: ph.level, ageDays: r3(g.conditions.ageDays) }, {
+      toStage: stage,
+      height: r3(ph.heightM),
+      sizeClass: ph.sizeClass,
+      form: evo?.form ?? "adult",
+      name: evo?.name ?? "",
+      kind: plan.kind,
+      phases: plan.phases.length,
+      unlocks: (def?.unlocks ?? []).join(","),
+      allUnlocks: (evo?.unlocks ?? []).join(","),
+      sizeMult: evo?.sizeMult ?? 1,
+      mature: MATURE_FORMS.includes(evo?.form ?? "adult") || plan.kind === "static",
+      final: stage === plan.phases.length,
+    }, "evolution plan: level + age thresholds");
     g.stage = stage;
   }
   if (ph.elements.primary !== before.primary || ph.elements.secondary !== before.secondary) {
@@ -196,7 +239,7 @@ function snapshot(g: Genemon) {
 export function grantXp(g: Genemon, xp: number, ctx: LifeCtx = {}): void {
   const before = snapshot(g);
   g.conditions.xp += xp;
-  log(ctx, g, "genemon.xp", { xp }, { total: g.conditions.xp, level: levelOf(g.conditions.xp) });
+  log(ctx, g, "genemon.xp", { xp }, { total: g.conditions.xp, level: levelCurve(evolutionPlanOf(g.genome)).levelOf(g.conditions.xp) });
   settle(g, before, ctx);
 }
 

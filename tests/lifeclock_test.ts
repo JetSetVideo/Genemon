@@ -8,8 +8,8 @@ import {
   canRank,
   circadian,
   DAY_MS,
-  evolutionPath,
   lifeOf,
+  lifePath,
   lifePhase,
   MAX_SCARS,
   newLifeState,
@@ -234,9 +234,10 @@ Deno.test("lifeclock: scars from heavy hits only, seeded; addScar caps; canRank 
   assert(!canRank(ancient).ok, "ancient retired");
 });
 
-Deno.test("lifeclock: evolutionPath lists every phase with monotone cumulative costs and plain properties [P5-V1]", () => {
+// Pass 6 (deliberate): the pass-5 life-stage path is now lifePath(); evolutionPath() is built from the evolution plan (tests/evolution_test.ts).
+Deno.test("lifeclock: lifePath lists every life phase with monotone cumulative costs and plain properties [P5-V1]", () => {
   const g = mk(8, 40);
-  const path = evolutionPath(g);
+  const path = lifePath(g);
   assertEquals(path.map((s) => s.phase).join(","), LIFE_PHASES.join(","));
   let cumDays = 0, cumXp = 0, cumBond = 0;
   path.forEach((s, i) => {

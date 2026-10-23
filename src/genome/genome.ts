@@ -8,6 +8,7 @@ import { AXES, AXIS_IDS, type AxisId, type AxisVector } from "../data/axes.ts";
 import { clamp, clamp01 } from "../core/math.ts";
 import { hashSeed, mix32, Rng } from "../core/rng.ts";
 import type { MorphAlleles } from "./helix.ts";
+import { isColossal } from "./complexity.ts";
 
 export const BODY_KINDS = ["quadruped", "biped", "hexapod", "serpent", "avian", "blob"] as const;
 export type BodyKind = typeof BODY_KINDS[number];
@@ -49,6 +50,11 @@ export interface Genome {
   mutations: string[];
   /** Morph helix min/max alleles (src/genome/helix.ts); absent on legacy saves (derived deterministically). Never hashed into the id. */
   morph?: MorphAlleles;
+  /**
+   * Pass 6 [P6-C1/C2]: the 6 complexity allele pairs in [0, 1] (src/genome/complexity.ts). Absent on legacy
+   * saves and wild genomes: derived deterministically from `seeds.genotype`. Never hashed into the id.
+   */
+  cxGenes?: Allele[];
 }
 
 export interface GenomeBias {
@@ -141,7 +147,29 @@ export function randomGenome(genotypeSeed: number, environmentSeed = genotypeSee
   const expressed = geneticAxes({ ...partial, id: "" });
   partial.kind = bias.kind ?? kindFromAxes(rng, expressed);
   partial.pattern = patternFromAxes(rng, expressed);
+  // Pass 6 [P6-C1]: a colossus (~1 in 5000 wild genomes) carries the body genes of an XXL giant. The tier
+  // depends only on the complexity alleles (from the genotype seed), the part plan genes and the kind, so
+  // this edit cannot change it. Every other genome is returned exactly as before (same draws, same id).
+  if (isColossal(partial)) colossusBody(partial);
   return { id: genomeId(partial), ...partial };
+}
+
+/**
+ * The XXL body of a colossus [P6-C1]: stature at the very top, a dense heavy body (slender plans heavier,
+ * since their shape factor is 2x smaller than a quadruped's), no gaseous / void lightness, a thick girth.
+ * Deterministic (seeded by the genotype seed); only raises the alleles. Measured through `express`: a fully
+ * grown colossus passes MASS_THRESHOLDS.XL (6000 kg) -> XXL (tests/complexity_test.ts).
+ */
+export function colossusBody(g: Omit<Genome, "id">): void {
+  const r = new Rng(hashSeed(g.seeds.genotype, "colossus"));
+  const slender = g.kind !== "quadruped";
+  const up = (p: Allele, lo: number, hi: number): Allele => [Math.max(p[0], r.range(lo, hi)), Math.max(p[1], r.range(lo, hi))];
+  g.axes.stature = up(g.axes.stature, 0.95, 1);
+  g.axes.weight = up(g.axes.weight, slender ? 0.6 : 0.25, slender ? 0.9 : 0.55);
+  g.axes.hardness = up(g.axes.hardness, 0.1, 0.5);
+  g.axes.phase = [Math.min(g.axes.phase[0], 0), Math.min(g.axes.phase[1], 0)];
+  g.axes.substance = up(g.axes.substance, 0.1, 0.4);
+  g.plan.girth = up(g.plan.girth, 0.6, 0.9);
 }
 
 /** Recompute the id after an edit (breeding/mutation return fresh genomes through this). */

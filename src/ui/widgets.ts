@@ -1,7 +1,7 @@
 /** Reusable UI pieces: Genemon cards, element chips, axis bars, stat tables, move rows. */
 import { AXES, type AxisId } from "../data/axes.ts";
 import { ELEMENTS, type ElementId } from "../data/elements.ts";
-import { type Genemon, phenotypeOf, STAGE_NAMES } from "../genome/genemon.ts";
+import { type Genemon, phenotypeOf, stageName } from "../genome/genemon.ts";
 import { moveCostBreakdown } from "../combat/moves.ts";
 import { ALL_MOVE_BY_ID as MOVE_BY_ID } from "../combat/kit.ts";
 import type { Phenotype } from "../genome/phenotype.ts";
@@ -18,7 +18,7 @@ export function genemonCard(g: Genemon, o: { selected?: boolean; inTeam?: boolea
     h("span", { class: "name" }, g.name),
     h("span", { class: "row" }, elChip(ph.elements.primary), ph.elements.secondary ? elChip(ph.elements.secondary) : null),
     h("span", { class: "row muted" }, h("span", { class: "size", title: `${ph.slots} team slot(s)` }, `${ph.sizeClass}·${ph.slots}`), `Lv ${ph.level}`, `⚡${Math.round(ph.power)}`),
-    h("span", { class: "muted" }, `${ph.kind} · ${STAGE_NAMES[g.stage]}`));
+    h("span", { class: "muted" }, `${ph.kind} · ${stageName(g, ph)}`));
 }
 
 export function axisRow(id: AxisId, v: number, genetic: number): HTMLElement {

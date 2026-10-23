@@ -126,6 +126,11 @@ export interface LadderOptions {
   interactions?: boolean;
   /** Append the derived comboEdge feature (default true; skipped if the context already has it). */
   comboFeature?: boolean;
+  /**
+   * Ranked league this ladder rates [P6-R1] ("prime" / "eternal"): written on every ladder.match row
+   * (entries.league + a tag). Not serialised: the store passes it when it loads the league's ladder.
+   */
+  league?: string;
 }
 
 /** Optional match conditions for expected()/explain(); a MatchResult can be passed as-is. */
@@ -216,7 +221,7 @@ type TalliesJSON = Record<Dim, Record<string, Tally>>;
 export interface LadderJSON {
   kind: "genemon.ladder";
   version: 1;
-  options: Required<Omit<LadderOptions, "ledger">>;
+  options: Required<Omit<LadderOptions, "ledger" | "league">>;
   matches: number;
   players: Record<string, PlayerRecord>;
   weights: Record<string, number>;
@@ -300,6 +305,7 @@ export class Ladder {
   readonly maxWeight: number;
   readonly interactions: boolean;
   readonly comboFeature: boolean;
+  readonly league: string | undefined;
   #ledger: Ledger | undefined;
   #players = new Map<string, PlayerRecord>();
   #w = new Map<string, number>();
@@ -318,6 +324,7 @@ export class Ladder {
     this.maxWeight = opts.maxWeight ?? 4;
     this.interactions = opts.interactions ?? true;
     this.comboFeature = opts.comboFeature ?? true;
+    this.league = opts.league;
     this.#ledger = opts.ledger;
   }
 
@@ -409,6 +416,7 @@ export class Ladder {
         k: r3(k),
       };
       for (const c of ex.contributions) entries[`x.${c.name}`] = r3(c.value);
+      if (this.league !== undefined) entries.league = this.league;
       this.#ledger.emit({
         when: r.when,
         where: { x: 0, y: 0, z: 0, zone: r.arena, space: "arena" },
@@ -425,7 +433,7 @@ export class Ladder {
           ratingB: r3(pb.rating),
           surprise: r3(S - E),
         },
-        tags: ["ladder"],
+        tags: this.league !== undefined ? ["ladder", this.league] : ["ladder"],
       });
     }
     return { expected: E, deltaA, deltaB, k, ratingOnly: ex.ratingOnly };
@@ -501,8 +509,8 @@ export class Ladder {
   }
 
   /** Rebuild a ladder (the ledger is not serialised: pass the one to keep emitting into). */
-  static fromJSON(j: LadderJSON, ledger?: Ledger): Ladder {
-    const lad = new Ladder({ ...j.options, ledger });
+  static fromJSON(j: LadderJSON, ledger?: Ledger, league?: string): Ladder {
+    const lad = new Ladder({ ...j.options, ledger, league });
     lad.#matches = j.matches ?? 0;
     for (const [id, p] of Object.entries(j.players ?? {})) lad.#players.set(id, { ...p });
     for (const [key, w] of Object.entries(j.weights ?? {})) lad.#w.set(key, w);

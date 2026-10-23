@@ -14,6 +14,7 @@ import type { TeamPresets } from "./teamsStore.ts";
 import type { HatchRecord } from "./hatch.ts";
 
 import type { DevSettings } from "../genome/lifeTypes.ts";
+import type { LeagueId } from "../genome/p6Types.ts";
 
 export interface Settings {
   theme: "dark" | "light";
@@ -49,6 +50,8 @@ export interface BattleRecordLite {
   mmrDelta: number;
   /** ranked (rated), practice (picked conditions), replay (seed already rewarded), forfeit (abandoned ranked). */
   kind?: "ranked" | "practice" | "replay" | "forfeit";
+  /** Ranked league of a ranked / forfeit row [P6-R1]; absent on rows before pass 6 (= Prime). */
+  league?: LeagueId;
 }
 
 export interface Profile {

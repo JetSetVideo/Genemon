@@ -10,7 +10,7 @@ import { ELEMENT_IDS, ELEMENTS, type ElementId } from "../../data/elements.ts";
 import { HYBRIDS, identityOfPhenotype } from "../../data/hybrids.ts";
 import { AXIS_BY_ID, type AxisId } from "../../data/axes.ts";
 import { FOOD_IDS, FOODS } from "../../data/lifestyle.ts";
-import { type Genemon, phenotypeOf, STAGE_NAMES } from "../../genome/genemon.ts";
+import { type Genemon, phenotypeOf, stageName } from "../../genome/genemon.ts";
 import { BODY_KINDS, type BodyKind } from "../../genome/genome.ts";
 import { type Phenotype, SIZE_CLASSES, type SizeClass } from "../../genome/phenotype.ts";
 import { LIFE_PHASES } from "../../genome/lifeTypes.ts";
@@ -187,7 +187,7 @@ function detailDrawer(app: App, g: Genemon, ps: TeamPresets): HTMLElement {
       h("span", { class: "size", title: `${ph.slots} team slot(s)` }, `${ph.sizeClass}·${ph.slots}`)),
     h("dl", { class: "kv" },
       h("dt", {}, "Level"), h("dd", {}, String(ph.level)),
-      h("dt", {}, "Stage"), h("dd", {}, STAGE_NAMES[g.stage] || "-"),
+      h("dt", {}, "Stage"), h("dd", {}, stageName(g, ph)),
       h("dt", {}, "Power"), h("dd", {}, fmt(ph.power)),
       h("dt", {}, "Body"), h("dd", {}, `${ph.kind} · ${fmt(ph.heightM, 2)} m · ${fmt(ph.massKg, 1)} kg`),
       h("dt", {}, "Teams"), h("dd", {}, ins.length ? ins.join(", ") : "none")),

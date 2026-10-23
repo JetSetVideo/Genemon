@@ -1,5 +1,8 @@
 /**
- * Ladder screen: the condition-aware MMR (src/ladder/mmr.ts) as the player sees it - standings,
+ * Ladder screen [P6-R2]: the two ranked leagues side by side (Prime | Eternal: tier, rating, W/L/D and
+ * recent matches of each), then tabs that open one league's full ladder below.
+ *
+ * Per league: the condition-aware MMR (src/ladder/mmr.ts) as the player sees it - standings,
  * why the last match moved the rating, what the ladder has learned each condition is worth, the
  * player's results per arena / weather / combo with Wilson 95% intervals, and the best and worst
  * combos. Data: getLadder() and the last-match summary written by recordBattle()
@@ -13,8 +16,11 @@ import { EXTRA_CONTEXT_FEATURES } from "../../ladder/context.ts";
 import { COMBO_FEATURE, type ConditionEntry, CONTEXT_FEATURES, type Ladder } from "../../ladder/mmr.ts";
 import { ARENA_INFO } from "../../world/arena.ts";
 import { bar, fmt, h, pct, section } from "../dom.ts";
-import { getLadder, type LastMatch, loadLastMatch } from "../ladderStore.ts";
+import { type LastMatch, leagueLadder, loadLastMatch } from "../ladderStore.ts";
 import { elChip } from "../widgets.ts";
+import { LEAGUE_IDS, LEAGUES, type LeagueId, leagueOfRecord, rankTier } from "../../ladder/leagues.ts";
+import { leagueStanding, rankedLeague, renderRankedPanel, tierBadge } from "../rankedPanel.ts";
+import type { BattleRecordLite } from "../profile.ts";
 
 const LABELS: Record<string, string> = {
   typeAdvantage: "Type advantage",
@@ -72,14 +78,14 @@ function offsetLabel(key: string): string {
 
 // ------------------------------------------------------------------------------------ sections
 
-function rankingSection(app: App, ladder: Ladder): HTMLElement {
+function rankingSection(app: App, ladder: Ladder, league: LeagueId): HTMLElement {
   const rows = ladder.table();
   const rated = new Set(rows.map((r) => r.id));
   const unrated = app.store.list().filter((p) => !rated.has(p.id));
   const me = app.profile.id;
   const nameCell = (id: string, extra: string) =>
     h("td", {}, id === me ? h("b", {}, playerName(app, id)) : playerName(app, id), extra ? h("span", { class: "muted" }, ` · ${extra}`) : null);
-  return section("Ranking",
+  return section(`${LEAGUES[league].name} ranking`,
     h("table", { class: "t" },
       h("tr", {}, h("th", {}, "#"), h("th", {}, "Player"), h("th", {}, "Rating"), h("th", {}, "Games"), h("th", {}, "W/L/D")),
       ...rows.map((r, i) =>
@@ -102,7 +108,7 @@ function rankingSection(app: App, ladder: Ladder): HTMLElement {
       `Provisional = fewer than ${ladder.provisionalGames} games: the rating moves ${fmt(ladder.provisionalMult)}× faster. Rival trainers, wild swarms and mirror matches are rated like any player.`));
 }
 
-function lastMatchSection(app: App, last: LastMatch): HTMLElement {
+function lastMatchSection(app: App, last: LastMatch, league: LeagueId): HTMLElement {
   const me = app.profile.id;
   const mine = last.a === me || last.b === me;
   const flip = last.b === me && last.a !== me;
@@ -135,7 +141,7 @@ function lastMatchSection(app: App, last: LastMatch): HTMLElement {
   const shown = last.top.reduce((acc, c) => acc + c.logit, 0);
   const rest = s * (last.contextLogit - shown);
   const effect = (logit: number): number => 100 * (sigmoid(z) - sigmoid(z - logit));
-  return section("Why the last match moved your rating",
+  return section(`Why the last ${LEAGUES[league].name} match moved ${mine ? "your" : "the"} rating`,
     h("p", {}, `${Who} ${outcome} against ${opp} in ${arenaName(last.arena)} (${weatherName(last.weather)}, ${last.winCondition || "result"}).`),
     h("dl", { class: "kv" },
       h("dt", {}, "Expected win chance"), h("dd", {}, `${pct(E)} with the conditions · ${pct(E0)} from the ratings alone`),
@@ -258,30 +264,90 @@ function featureListSection(): HTMLElement {
       ...FEATURES.map((f) => h("tr", {}, h("td", {}, label(f.name)), h("td", { class: "muted" }, f.note)))));
 }
 
+// ------------------------------------------------------------------------------------ leagues
+
+/** The league whose full ladder is open below the side-by-side cards (follows the Ranked toggle at first). */
+let tab: LeagueId | null = null;
+const RECENT = 5;
+
+/** Ranked rows of the player's history in a league, newest first (rows before pass 6 = Prime). */
+function recentIn(app: App, league: LeagueId): BattleRecordLite[] {
+  return app.profile.history.filter((r) => leagueOfRecord(r) === league).slice(0, RECENT);
+}
+
+function resultMark(won: 0 | 1 | 2): HTMLElement {
+  const [cls, txt] = won === 0 ? ["win", "W"] : won === 1 ? ["loss", "L"] : ["draw", "D"];
+  return h("span", { class: `p6r-res ${cls}` }, txt);
+}
+
+/** One league card: tier, rating, record, place and the last matches (click = open its tab). */
+function leagueCard(app: App, league: LeagueId, open: boolean): HTMLElement {
+  const def = LEAGUES[league];
+  const st = leagueStanding(app, league);
+  const tier = rankTier(st.rating, st.games);
+  const recent = recentIn(app, league);
+  const openTab = () => {
+    tab = league;
+    app.render();
+  };
+  return h("div", { class: `p6r-card ${open ? "on" : ""}`, role: "button", tabindex: 0, "data-league-card": league, "aria-pressed": String(open), title: `Open the ${def.name} ladder below`, vars: { tier: tier.color }, onclick: openTab, onkeydown: (e: KeyboardEvent) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      openTab();
+    }
+  } },
+    h("div", { class: "p6r-card-head" }, h("b", {}, def.name), tierBadge(st)),
+    h("div", { class: "p6r-big mono" }, fmt(st.rating)),
+    h("div", { class: "muted" }, st.games ? `${st.wins}W ${st.losses}L ${st.draws}D · ${st.games} game${st.games === 1 ? "" : "s"}${st.place !== null ? ` · #${st.place} of ${st.players}` : ""}${st.provisional ? " · provisional" : ""}` : "No game yet"),
+    tier.next !== null ? h("div", { class: "muted" }, `Next tier at ${tier.next}`) : null,
+    recent.length
+      ? h("ol", { class: "p6r-recent" }, ...recent.map((r) =>
+        h("li", {}, resultMark(r.won), h("span", {}, `vs ${r.opponent}`), h("span", { class: "muted" }, arenaName(r.arena)), h("span", { class: `mono ${r.mmrDelta > 0 ? "p6r-up" : r.mmrDelta < 0 ? "p6r-down" : ""}` }, `${r.mmrDelta > 0 ? "+" : ""}${r.mmrDelta}`))))
+      : h("p", { class: "muted" }, "No recent match."),
+    h("p", { class: "muted p6r-blurb" }, def.blurb));
+}
+
+function leaguesSection(app: App, open: LeagueId): HTMLElement {
+  return section("Your two ladders",
+    h("div", { class: "p6r-duo" }, ...LEAGUE_IDS.map((l) => leagueCard(app, l, l === open))),
+    h("p", { class: "muted" }, "Each league has its own rating, history and arena draw. Prime has a level cap and refuses Genemon past their prime; they keep ranking in Eternal, where every Genemon is welcome."));
+}
+
+function leagueTabs(app: App, open: LeagueId): HTMLElement {
+  return h("div", { class: "p6r-tabs", role: "tablist", "aria-label": "League" },
+    ...LEAGUE_IDS.map((l) =>
+      h("button", { class: `p6r-tab ${l === open ? "on" : ""}`, type: "button", role: "tab", "data-league-tab": l, "aria-selected": String(l === open), onclick: () => {
+        tab = l;
+        app.render();
+      } }, `${LEAGUES[l].name} ladder`)));
+}
+
 // ------------------------------------------------------------------------------------ screen
 
 export function renderLadder(app: App): HTMLElement {
-  const ladder = getLadder(app);
+  const league = tab ?? rankedLeague();
+  const ladder = leagueLadder(app, league);
   const intro = h("p", {},
     "Your rating moves by K × (result − expected). The expected score uses both ratings AND the match conditions: type advantage, arena ground, weather, time of day, team power, synergy, size, reach and your combos' track record. A win when the conditions were against you pays more; a loss when they favoured you costs more. How much each condition matters is learned from every ladder match.");
+  const head = [h("h1", {}, "Ladder"), leaguesSection(app, league), section("Ranked battle", renderRankedPanel(app, { compact: true })), leagueTabs(app, league)];
   if (ladder.matches === 0) {
-    return h("div", {},
-      h("h1", {}, "Ladder"),
+    return h("div", { "data-ladder-league": league },
+      ...head,
       intro,
-      section("No ladder battles yet",
-        h("p", {}, "Fight a few ladder battles to fill this page."),
-        h("p", { class: "muted" }, "Every Arena battle counts, against a rival trainer, another profile, a wild swarm or your mirror."),
+      section(`No ${LEAGUES[league].name} battles yet`,
+        h("p", {}, `Fight a few ${LEAGUES[league].name} ranked battles to fill this page.`),
+        h("p", { class: "muted" }, LEAGUES[league].blurb),
         h("button", { class: "btn primary", onclick: () => app.go("arena") }, "⚔ Go to the Arena")),
       featureListSection());
   }
-  const last = loadLastMatch(localStorage);
-  return h("div", {},
-    h("h1", {}, "Ladder"),
+  const last = loadLastMatch(localStorage, league);
+  return h("div", { "data-ladder-league": league },
+    ...head,
     intro,
-    rankingSection(app, ladder),
-    last ? lastMatchSection(app, last) : null,
+    rankingSection(app, ladder, league),
+    last ? lastMatchSection(app, last, league) : null,
     weightsSection(ladder),
     conditionsSection(app, ladder),
     combosSection(ladder),
-    h("p", { class: "muted" }, `${ladder.matches} ladder match${ladder.matches === 1 ? "" : "es"} recorded. Each one is a ladder.match row in the Data screen's ledger.`));
+    h("p", { class: "muted" }, `${ladder.matches} ${LEAGUES[league].name} match${ladder.matches === 1 ? "" : "es"} recorded. Each one is a ladder.match row (league ${league}) in the Data screen's ledger.`));
 }

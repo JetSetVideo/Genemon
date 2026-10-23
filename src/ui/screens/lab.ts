@@ -3,7 +3,7 @@ import { SPACES, type AxisId } from "../../data/axes.ts";
 import { ELEMENT_IDS, ELEMENTS } from "../../data/elements.ts";
 import { GROUND_IDS, type GroundId } from "../../data/grounds.ts";
 import { EXPERIENCE_IDS, EXPERIENCES, type ExperienceId, FOOD_IDS, FOODS, type FoodId } from "../../data/lifestyle.ts";
-import { age, createGenemon, expose, feedLife, type Genemon, inheritLife, live, phenotypeOf, STAGE_NAMES } from "../../genome/genemon.ts";
+import { age, canBreed, createGenemon, expose, feedLife, type Genemon, inheritLife, live, phenotypeOf, stageName } from "../../genome/genemon.ts";
 import { breed, fuse, geneticDistance, morph, mutate } from "../../genome/breeding.ts";
 import { PLAN_GENES } from "../../genome/genome.ts";
 import { epigeneticPressure } from "../../genome/epigenetics.ts";
@@ -77,7 +77,7 @@ export function renderLab(app: App): HTMLElement {
     } }, t)));
   const head = h("div", {},
     h("div", { class: "row" }, h("h1", {}, g.name), h("span", { class: "size" }, `${ph.sizeClass}·${ph.slots}`), elChip(ph.elements.primary), ph.elements.secondary ? elChip(ph.elements.secondary) : null),
-    h("p", { class: "muted" }, `${ph.kind} · ${STAGE_NAMES[g.stage]} · Lv ${ph.level} · gen ${g.genome.generation} · ${g.genome.id}`),
+    h("p", { class: "muted" }, `${ph.kind} · ${stageName(g, ph)} · Lv ${ph.level} · gen ${g.genome.generation} · ${g.genome.id}`),
     h("div", { class: "row" },
       h("button", { class: `btn small ${app.profile.settings.showSkeleton ? "on" : ""}`, title: "Overlay bones, centre of mass and support polygon", onclick: () => app.updateSettings({ showSkeleton: !app.profile.settings.showSkeleton }) }, "🦴 skeleton"),
       h("button", { class: "btn small", onclick: () => app.labView && (app.labView.autoRotate = !app.labView.autoRotate) }, "⟳ rotate"),
@@ -162,10 +162,19 @@ export function renderLab(app: App): HTMLElement {
         }), pg ? h("p", { class: "muted" }, `Genetic distance ${fmt(geneticDistance(g.genome, pg.genome), 2)} (higher = more diverse offspring).`) : null),
         pg ? sec("breed", "Operations", {},
           h("div", { class: "grid2" },
-            h("button", { class: "btn primary", onclick: () => addChild(app, inheritLife(createGenemon({ seed, owner: app.profile.id, level: 5, ageDays: 1, genome: breed(g.genome, pg.genome, seed) }), g, pg, seed, Date.now()), `bred ${g.name} × ${pg.name}`) }, "Breed"),
+            h("button", { class: "btn primary", disabled: !canBreed(g, pg).ok, title: canBreed(g, pg).why, onclick: () => {
+              // Pass 6 [P6-E5]: both parents must be inside a fertility window (phase + cycle).
+              const ok = canBreed(g, pg);
+              if (!ok.ok) {
+                toast(`Cannot breed: ${ok.why}`, 4200);
+                return;
+              }
+              addChild(app, inheritLife(createGenemon({ seed, owner: app.profile.id, level: 5, ageDays: 1, genome: breed(g.genome, pg.genome, seed) }), g, pg, seed, Date.now()), `bred ${g.name} × ${pg.name}`);
+            } }, "Breed"),
             h("button", { class: "btn", onclick: () => addChild(app, createGenemon({ seed: seed + 1, owner: app.profile.id, level: Math.max(phenotypeOf(g).level, phenotypeOf(pg).level), genome: fuse(g.genome, pg.genome, seed) }), `fused ${g.name} + ${pg.name}`) }, "Fuse"),
             h("button", { class: "btn", onclick: () => addChild(app, createGenemon({ seed: seed + 2, owner: app.profile.id, level: phenotypeOf(g).level, genome: morph(g.genome, pg.genome, morphT) }), `morphed ${Math.round(morphT * 100)}%`) }, `Morph ${Math.round(morphT * 100)}%`),
             h("button", { class: "btn", onclick: () => addChild(app, createGenemon({ seed: seed + 3, owner: app.profile.id, level: phenotypeOf(g).level, genome: mutate(g.genome, seed, 0.35) }), `mutated ${g.name}`) }, "Mutate")),
+          h("p", { class: "muted" }, `Breeding: ${canBreed(g, pg).why}.`),
           h("label", { class: "field" }, "Morph blend", h("input", { type: "range", min: 0, max: 1, step: 0.05, value: morphT, oninput: (e: Event) => (morphT = Number((e.target as HTMLInputElement).value)), onchange: () => app.render() }))) : h("p", {}, "You need at least two Genemon."),
         sec("objects", "Release", {}, h("p", { class: "muted" }, "Released Genemon return to the wild and influence spawns around you."), h("button", { class: "btn", onclick: () => {
           if (app.profile.collection.length <= 1) return;

@@ -9,6 +9,9 @@ import { arenaStats, previewSeed } from "../../world/arenaStats.ts";
 import { renderArenaDossier } from "../arenaDossier.ts";
 import { renderGauntletPanel } from "../gauntletPanel.ts";
 import { lootList } from "../icons.ts";
+import { LEAGUES, type LeagueId } from "../../ladder/leagues.ts";
+import { leagueLadder } from "../ladderStore.ts";
+import { renderRankedPanel } from "../rankedPanel.ts";
 
 const opts: BattleOptions = { arena: "meadow", weather: "auto", hour: "real", opponent: "rival", format: "brawl" };
 
@@ -75,12 +78,9 @@ export function mountArena(app: App): void {
   showArenaPreview(app);
 }
 
-/**
- * App.startRanked with the chosen start slot. The third parameter is ignored until App.startRanked
- * accepts it (a function with fewer parameters is assignable to this type).
- */
-function rankedStart(app: App): (opponent: "rival" | "profile", opponentProfile?: string, spawn?: number) => void {
-  return app.startRanked.bind(app);
+/** League of the last battle (BattleOptions.league; absent = Prime, the pre-pass-6 ladder). */
+function lastLeague(app: App): LeagueId {
+  return (app.lastBattle?.opts as { league?: LeagueId } | undefined)?.league ?? "prime";
 }
 
 /** Re-render the panel without losing its scroll position. */
@@ -218,7 +218,7 @@ export function renderArena(app: App): HTMLElement {
   if (bv && !res) {
     const b = bv.battle;
     root.append(
-      h("h1", {}, "Battle in progress"),
+      h("h1", {}, app.lastBattle?.opts.ranked ? `Ranked battle · ${LEAGUES[lastLeague(app)].name}` : "Battle in progress"),
       h("p", {}, `${ARENA_INFO[b.arena.spec.kind].name} · started in ${WEATHERS[b.setup.arena.weather].name} · ${Math.floor(b.setup.arena.hour)}h (live weather: bottom of the 3D view). ${WEATHERS[b.setup.arena.weather].note}`),
       h("p", { class: "muted" }, `${b.arena.symmetry === "none" ? "Free layout" : b.arena.symmetry === "mirror" ? "Symmetric map (mirror)" : "Symmetric map (rotated 180°)"} · ${fmt(b.arena.altitudeM)} m altitude · ${b.arena.innerProps().filter((p) => p.solid).length} solid obstacles · ${b.arena.plateaus.length} plateau${b.arena.plateaus.length === 1 ? "" : "s"}.`),
       section("Controls",
@@ -247,7 +247,9 @@ export function renderArena(app: App): HTMLElement {
           h("dt", {}, "MVP"), h("dd", {}, b?.fighters.find((f) => f.id === res.mvp)?.name ?? "-"),
           h("dt", {}, "Reactions"), h("dd", {}, Object.entries(res.reactions).map(([k, v]) => `${k}×${v}`).join(", ") || "none"),
           h("dt", {}, "Weather"), h("dd", {}, res.weatherStart === res.weatherEnd ? res.weatherStart : `${res.weatherStart} → ${res.weatherEnd}`),
-          h("dt", {}, "MMR"), h("dd", {}, rec ? `${rec.mmrDelta >= 0 ? "+" : ""}${rec.mmrDelta} → ${Math.round(app.profile.mmr)}` : "-"),
+          ...(app.lastBattle?.opts.ranked
+            ? [h("dt", {}, `${LEAGUES[lastLeague(app)].name} rating`), h("dd", { "data-result-league": lastLeague(app) }, rec ? `${rec.mmrDelta >= 0 ? "+" : ""}${rec.mmrDelta} → ${Math.round(leagueLadder(app, lastLeague(app)).rating(app.profile.id))}` : "-")]
+            : [h("dt", {}, "Rating"), h("dd", {}, "unrated (practice)")]),
           h("dt", {}, "Loot"), h("dd", { "data-loot": "" }, lootList(app.lastLoot))),
         h("table", { class: "t" },
           h("tr", {}, h("th", {}, "Genemon"), h("th", {}, "Side"), h("th", {}, "Dealt"), h("th", {}, "Hits"), h("th", {}, "Crits"), h("th", {}, "KOs"), h("th", {}, "HP")),
@@ -316,10 +318,8 @@ export function renderArena(app: App): HTMLElement {
         : null,
       h("p", { class: "muted" }, { rival: "An AI trainer with a balanced team at your level.", profile: "Another profile's team (you vs me).", wild: "A swarm of wild Genemon.", mirror: "Your own team against itself.", gauntlet: "One Genemon against an endless line (use the Gauntlet panel below)." }[opts.opponent])),
     section("Ranked",
-      h("p", { class: "muted" }, "Rated battles move your condition-aware MMR. The ladder draws the arena; your real hour and today's weather apply. Each seed pays XP and rating once."),
-      h("p", { class: "muted" }, `Ranked maps are symmetric (mirrored or rotated 180°), so neither side starts on better ground. Your start point (${map.spawn + 1} · ${(SPAWN_SLOTS[map.spawn] ?? SPAWN_SLOTS[0]).label.toLowerCase()}) applies; the opponent takes its image.`),
-      h("div", { class: "row" },
-        h("button", { class: "btn primary big", "data-action": "ranked-battle", onclick: () => rankedStart(app)(opts.opponent === "profile" ? "profile" : "rival", opts.opponent === "profile" ? (opts.opponentProfile ?? others[0]?.id) : undefined, map.spawn) }, "♛ Ranked battle"))),
+      renderRankedPanel(app, { opponent: opts.opponent === "profile" ? "profile" : "rival", opponentProfile: opts.opponent === "profile" ? (opts.opponentProfile ?? others[0]?.id) : undefined, spawn: map.spawn }),
+      h("p", { class: "muted" }, `Rated battles move the chosen league's condition-aware rating. The ladder draws the arena; your real hour and today's weather apply. Each seed pays XP and rating once. Ranked maps are symmetric, so neither side starts on better ground; your start point (${map.spawn + 1} · ${(SPAWN_SLOTS[map.spawn] ?? SPAWN_SLOTS[0]).label.toLowerCase()}) applies. Opponent: ${opts.opponent === "profile" ? "the chosen profile" : "a rival trainer"}.`)),
     h("button", { class: "btn big", "data-action": "start-battle", title: "Practice: you pick the conditions, nothing is rated", onclick: () => app.startBattle(withMap(opts)) }, "⚔ Practice battle (unrated)"),
     renderGauntletPanel(app, app.gauntletDeps()),
   );

@@ -117,8 +117,9 @@ Deno.test("[SPEC V3] manga eyes: all 8 styles, ~80 % two eyes, pupil follows sty
     assert(styles.has(st), `eye style ${st} never appears`);
   }
   // Pass 5: 1..8 eyes, two stay the norm (~80 %); the full distribution is pinned in helix_p5_test.ts.
+  // Pass 6 [P6-C1]: minimal globes (~6.5 % of wild genomes) are one-eyed by definition: two eyes ~74 %.
   const two = sample.filter((s) => s.h.eyes.count === 2).length / N;
-  assert(two >= 0.74 && two <= 0.86, `two eyes ${two}`);
+  assert(two >= 0.68 && two <= 0.86, `two eyes ${two}`);
   for (const { h } of sample) {
     assert(h.eyes.count >= 1 && h.eyes.count <= 8);
     assertEquals(h.eyes.count, h.p5!.eyes.count, "EyeGenes.count mirrors p5.eyes.count");
@@ -157,7 +158,8 @@ Deno.test("[SPEC V3] wings bigger and flapping more: avian span >= 2.0, avian fl
   for (const { ph, h } of sample) {
     if (h.wings.kind === "none") assertEquals(h.wings.span, 0);
     else if (ph.kind !== "avian") assert(h.wings.span >= 1.2 && h.wings.span <= 2.6, `span ${h.wings.span}`);
-    if (ph.kind !== "avian" && ph.plan.wings < 0.45) assertEquals(h.wings.kind, "none");
+    // Pass 6: a mythic chimera grows wing pairs on any body (complexity counts.wingPairs >= 2).
+    if (ph.kind !== "avian" && ph.plan.wings < 0.45 && h.p6?.complexity.tier !== "mythic") assertEquals(h.wings.kind, "none");
     assert(h.wings.fingers >= 0 && h.wings.fingers <= 5);
   }
 });
@@ -166,10 +168,12 @@ Deno.test("[SPEC V3] teeth, digits and fractal development follow the body", () 
   for (const { ph, h } of sample) {
     assert(h.mouth.teethCount >= 0 && h.mouth.teethCount <= 12);
     assert(h.mouth.width >= 0.3 && h.mouth.width <= 1);
-    assert(h.digits >= 0 && h.digits <= 5);
+    // Pass 6 [P6-C1]: digits = complexity counts.fingers; a mythic chimera has 5-7 fingers on any body.
+    const mythic = h.p6?.complexity.tier === "mythic";
+    assert(h.digits >= 0 && h.digits <= (mythic ? 7 : 5), `digits ${h.digits}`);
     assert(h.fractalDepth >= 0 && h.fractalDepth <= 3);
-    if (ph.kind === "serpent" || ph.kind === "blob") assertEquals(h.digits, 0);
-    if (ph.kind === "avian") assert(h.digits >= 3 && h.digits <= 4, `avian toes ${h.digits}`);
+    if ((ph.kind === "serpent" || ph.kind === "blob") && !mythic) assertEquals(h.digits, 0);
+    if (ph.kind === "avian" && !mythic) assert(h.digits >= 3 && h.digits <= 4, `avian toes ${h.digits}`);
     if (h.mouth.teeth === "beak") assertEquals(ph.kind, "avian");
   }
   const avian = sample.filter((s) => s.ph.kind === "avian");

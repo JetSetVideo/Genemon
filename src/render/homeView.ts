@@ -12,10 +12,9 @@
  * "low" when more than 3 share the platform. The pure layout helpers at the top are tested in
  * tests/home_dex_test.ts.
  */
-import { P5_DEFAULTS } from "../genome/morphTypes.ts";
 import { lifePhase } from "../genome/lifeclock.ts";
 import * as THREE from "../lib/three.ts";
-import { buildSkeleton } from "../body/skeleton.ts";
+import { buildSkeleton, skeletonGenes } from "../body/skeleton.ts";
 import { type Genemon, phenotypeOf } from "../genome/genemon.ts";
 import type { Phenotype } from "../genome/phenotype.ts";
 import { helixOf } from "../genome/helix.ts";
@@ -263,7 +262,7 @@ export class HomeView implements View {
   private buildActor(g: Genemon): Actor {
     const ph = phenotypeOf(g);
     const helix = helixOf(g.genome, ph);
-    const sk = buildSkeleton(ph, helix.p5 ?? P5_DEFAULTS);
+    const sk = buildSkeleton(ph, skeletonGenes(helix));
     const cv = new CreatureView(ph, sk, hashSeed(g.genome.id, "skin"), { quality: this.quality, shadows: this.o.shadows, helix, life: { scars: g.life?.scars ?? [], phase: lifePhase(g) } });
     const anim = new Animator(sk, ph, helix);
     cv.root.updateMatrixWorld(true);

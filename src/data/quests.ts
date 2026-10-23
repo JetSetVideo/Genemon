@@ -1070,7 +1070,7 @@ export const QUESTS: readonly Quest[] = [
     physicalOnly: false,
     steps: [
       s("gen3", "Breed a generation-3 Genemon.", "genemon.breed", 1, { "generation>=": 3 }),
-      s("adult", "Raise a Genemon to the Adult stage.", "genemon.evolve", 1, { "exits.toStage": 3 }),
+      s("adult", "Raise a Genemon to a grown-up form (adult, imago...).", "genemon.evolve", 1, { "exits.mature": true }),
     ],
     reward: { credits: 400, xp: 600 },
     giver: "Professor Helix",

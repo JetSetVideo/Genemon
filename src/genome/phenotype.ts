@@ -12,11 +12,15 @@ import { ELEMENT_IDS, ELEMENTS, elementAffinities, type ElementId, typeMultiplie
 import { GROUND_IDS, type GroundId } from "../data/grounds.ts";
 import { FOOD_IDS, FOODS, type FoodId, GROUND_EXPOSURE } from "../data/lifestyle.ts";
 import { clamp, clamp01, u01 } from "../core/math.ts";
-import { type Conditions, epigeneticShift, growthOf, levelOf } from "./epigenetics.ts";
+import { type Conditions, epigeneticShift, growthOf } from "./epigenetics.ts";
+import { evolutionPlanOf, levelCurve, phaseOf } from "./evolution.ts";
 import { type BodyKind, geneticAxes, type Genome, type PatternKind, PLAN_GENES, type PlanGene, planValue } from "./genome.ts";
 import { hashSeed, Rng } from "../core/rng.ts";
 import { identityOfPhenotype } from "../data/hybrids.ts";
 import type { EvoState, NurtureState, Palette3 } from "./p6Types.ts";
+import { complexityOf, isColossal } from "./complexity.ts";
+import { nurtureOf } from "./structure.ts";
+import { palette3Of, paletteFromP3 } from "./palette.ts";
 
 export { POWER_BUDGET, SIZE_CLASSES, type SizeClass, SLOT_COST } from "../data/sizeBudget.ts";
 import { POWER_BUDGET, type SizeClass, SLOT_COST } from "../data/sizeBudget.ts";
@@ -293,8 +297,12 @@ export function express(g: Genome, c: Conditions, extraShift: Partial<Record<Axi
   const axes = {} as AxisVector;
   // Pass 5: object imprints bend an axis by at most +-0.06 (src/genome/imprint.ts imprintAxisShift) [P5-G6].
   for (const id of AXIS_IDS) axes[id] = clamp(genetic[id] + shift[id] + (extraShift[id] ?? 0), -1, 1);
-  const growth = growthOf(c);
-  const level = levelOf(c.xp);
+  // Pass 6 [P6-E1..E4]: the lineage's evolution plan sets the XP curve (level), the phase (form, unlocks)
+  // and the phase's size multiplier; growth counts xp in lineage units (same level + age = same growth).
+  const evoPlan = evolutionPlanOf(g);
+  const growth = growthOf(c, evoPlan.xpMult);
+  const level = levelCurve(evoPlan).levelOf(c.xp);
+  const evo = phaseOf(evoPlan, level, c.ageDays, c);
   const plan = {} as Record<PlanGene, number>;
   for (const id of PLAN_GENES) plan[id] = planValue(g, id);
 
@@ -302,14 +310,26 @@ export function express(g: Genome, c: Conditions, extraShift: Partial<Record<Axi
   const tempo01 = u01(axes.tempo), might01 = u01(axes.might), vit01 = u01(axes.vitality);
   const focus01 = u01(axes.focus);
   const adultH = 0.25 * Math.pow(16, size01);
-  const heightM = adultH * (0.35 + 0.65 * growth);
+  // sizeMult = 1 at the reference adult's phase (level 20, 60 days): the adult size class is the pass-5 one;
+  // earlier phases are smaller, later ones a little bigger, a cocoon shrinks (src/genome/evolution.ts).
+  // Pass 6 [P6-C1]: a colossus hatches near its full size, so it fills the 6 slots (XXL) at every age.
+  const colossal = isColossal(g);
+  const rawH = adultH * (colossal ? 0.9 + 0.1 * growth : 0.35 + 0.65 * growth) * (colossal ? Math.max(1, evo.sizeMult) : evo.sizeMult);
   const density = clamp(
     1000 * Math.pow(2, 1.6 * axes.weight) * (1 - 0.75 * Math.max(0, axes.phase)) *
       (1 - 0.6 * Math.max(0, -axes.substance)) * (1 + 0.35 * Math.max(0, axes.hardness)),
     60,
     4000,
   );
-  const massKg = density * SHAPE_K[g.kind] * heightM ** 3;
+  // Pass 6 [P6-C1, P6-C2]: the size class follows the complexity spectrum at its two ends. XXL (6 slots) is
+  // RESERVED for the colossus; a minimal globe stays a small 1-slot creature. The body keeps its proportions
+  // (height scales with the cube root of the mass cap).
+  const rawMass = density * SHAPE_K[g.kind] * rawH ** 3;
+  // A colossus IS XXL whatever its density (an airy void giant too): its mass is floored at the XXL threshold.
+  const massCap = colossal ? Infinity : complexityOf(g).tier === "minimal" ? MASS_THRESHOLDS.S * 0.9 : MASS_THRESHOLDS.XL * 0.97;
+  const massFloor = colossal ? MASS_THRESHOLDS.XL * 1.04 : 0;
+  const massKg = clamp(rawMass, massFloor, massCap);
+  const heightM = rawMass === massKg ? rawH : rawH * Math.cbrt(massKg / rawMass);
   const sizeClass = sizeClassOf(massKg);
   const elasticity = clamp01(u01(axes.elasticity) * 0.85 + Math.max(0, axes.phase) * 0.15);
   const mobility = clamp(0.6 + 0.8 * elasticity - 0.3 * hard01 + 0.2 * u01(axes.form), 0.4, 1.6);
@@ -337,13 +357,30 @@ export function express(g: Genome, c: Conditions, extraShift: Partial<Record<Axi
     reach: 0.55 + 0.45 * heightM + 0.25 * plan.neck * heightM,
     rate: 0.75 + 0.5 * tempo01,
   };
+  // Phase reshaping [P6-E3, E4], budget-neutral: def is priced in powerIndex, so the normalisation below
+  // pays a thicker shell with less HP/attack and refunds a shed one. A cocoon barely moves (it cannot fight).
+  const shed = evo.unlocks.lastIndexOf("armorShed"), lastArmor = evo.unlocks.lastIndexOf("armor+");
+  const armorLayers = evo.unlocks.filter((u) => u === "armor+").length;
+  if (shed > lastArmor) {
+    raw.def *= 0.6;
+    raw.spd *= 1.15;
+  } else if (armorLayers > 0) raw.def *= 1 + 0.08 * Math.min(3, armorLayers);
+  const necks = evo.unlocks.filter((u) => u === "neck+").length;
+  if (necks > 0) raw.reach *= 1 + 0.06 * Math.min(3, necks);
+  if (evo.form === "cocoon") {
+    raw.def *= 1.5;
+    raw.spd *= 0.15;
+    raw.evasion = 0.02;
+  }
   const target = 100 * POWER_BUDGET[sizeClass] * (1 + 0.12 * (2 * quality - 1)) * (1 + (level - 1) / 30) *
     (0.55 + 0.45 * growth);
   const s = target / powerIndex(raw);
   const stats: Stats = { ...raw, hp: raw.hp * s, atk: raw.atk * s };
 
   const abilities: Abilities = {
-    fly: g.kind === "avian" || (plan.wings > 0.62 && axes.altitude > 0.35 && density < 900),
+    // Pass 6: a winged imago (metamorphosis) takes to the air like a butterfly [P6-E4].
+    fly: g.kind === "avian" || (plan.wings > 0.62 && axes.altitude > 0.35 && density < 900) ||
+      (evo.kind === "metamorphosis" && evo.unlocks.includes("wingPair+") && density < 1500),
     swim: axes.moisture > 0.25 || (g.kind === "serpent" && axes.moisture > 0),
     dig: axes.altitude < -0.3 && axes.hardness > -0.2 && g.kind !== "avian" && g.kind !== "blob",
     phaseShift: axes.form > 0.45 && Math.abs(axes.phase) < 0.6,
@@ -362,6 +399,11 @@ export function express(g: Genome, c: Conditions, extraShift: Partial<Record<Axi
     Math.max(0, axes.luminance) * 0.7 + (glowEls.includes(els.primary) ? 0.35 : 0) +
       (els.secondary && glowEls.includes(els.secondary) ? 0.15 : 0),
   );
+  // Pass 6 [P6-K1]: primary / secondary / tertiary palette (src/genome/palette.ts), mapped back onto the pass-5
+  // palette (base = primary, accent = secondary, belly / eye / glow per attribution) so every consumer wears it.
+  // Minimal globes (complexity tier "minimal") use two colours.
+  const palette3 = palette3Of(g, axes, els.primary, els.secondary, complexityOf(g).colors);
+  const palette = paletteFromP3(palette3, hybridPalette(paletteOf(g, axes, els.primary, els.secondary), axes, els));
   return {
     axes,
     genetic,
@@ -370,7 +412,7 @@ export function express(g: Genome, c: Conditions, extraShift: Partial<Record<Axi
     kind: g.kind,
     plan,
     pattern: g.pattern,
-    palette: hybridPalette(paletteOf(g, axes, els.primary, els.secondary), axes, els),
+    palette,
     glow,
     heightM,
     massKg,
@@ -388,6 +430,9 @@ export function express(g: Genome, c: Conditions, extraShift: Partial<Record<Axi
     power: powerIndex(stats),
     offense: { physical: Math.exp(offBias), special: Math.exp(-offBias) },
     guard: { physical: Math.exp(guardBias), special: Math.exp(-guardBias) },
+    evo,
+    nurture: nurtureOf(g, c),
+    palette3,
   };
 }
 

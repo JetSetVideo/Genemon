@@ -17,7 +17,8 @@ import type { GauntletDeps } from "./gauntletPanel.ts";
 import { ARENA_INFO, type ArenaKind, type ArenaSymmetry, rankedSymmetry } from "../world/arena.ts";
 import { BattleView, SIDE_COLORS } from "../render/battleView.ts";
 import { isRated, rankedConditions } from "../ladder/ranked.ts";
-import { getLadder, recordBattle } from "./ladderStore.ts";
+import { leagueLadder, recordLeagueBattle } from "./ladderStore.ts";
+import { LEAGUES, type LeagueId, teamEligibility } from "../ladder/leagues.ts";
 import { getProgress, resetProgress } from "./progressStore.ts";
 import { CAMERA_DEFAULTS, renderCameraPanel, syncCameraPanel } from "./cameraPanel.ts";
 import { clampPost, gatePost } from "../render/post.ts";
@@ -26,7 +27,7 @@ import { addItems, bagOf } from "./bagStore.ts";
 import type { CameraMode } from "../render/battleCamera.ts";
 import { GenospaceView } from "../render/genospaceView.ts";
 import { LabView } from "../render/labView.ts";
-import { canRank, circadian, lifeOf, lifePhase } from "../genome/lifeclock.ts";
+import { canFight, circadian, lifeOf, lifePhase } from "../genome/lifeclock.ts";
 import { sensesOf } from "../genome/senses.ts";
 import { helixOf } from "../genome/helix.ts";
 import { Stage, type View } from "../render/stage.ts";
@@ -45,6 +46,8 @@ export interface BattleOptions {
   seed?: number;
   /** Rated battle: conditions drawn by the ladder (App.startRanked), never picked. */
   ranked?: boolean;
+  /** Ranked league [P6-R1] (default "prime"): which ladder rates it and who may fight (src/ladder/leagues.ts). */
+  league?: LeagueId;
   /**
    * Battle format [P4-B2]: brawl = everyone at once (legacy); 1v1 / 2v2 / 3v3 = that many on the
    * field per side, the rest on the bench, thrown in on a KO or switched by the trainer.
@@ -351,12 +354,13 @@ export class App {
 
   // ---------------------------------------------------------------- battles
   opponentTeam(o: BattleOptions, seed: number): Team {
-    const mine = teamOf(this.profile);
+    const mine = o.ranked ? teamEligibility(o.league ?? "prime", teamOf(this.profile), Date.now()).fighters : teamOf(this.profile);
     const avgLevel = Math.round(mine.reduce((s, g) => s + phenotypeOf(g).level, 0) / Math.max(1, mine.length));
     switch (o.opponent) {
       case "profile": {
         const p = this.store.get(o.opponentProfile ?? "") ?? this.store.list().find((x) => x.id !== this.profile.id);
-        if (p) return { id: `team-${p.id}`, owner: p.id, name: `${p.name}'s team`, members: teamOf(p).map((g) => structuredClone(g)) };
+        const theirs = p ? (o.ranked ? teamEligibility(o.league ?? "prime", teamOf(p), Date.now()).fighters : teamOf(p).filter((g) => canFight(g).ok)) : [];
+        if (p && theirs.length) return { id: `team-${p.id}`, owner: p.id, name: `${p.name}'s team`, members: theirs.map((g) => structuredClone(g)) };
         break;
       }
       case "mirror":
@@ -372,7 +376,8 @@ export class App {
         return autoTeam(pool, "wild", seed, "swarm");
       }
     }
-    const pool = Array.from({ length: 9 }, (_, i) => createGenemon({ seed: hashSeed(seed, "rival", i), owner: "rival", level: avgLevel + 1 }));
+    const cap = o.ranked ? LEAGUES[o.league ?? "prime"].levelCap : null;
+    const pool = Array.from({ length: 9 }, (_, i) => createGenemon({ seed: hashSeed(seed, "rival", i), owner: "rival", level: cap === null ? avgLevel + 1 : Math.min(cap, avgLevel + 1) }));
     const t = autoTeam(pool, "rival", seed, "balanced");
     return { ...t, name: "Rival trainer" };
   }
@@ -381,15 +386,21 @@ export class App {
     const seed = o.seed ?? (Date.now() % 2147483647);
     const gRun = o.opponent === "gauntlet" ? this.gauntlet().current() : null;
     let mine = o.mine ?? (o.opponent === "gauntlet" ? this.profile.collection.filter((g) => g.id === gRun?.championId) : teamOf(this.profile));
-    // Elders past their prime cannot RANK [P5-G5]: they sit out rated battles (practice is still open).
+    // Pass 6 [P6-E4]: a cocoon (or an unhatched egg) cannot fight in ANY battle: it sits out.
+    const sealed = mine.filter((g) => !canFight(g).ok);
+    if (sealed.length > 0) {
+      mine = mine.filter((g) => canFight(g).ok);
+      toast(`${sealed.map((g) => `${g.name} (${canFight(g).why})`).join(", ")} cannot fight and sits this one out.`, 4200);
+    }
+    // Ranked leagues [P6-R1, P5-G5]: the league decides who fights (Prime: level cap, no unborn / cocoon /
+    // past-prime; Eternal: every born Genemon). The others sit this one out (practice is open to all).
     if (o.ranked) {
-      const out = mine.filter((g) => !canRank(g).ok);
-      if (out.length > 0) {
-        mine = mine.filter((g) => canRank(g).ok);
-        toast(`${out.map((g) => `${g.name} (${canRank(g).why})`).join(", ")} cannot rank and sits this one out.`, 4200);
-      }
+      const league = o.league ?? "prime";
+      const el = teamEligibility(league, mine, Date.now());
+      if (el.out.length > 0) toast(`${LEAGUES[league].name}: ${el.out.map((x) => `${x.g.name} (${x.why})`).join(", ")} sit${el.out.length === 1 ? "s" : ""} this one out.`, 4200);
+      mine = el.fighters;
       if (mine.length === 0) {
-        toast("Nobody in your team can rank: they are all past their prime. Train younger Genemon.", 4200);
+        toast(league === "prime" ? "Nobody in your team can fight in Prime. Switch to Eternal: every Genemon ranks there." : "Nobody in your team can fight yet (eggs only). Hatch or add Genemon in the Team screen.", 4200);
         return;
       }
     }
@@ -499,17 +510,21 @@ export class App {
     const ranked = !!opts && isRated(opts, seed, paid);
     // Rate FIRST: the condition-aware ladder reads only pre-match information, and applyBattleResult
     // below changes the Genemon (xp, records, so phenotypes).
+    const league: LeagueId = opts?.league ?? "prime";
     let delta = 0;
     if (ranked) {
-      const rating = recordBattle(this, r, [teams[0], teams[1]], b.setup.arena);
+      const rating = recordLeagueBattle(this, league, r, [teams[0], teams[1]], b.setup.arena);
       if (rating.rated) {
-        const ladder = getLadder(this);
+        const ladder = leagueLadder(this, league);
         delta = Math.round(rating.deltaA);
-        this.profile.mmr = Math.round(ladder.rating(this.profile.id));
-        const opp = opts?.opponent === "profile" ? this.store.get(teams[1].owner) : undefined;
-        if (opp) {
-          opp.mmr = Math.round(ladder.rating(opp.id));
-          this.store.save(opp);
+        // profile.mmr stays the PRIME rating (the main ladder; pre-pass-6 saves keep theirs). Eternal lives in its ladder.
+        if (league === "prime") {
+          this.profile.mmr = Math.round(ladder.rating(this.profile.id));
+          const opp = opts?.opponent === "profile" ? this.store.get(teams[1].owner) : undefined;
+          if (opp) {
+            opp.mmr = Math.round(ladder.rating(opp.id));
+            this.store.save(opp);
+          }
         }
       }
     }
@@ -556,7 +571,7 @@ export class App {
       }
     }
     const kind = forfeit ? "forfeit" : ranked ? "ranked" : fresh ? "practice" : "replay";
-    this.profile.history.unshift({ when: Date.now(), arena: r.arena, weather: r.weatherStart, hour: Math.round(r.hour), won: r.winner, opponent: teams[1].name, duration: Math.round(r.duration), reactions: Object.values(r.reactions).reduce<number>((s, v) => s + (v ?? 0), 0), mvp: b.fighters.find((f) => f.id === r.mvp)?.name ?? "", mmrDelta: delta, kind });
+    this.profile.history.unshift({ when: Date.now(), arena: r.arena, weather: r.weatherStart, hour: Math.round(r.hour), won: r.winner, opponent: teams[1].name, duration: Math.round(r.duration), reactions: Object.values(r.reactions).reduce<number>((s, v) => s + (v ?? 0), 0), mvp: b.fighters.find((f) => f.id === r.mvp)?.name ?? "", mmrDelta: delta, kind, ...(opts?.ranked ? { league } : {}) });
     this.profile.history = this.profile.history.slice(0, 60);
     this.ledger.emit({
       when: Date.now(),
@@ -566,8 +581,8 @@ export class App {
       why: `${kind}: ${ranked ? "rated by the condition-aware ladder" : fresh ? "unrated, first play of this seed" : "unrated replay"}`,
       from: this.profile.id,
       to: teams[1].owner,
-      entries: { seed, ranked, fresh, forfeit, kind },
-      exits: { mmrDelta: delta, mmr: this.profile.mmr, winner: r.winner },
+      entries: { seed, ranked, fresh, forfeit, kind, league: opts?.ranked ? league : "" },
+      exits: { mmrDelta: delta, mmr: league === "prime" ? this.profile.mmr : Math.round(leagueLadder(this, league).rating(this.profile.id)), winner: r.winner },
     });
     if (opts?.opponent === "gauntlet") this.settleGauntlet(r, teams[1], seed);
     this.save();
@@ -650,10 +665,13 @@ export class App {
     this.closeBattle();
   }
 
-  /** A rated battle: the ladder draws the arena and seed; the hour and (when it fits) the weather are real (X6). */
-  startRanked(opponent: "rival" | "profile" = "rival", opponentProfile?: string, spawn?: number): void {
-    const d = rankedConditions(this.profile.id, this.profile.stats.battles, Math.floor(Date.now() / 86_400_000), this.hourNow(), this.rw.weather);
-    this.startBattle({ arena: d.arena, weather: d.weather, hour: d.hour, opponent, opponentProfile, seed: d.seed, ranked: true, spawn });
+  /**
+   * A rated battle in `league` [P6-R1]: the ladder draws the arena and seed (each league its own draw);
+   * the hour and (when it fits) the weather are real (X6). League last: pre-pass-6 callers stay Prime.
+   */
+  startRanked(opponent: "rival" | "profile" = "rival", opponentProfile?: string, spawn?: number, league: LeagueId = "prime"): void {
+    const d = rankedConditions(this.profile.id, this.profile.stats.battles, Math.floor(Date.now() / 86_400_000), this.hourNow(), this.rw.weather, league);
+    this.startBattle({ arena: d.arena, weather: d.weather, hour: d.hour, opponent, opponentProfile, seed: d.seed, ranked: true, spawn, league });
   }
 
   // ---------------------------------------------------------------- HUD
@@ -806,6 +824,7 @@ export class App {
     return {
       screen: this.screen,
       profile: { id: this.profile.id, name: this.profile.name, mmr: this.profile.mmr, collection: this.profile.collection.length, team: this.profile.team.length, theme: this.profile.settings.theme },
+      ladders: { prime: Math.round(leagueLadder(this, "prime").rating(this.profile.id)), eternal: Math.round(leagueLadder(this, "eternal").rating(this.profile.id)), league: this.lastBattle?.opts.ranked ? (this.lastBattle.opts.league ?? "prime") : null },
       view: this.stage.view?.snapshot?.() ?? null,
       life: this.life?.stats() ?? null,
       ledger: { size: this.ledger.size, counts: this.ledger.counts() },

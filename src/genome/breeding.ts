@@ -5,18 +5,53 @@
  *  - morph:  continuous blend between two genomes (t in [0,1]) - shapeshifting & previews.
  *  - fuse:   combination of two creatures into one: strongest pole wins per axis, larger body.
  * Mutation rate rises with chaos (structure axis < 0) - chaotic lineages diverge faster.
+ * Pass 6 [P6-C2]: the complexity alleles are inherited the same Mendelian way (one per parent per pair, so
+ * the child's expected complexity is the mid-parent value), with a small mutation and a RARE JUMP (~2 % of
+ * births shift every complexity allele together by 0.04-0.10, up slightly more often than down): selection
+ * climbs the ladder slowly, a lucky birth skips a rung. A child whose genes reach the colossal tier gets the
+ * colossus body (`colossusBody`). Every draw uses forked streams, so pass-5 children keep their genes.
  */
 import { AXIS_IDS, type AxisId } from "../data/axes.ts";
 import { clamp, clamp01 } from "../core/math.ts";
 import { hashSeed, Rng } from "../core/rng.ts";
 import { ensureMorph, inheritMorph } from "./helix.ts";
-import { type Allele, BODY_KINDS, type Genome, geneticAxes, PATTERNS, PLAN_GENES, type PlanGene, sealGenome } from "./genome.ts";
+import { type Allele, BODY_KINDS, colossusBody, type Genome, geneticAxes, PATTERNS, PLAN_GENES, type PlanGene, sealGenome } from "./genome.ts";
+import { cxAllelesOf, isColossal } from "./complexity.ts";
 
 export interface BreedOptions {
   /** Base per-gene mutation probability (default 0.03). */
   mutationRate?: number;
   /** Std-dev of a mutation step on an axis allele (default 0.25). */
   mutationStep?: number;
+  /** Probability of a complexity jump at birth (default CX_JUMP_RATE). */
+  cxJumpRate?: number;
+}
+
+/** Share of births whose complexity alleles all jump together (up 55 % / down 45 %). */
+export const CX_JUMP_RATE = 0.02;
+
+/** Mendelian inheritance of the complexity alleles + small mutation + the rare jump [P6-C2]. */
+export function inheritCx(a: Genome, b: Genome, rng: Rng, mutationRate: number, jumpRate = CX_JUMP_RATE, mutations?: string[]): Allele[] {
+  const ca = cxAllelesOf(a), cb = cxAllelesOf(b);
+  const out: Allele[] = ca.map((pa, i) => {
+    let x = rng.pick(pa), y = rng.pick(cb[i]);
+    if (rng.chance(mutationRate)) x = clamp01(x + rng.normal(0, 0.12));
+    if (rng.chance(mutationRate)) y = clamp01(y + rng.normal(0, 0.12));
+    return rng.chance(0.5) ? [x, y] : [y, x];
+  });
+  if (rng.chance(jumpRate)) {
+    const up = rng.chance(0.55);
+    const d = (up ? 1 : -1) * rng.range(0.04, 0.1);
+    for (const p of out) [p[0], p[1]] = [clamp01(p[0] + d), clamp01(p[1] + d)];
+    mutations?.push(up ? "cx:jump+" : "cx:jump-");
+  }
+  return out;
+}
+
+/** Seal a child genome, giving it the colossus body when its complexity genes reach the colossal tier. */
+function sealChild(g: Omit<Genome, "id">): Genome {
+  if (isColossal(g)) colossusBody(g);
+  return sealGenome(g);
 }
 
 function chaosOf(g: Genome): number {
@@ -58,7 +93,8 @@ export function breed(a: Genome, b: Genome, seed: number, o: BreedOptions = {}):
     pattern = rng.pick(PATTERNS);
     mutations.push(`pattern:${pattern}`);
   }
-  return sealGenome({
+  const cxGenes = inheritCx(a, b, rng.fork("cx"), rate, o.cxJumpRate ?? CX_JUMP_RATE, mutations);
+  return sealChild({
     seeds: { genotype: hashSeed(a.seeds.genotype, b.seeds.genotype, seed), environment: hashSeed(seed, "env") },
     generation: Math.max(a.generation, b.generation) + 1,
     lineage: [a.id, b.id],
@@ -69,6 +105,7 @@ export function breed(a: Genome, b: Genome, seed: number, o: BreedOptions = {}):
     hue: [rng.pick(a.hue), rng.pick(b.hue)],
     mutations,
     morph: inheritMorph(a, b, rng.fork("morph"), Math.min(0.2, rate + 0.01)),
+    cxGenes,
   });
 }
 
@@ -82,7 +119,7 @@ export function mutate(g: Genome, seed: number, strength = 0.3, focus?: AxisId[]
     axes[id][i] = clamp(axes[id][i] + rng.normal(0, strength), -1, 1);
     mutations.push(`mut:${id}`);
   }
-  return sealGenome({ ...structuredClone(g), axes, mutations, generation: g.generation, morph: ensureMorph(g) });
+  return sealGenome({ ...structuredClone(g), axes, mutations, generation: g.generation, morph: ensureMorph(g), cxGenes: cxAllelesOf(g) });
 }
 
 /** Continuous blend between genomes (t=0 -> a, t=1 -> b). Discrete genes switch at t=0.5. */
@@ -107,6 +144,7 @@ export function morph(a: Genome, b: Genome, t: number): Genome {
     hue: mixA(a.hue, b.hue, 0, 1),
     mutations: [...a.mutations, `morph:${k.toFixed(2)}`],
     morph: structuredClone(k < 0.5 ? ensureMorph(a) : ensureMorph(b)),
+    cxGenes: cxAllelesOf(k < 0.5 ? a : b),
   });
 }
 
@@ -124,7 +162,13 @@ export function fuse(a: Genome, b: Genome, seed: number): Genome {
   for (const id of PLAN_GENES) {
     plan[id] = [clamp01(Math.max(a.plan[id][0], b.plan[id][0])), clamp01((a.plan[id][1] + b.plan[id][1]) / 2)];
   }
-  return sealGenome({
+  // A fusion is a chimera: per complexity pair the higher allele of each rank wins (complexity rises).
+  const ca = cxAllelesOf(a), cb = cxAllelesOf(b);
+  const cxGenes: Allele[] = ca.map((pa, i) => {
+    const x = [Math.min(...pa), Math.max(...pa)], y = [Math.min(...cb[i]), Math.max(...cb[i])];
+    return [Math.max(x[0], y[0]), Math.max(x[1], y[1])];
+  });
+  return sealChild({
     seeds: { genotype: hashSeed(a.seeds.genotype, b.seeds.genotype, "fuse"), environment: hashSeed(seed, "fenv") },
     generation: Math.max(a.generation, b.generation) + 1,
     lineage: [a.id, b.id],
@@ -135,6 +179,7 @@ export function fuse(a: Genome, b: Genome, seed: number): Genome {
     hue: [a.hue[0], b.hue[1]],
     mutations: ["fusion"],
     morph: inheritMorph(a, b, rng.fork("morph"), 0),
+    cxGenes,
   });
 }
 

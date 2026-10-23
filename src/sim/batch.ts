@@ -11,21 +11,27 @@
  *    archetype and flags for any row above 65 % overall or any cell above 85 %.
  *  - breedBatch / BreedJob: tournament selection on battle win rate, Mendelian breed + mutate
  *    (src/genome/breeding.ts), per-generation stats (mean stats, power index, archetype drift, diversity).
- *  - batchReportMarkdown: the human report (weights, costs and probabilities explained).
+ *  - colossusMatrix / ColossusJob [P6-B1, P6-B2]: a lone XXL colossus (buildColossus) against a poor / median /
+ *    good six of S bodies (composeSix, ranked by teamQuality from src/combat/team.ts) at levels 10 / 25 / 50; the
+ *    six's win rate per cell, draws excluded and reported, Wilson 95 % intervals, target bands (COLOSSUS_TARGET).
+ *  - batchReportMarkdown / colossusReportMarkdown: the human report (weights, costs and probabilities explained).
  *
  * Pure and deterministic: randomness only through Rng / hashSeed; no clock, no DOM. The *Job classes do the
  * work in resumable slices (advance(yieldNow, max)) so the UI can time-slice them; the plain functions run
  * a job to completion.
  */
 import { Battle, type BattleResult } from "../combat/battle.ts";
-import type { Team } from "../combat/team.ts";
+import { ALL_MOVE_BY_ID } from "../combat/kit.ts";
+import { isDamaging } from "../combat/moves.ts";
+import { QUALITY_WEIGHTS, type Team, TEAM_CAPACITY, type TeamQuality, teamQuality } from "../combat/team.ts";
 import { clamp } from "../core/math.ts";
 import { hashSeed, Rng } from "../core/rng.ts";
 import { type AxisId, type AxisVector } from "../data/axes.ts";
-import { ELEMENT_IDS, ELEMENTS, type ElementId } from "../data/elements.ts";
+import { ELEMENT_IDS, ELEMENTS, type ElementId, typeMultiplier } from "../data/elements.ts";
 import { breed, geneticDistance, mutate } from "../genome/breeding.ts";
 import { createGenemon, type Genemon, phenotypeOf } from "../genome/genemon.ts";
-import { type BodyKind, type GenomeBias, type PlanGene, planValue } from "../genome/genome.ts";
+import { type BodyKind, cloneGenome, type Genome, type GenomeBias, type PlanGene, planValue, sealGenome } from "../genome/genome.ts";
+import { CX_PAIRS, isColossal } from "../genome/complexity.ts";
 import { POWER_BUDGET, type Phenotype, SIZE_CLASSES, type SizeClass, SLOT_COST } from "../genome/phenotype.ts";
 import { type Interval, median, wilson } from "../ml/stats.ts";
 import { ARENA_KINDS } from "../world/arena.ts";
@@ -167,12 +173,16 @@ export function buildBody(a: BatchArchetype, e: ElementId | null, want: SizeClas
   }
   const order = STATURES.slice().sort((x, y) => Math.abs(x - STATURE_GUESS[want]) - Math.abs(y - STATURE_GUESS[want]));
   let best: Genemon | null = null, bestGap = 99;
-  for (const stature of order) {
-    const g = make(strength, variant, stature);
-    const ph = phenotypeOf(g);
-    const gap = Math.abs(SIZE_CLASSES.indexOf(ph.sizeClass) - SIZE_CLASSES.indexOf(want));
-    if (gap < bestGap) (best = g), (bestGap = gap);
-    if (gap === 0) break;
+  // Pass 6: a minimal globe is capped at S (phenotype.ts), so a bigger class tries the next variants too.
+  search2: for (const stature of order) {
+    for (const vk of [variant, variant + 2, variant + 4]) {
+      const g = make(strength, vk, stature);
+      const ph = phenotypeOf(g);
+      const gap = Math.abs(SIZE_CLASSES.indexOf(ph.sizeClass) - SIZE_CLASSES.indexOf(want));
+      if (gap < bestGap) (best = g), (bestGap = gap);
+      if (gap === 0) break search2;
+      if (vk === variant && (e === null || ph.elements.primary === e) && ph.sizeClass !== "S" && ph.sizeClass !== "XS") break;
+    }
   }
   if (stats) {
     stats.built++;
@@ -772,6 +782,379 @@ export function breedBatch(seedPop: readonly Genemon[], generations: number, pop
   const job = new BreedJob(seedPop, generations, popSize, fitness, seed, o);
   job.advance();
   return job.result();
+}
+
+// ------------------------------------------------------------------------------------------ colossus vs six [P6-B1, P6-B2]
+
+/** Team-quality brackets of the six small Genemon that face a lone colossus. */
+export const QUALITY_BRACKETS = ["poor", "median", "good"] as const;
+export type QualityBracket = typeof QUALITY_BRACKETS[number];
+/** Level brackets: both sides fight at the same level. */
+export const LEVEL_BRACKETS = [10, 25, 50] as const;
+/** Target band of the six's win rate per bracket (decisive only) [P6-B1]. */
+export const COLOSSUS_TARGET: Record<QualityBracket, [number, number]> = { poor: [0.25, 0.4], median: [0.45, 0.55], good: [0.55, 0.7] };
+
+/**
+ * The XXL colossus recipe (until src/genome/complexity.ts lands): the element signature at 0.8, then stature and
+ * weight pushed to the top of their range, a quadruped with a thick body (girth 0.9) on medium legs, small spread.
+ * The first (stature, weight, variant) whose body is XXL with the requested primary element wins.
+ */
+export const COLOSSUS_RECIPE = { statures: [0.9, 0.95, 1], weights: [0.6, 0.8, 0.95], variants: 3, kind: "quadruped" as BodyKind, plan: { quality: 0.5, girth: 0.9, legLen: 0.6 }, spread: 0.1, signature: 0.8 };
+
+export interface ColossusBuildStats {
+  built: number;
+  /** No recipe step reached XXL: the heaviest body was used (counted, never hidden). */
+  missedClass: number;
+  /** The requested element did not come out primary. */
+  missedElement: number;
+}
+
+/** Part genes raised on a bred-to-the-top colossus line (the planZ term of src/genome/complexity.ts saturates). */
+const COLOSSUS_PARTS: readonly PlanGene[] = ["wings", "horns", "spikes", "tail", "segments", "ears", "quality", "neck", "eyes", "jaw"];
+
+/**
+ * Pass 6: XXL is reserved for REAL colossi (phenotype.ts caps every other body below 6000 kg), so the recipe
+ * genome is turned into a colossal one the way a breeder would: every complexity allele at its top, the part
+ * genes high, then the colossus body (genome.ts colossusBody). The per-seed developmental luck can still keep
+ * it below the colossal cut (~10 % of seeds): the caller's loop simply tries the next variant.
+ */
+function colossalize(g: Genemon, seed: number, owner: string, level: number): Genemon {
+  const gen = cloneGenome(g.genome);
+  gen.cxGenes = Array.from({ length: CX_PAIRS }, () => [1, 1] as [number, number]);
+  for (const id of COLOSSUS_PARTS) gen.plan[id] = [Math.max(gen.plan[id][0], 0.8), Math.max(gen.plan[id][1], 0.8)];
+  const { id: _id, ...rest } = gen;
+  void _id;
+  if (!isColossal(rest)) return g;
+  const sealed: Genome = sealGenome(rest);
+  return createGenemon({ seed, owner, level, genome: sealed });
+}
+
+/** A lone XXL colossus of primary element `e` at `level` (recipe COLOSSUS_RECIPE; deterministic in seed). */
+export function buildColossus(e: ElementId, seed: number, level = 25, owner = "colossus", stats?: ColossusBuildStats): Genemon {
+  const R = COLOSSUS_RECIPE;
+  const sig: Partial<AxisVector> = {};
+  for (const [k, v] of Object.entries(ELEMENTS[e].signature)) sig[k as AxisId] = clamp((v as number) * R.signature, -0.95, 0.95);
+  let best: Genemon | null = null, bestScore = -Infinity;
+  for (const stature of R.statures) {
+    for (const w of R.weights) {
+      for (let k = 0; k < R.variants; k++) {
+        const axes: Partial<AxisVector> = { ...sig, stature, weight: Math.max(sig.weight ?? -1, w) };
+        const s0 = hashSeed(seed, "colossus", e, stature, w, k);
+        const g = colossalize(createGenemon({ seed: s0, owner, level, bias: { axes, kind: R.kind, spread: R.spread, plan: R.plan } }), s0, owner, level);
+        const ph = phenotypeOf(g);
+        const score = (ph.sizeClass === "XXL" ? 2 : 0) + (ph.elements.primary === e ? 1 : 0) + ph.massKg / 1e6;
+        if (score > bestScore) (best = g), (bestScore = score);
+        if (score >= 3) {
+          if (stats) stats.built++;
+          return g;
+        }
+      }
+    }
+  }
+  const ph = phenotypeOf(best!);
+  if (stats) {
+    stats.built++;
+    if (ph.sizeClass !== "XXL") stats.missedClass++;
+    if (ph.elements.primary !== e) stats.missedElement++;
+  }
+  return best!;
+}
+
+/** A plain small body of element e (no archetype genes): the element signature at 0.8, stature searched for class S. */
+const PLAIN: BatchArchetype = { id: "plain" as ArchetypeId, label: "Plain", color: "#a7b3c6", axes: {}, intent: "element signature only" };
+export function smallBody(e: ElementId, seed: number, level = 25, owner = "six", stats?: BuildStats): Genemon {
+  return buildBody(PLAIN, e, "S", seed, level, owner, stats);
+}
+
+const typesOf = (g: Genemon): ElementId[] => {
+  const ph = phenotypeOf(g);
+  return [ph.elements.primary, ...(ph.elements.secondary ? [ph.elements.secondary] : [])];
+};
+
+/**
+ * Edge of element `e` against a colossus (log2 units): how hard its own-element moves hit the colossus minus how
+ * hard the colossus's damaging moves hit an `e` body. Negative = a bad element to bring.
+ */
+export function elementEdge(e: ElementId, colossus: Genemon): number {
+  const ct = typesOf(colossus);
+  const els = [...new Set(colossus.moves.map((id) => ALL_MOVE_BY_ID[id]).filter((m) => m && isDamaging(m)).map((m) => m.element))];
+  const worst = els.length ? Math.max(...els.map((x) => typeMultiplier(x, [e]))) : 1;
+  return Math.log2(typeMultiplier(e, ct)) - Math.log2(worst);
+}
+
+export interface ComposedSix {
+  members: Genemon[];
+  quality: TeamQuality;
+}
+
+/** Candidate pool of the composer: POOL_PER_ELEMENT small bodies per element (26). */
+export const POOL_PER_ELEMENT = 2;
+
+/**
+ * Compose six small Genemon (one slot each) against `colossus` at `level`:
+ *  - good: greedy on teamQuality from a pool of 2 S bodies per element (coverage of the colossus's weaknesses,
+ *    mixed synergies, kits, distinct elements);
+ *  - median: six random members of the same pool;
+ *  - poor: six bodies of ONE element, the one with the lowest elementEdge against the colossus (ties rotate by seed).
+ */
+export function composeSix(colossus: Genemon, bracket: QualityBracket, seed: number, level = 25, owner = "six", stats?: BuildStats): ComposedSix {
+  const rng = new Rng(hashSeed(seed, "compose", bracket));
+  let members: Genemon[];
+  if (bracket === "poor") {
+    const ranked = BATCH_ELEMENTS.map((e) => ({ e, edge: elementEdge(e, colossus) })).sort((a, b) => a.edge - b.edge || (a.e < b.e ? -1 : 1));
+    const worst = ranked.filter((r) => r.edge <= ranked[0].edge + 1e-9);
+    const e = worst[rng.int(0, worst.length - 1)].e;
+    members = Array.from({ length: TEAM_CAPACITY }, (_, k) => smallBody(e, hashSeed(seed, "poor", k), level, owner, stats));
+  } else {
+    const pool = BATCH_ELEMENTS.flatMap((e) => Array.from({ length: POOL_PER_ELEMENT }, (_, k) => smallBody(e, hashSeed(seed, "pool", e, k), level, owner, stats)));
+    if (bracket === "median") members = rng.shuffle(pool.slice()).slice(0, TEAM_CAPACITY);
+    else {
+      members = [];
+      const left = pool.slice();
+      while (members.length < TEAM_CAPACITY && left.length) {
+        let bi = 0, bs = -Infinity;
+        left.forEach((g, i) => {
+          const s = teamQuality([...members, g], [colossus]).score;
+          if (s > bs + 1e-12) (bs = s), (bi = i);
+        });
+        members.push(left.splice(bi, 1)[0]);
+      }
+    }
+  }
+  return { members, quality: teamQuality(members, [colossus]) };
+}
+
+export interface ColossusCell {
+  level: number;
+  bracket: QualityBracket;
+  /** Six's wins / colossus wins / draws. */
+  wins: number;
+  losses: number;
+  draws: number;
+  n: number;
+  /** Six's win rate (decisive only) and its 95 % Wilson interval; the colossus's is 1 - p. */
+  p: number;
+  lo: number;
+  hi: number;
+  medianDuration: number;
+  timeouts: number;
+  /** Mean team-quality score and components of the six. */
+  quality: Omit<TeamQuality, "synergies">;
+  /** Mean number of synergies the six formed at the start. */
+  synergies: number;
+  /** Mean members of the six still standing when the six won. */
+  sixSurvivors: number;
+  inBand: boolean;
+}
+
+export interface ColossusResult {
+  levels: number[];
+  brackets: QualityBracket[];
+  /** cells[levelIdx][bracketIdx] */
+  cells: ColossusCell[][];
+  /** Per bracket, all levels pooled. */
+  pooled: ColossusCell[];
+  nPerCell: number;
+  seed: number;
+  battles: number;
+  draws: number;
+  colossusBuild: ColossusBuildStats;
+  sixBuild: BuildStats;
+  verdict: { goodBeatsColossus: boolean; poorLosesToColossus: boolean; medianBalanced: boolean; allInBand: boolean };
+  flags: string[];
+}
+
+interface ColAcc {
+  wins: number;
+  losses: number;
+  draws: number;
+  durations: number[];
+  timeouts: number;
+  q: Omit<TeamQuality, "synergies">;
+  syn: number;
+  survivors: number;
+  fights: number;
+}
+const emptyColAcc = (): ColAcc => ({ wins: 0, losses: 0, draws: 0, durations: [], timeouts: 0, q: { score: 0, synergy: 0, offense: 0, defense: 0, diversity: 0, kit: 0 }, syn: 0, survivors: 0, fights: 0 });
+
+/**
+ * Resumable COLOSSUS vs SIX batch: for every level bracket and battle index one colossus (element rotating through
+ * all 13) meets the poor, the median and the good six (the same colossus for the three, so the brackets are
+ * paired), sides swapped every other battle, arenas and hours rotating. One unit of work = one battle.
+ */
+export class ColossusJob {
+  readonly levels: number[];
+  readonly nPerCell: number;
+  readonly seed: number;
+  readonly total: number;
+  readonly maxTime: number | undefined;
+  done = 0;
+  readonly colossusBuild: ColossusBuildStats = { built: 0, missedClass: 0, missedElement: 0 };
+  readonly sixBuild: BuildStats = emptyBuildStats();
+  private readonly acc: ColAcc[][];
+  private col: { key: string; g: Genemon } | null = null;
+
+  constructor(nPerCell: number, seed: number, levels: readonly number[] = LEVEL_BRACKETS, maxTime?: number) {
+    this.levels = levels.slice();
+    this.nPerCell = Math.max(1, Math.floor(nPerCell));
+    this.seed = seed >>> 0;
+    this.maxTime = maxTime;
+    this.total = this.levels.length * QUALITY_BRACKETS.length * this.nPerCell;
+    this.acc = this.levels.map(() => QUALITY_BRACKETS.map(emptyColAcc));
+  }
+
+  advance(yieldNow: () => boolean = () => false, max = Infinity): boolean {
+    let count = 0;
+    while (this.done < this.total && count < max) {
+      this.runOne(this.done);
+      this.done++;
+      count++;
+      if (yieldNow()) break;
+    }
+    return this.done >= this.total;
+  }
+
+  private runOne(t: number): void {
+    const per = QUALITY_BRACKETS.length;
+    const li = Math.floor(t / (this.nPerCell * per)), rem = t % (this.nPerCell * per);
+    const s = Math.floor(rem / per), qi = rem % per;
+    const level = this.levels[li], bracket = QUALITY_BRACKETS[qi];
+    const e = BATCH_ELEMENTS[(s + li * 5) % BATCH_ELEMENTS.length];
+    const key = `${li}|${s}`;
+    if (this.col?.key !== key) this.col = { key, g: buildColossus(e, hashSeed(this.seed, "col", level, s), level, "colossus", this.colossusBuild) };
+    const colossus = this.col.g;
+    const six = composeSix(colossus, bracket, hashSeed(this.seed, "six", level, s), level, "six", this.sixBuild);
+    const side = (s % 2) as 0 | 1;
+    const r = new Battle({
+      seed: hashSeed(this.seed, "cfight", level, s, bracket),
+      arena: { seed: hashSeed(this.seed, "arena", s), kind: ARENA_KINDS[(s + li) % ARENA_KINDS.length], weather: "clear", hour: (s * 7 + 3) % 24 },
+      teams: side === 0 ? [teamOf("six", six.members), teamOf("colossus", [colossus])] : [teamOf("colossus", [colossus]), teamOf("six", six.members)],
+      detail: "summary",
+      ...(this.maxTime ? { maxTime: this.maxTime } : {}),
+    }).run();
+    const c = this.acc[li][qi];
+    if (r.winner === 2) c.draws++;
+    else if (r.winner === side) {
+      c.wins++;
+      c.survivors += r.fighters.filter((f) => f.team === side && f.alive).length;
+    } else c.losses++;
+    c.durations.push(r.duration);
+    if (r.reason === "timeout") c.timeouts++;
+    for (const k of Object.keys(c.q) as (keyof ColAcc["q"])[]) c.q[k] += six.quality[k];
+    c.syn += r.synergies[side].length;
+    c.fights++;
+  }
+
+  private cell(level: number, bracket: QualityBracket, c: ColAcc): ColossusCell {
+    const n = c.wins + c.losses;
+    const w = wilson(c.wins, n);
+    const m = Math.max(1, c.fights);
+    const q = { ...c.q };
+    for (const k of Object.keys(q) as (keyof typeof q)[]) q[k] /= m;
+    const [lo, hi] = COLOSSUS_TARGET[bracket];
+    return {
+      level,
+      bracket,
+      wins: c.wins,
+      losses: c.losses,
+      draws: c.draws,
+      n,
+      p: w.p,
+      lo: w.lo,
+      hi: w.hi,
+      medianDuration: c.durations.length ? median(c.durations) : 0,
+      timeouts: c.timeouts,
+      quality: q,
+      synergies: c.syn / m,
+      sixSurvivors: c.wins ? c.survivors / c.wins : 0,
+      inBand: n > 0 && w.p >= lo && w.p <= hi,
+    };
+  }
+
+  result(): ColossusResult {
+    const cells = this.acc.map((row, li) => row.map((c, qi) => this.cell(this.levels[li], QUALITY_BRACKETS[qi], c)));
+    const pooled = QUALITY_BRACKETS.map((b, qi) => {
+      const sum = emptyColAcc();
+      for (const row of this.acc) {
+        const c = row[qi];
+        (sum.wins += c.wins), (sum.losses += c.losses), (sum.draws += c.draws), sum.durations.push(...c.durations), (sum.timeouts += c.timeouts);
+        for (const k of Object.keys(sum.q) as (keyof ColAcc["q"])[]) sum.q[k] += c.q[k];
+        (sum.syn += c.syn), (sum.survivors += c.survivors), (sum.fights += c.fights);
+      }
+      return this.cell(0, b, sum);
+    });
+    const flags: string[] = [];
+    for (const row of cells) {
+      for (const c of row) {
+        if (c.n && !c.inBand) flags.push(`L${c.level} ${c.bracket}: six win ${pc(c.p)} outside ${pc(COLOSSUS_TARGET[c.bracket][0])}-${pc(COLOSSUS_TARGET[c.bracket][1])} (n=${c.n})`);
+      }
+    }
+    const P = Object.fromEntries(pooled.map((c) => [c.bracket, c])) as Record<QualityBracket, ColossusCell>;
+    const draws = this.acc.reduce((s, row) => s + row.reduce((t, c) => t + c.draws, 0), 0);
+    return {
+      levels: this.levels.slice(),
+      brackets: [...QUALITY_BRACKETS],
+      cells,
+      pooled,
+      nPerCell: this.nPerCell,
+      seed: this.seed,
+      battles: this.done,
+      draws,
+      colossusBuild: { ...this.colossusBuild },
+      sixBuild: { ...this.sixBuild },
+      verdict: {
+        goodBeatsColossus: P.good.n > 0 && P.good.p > 0.5 && cells.every((row) => row[2].n === 0 || row[2].p > 0.5),
+        poorLosesToColossus: P.poor.n > 0 && P.poor.p < 0.5 && cells.every((row) => row[0].n === 0 || row[0].p < 0.5),
+        medianBalanced: P.median.inBand,
+        allInBand: cells.every((row) => row.every((c) => c.n === 0 || c.inBand)),
+      },
+      flags,
+    };
+  }
+}
+
+/** Colossus vs six batch run to completion (see ColossusJob for the sliced version). */
+export function colossusMatrix(nPerCell: number, seed: number, levels: readonly number[] = LEVEL_BRACKETS, maxTime?: number): ColossusResult {
+  const job = new ColossusJob(nPerCell, seed, levels, maxTime);
+  job.advance();
+  return job.result();
+}
+
+/** Markdown section for the colossus batch. */
+export function colossusReportMarkdown(c: ColossusResult, held?: ColossusResult): string {
+  const q = (v: number) => v.toFixed(2);
+  const row = (x: ColossusCell) => `${pc(x.p)} <sub>${pc(x.lo)}-${pc(x.hi)}, ${x.wins}-${x.losses}${x.draws ? `, ${x.draws}d` : ""}</sub>${x.inBand ? "" : " ⚠"}`;
+  const R = COLOSSUS_RECIPE;
+  const lines = [
+    "## 6. Colossus vs six [P6-B1, P6-B2]",
+    "",
+    `One lone XXL colossus (6 slots) against six small S Genemon (1 slot each) at the SAME level; ${c.nPerCell} battles per cell (${c.battles} battles, seed ${c.seed}); ` +
+    `the colossus's element rotates through all 13 and the SAME colossus meets the poor, the median and the good six (paired brackets); sides swapped every other battle; arenas and hours rotate.`,
+    `Colossus recipe (GenomeBias, until src/genome/complexity.ts lands): element signature x${R.signature}, stature ${R.statures.join("/")}, weight >= ${R.weights.join("/")}, ${R.kind}, girth ${R.plan.girth}, legLen ${R.plan.legLen}, spread ${R.spread}: ` +
+    `${c.colossusBuild.built} built, ${c.colossusBuild.missedClass} not XXL, ${c.colossusBuild.missedElement} off-element.`,
+    `Six: ${c.sixBuild.built} S bodies built, ${c.sixBuild.missed} missed class S. Brackets: **good** = greedy on the team-quality score from a pool of ${POOL_PER_ELEMENT} S bodies per element; **median** = 6 random members of that pool; **poor** = six bodies of the element with the lowest edge against the colossus (same element, weak to it, no mixed synergy).`,
+    `Quality score = ${Object.entries(QUALITY_WEIGHTS).map(([k, v]) => `${v} ${k}`).join(" + ")} (src/combat/team.ts teamQuality). Win rate = the SIX's, decisive only (the colossus's is 100 % minus it); draws ${c.draws}/${c.battles}, reported per cell; ⚠ = outside the target band.`,
+    "",
+    `Target bands (six's win rate): ${QUALITY_BRACKETS.map((b) => `${b} ${pc(COLOSSUS_TARGET[b][0])}-${pc(COLOSSUS_TARGET[b][1])}`).join(", ")}.`,
+    "",
+    `- Good six beats the colossus (every level > 50 %): **${c.verdict.goodBeatsColossus ? "yes" : "NO"}**`,
+    `- Poor six loses to it (every level < 50 %): **${c.verdict.poorLosesToColossus ? "yes" : "NO"}**`,
+    `- Median six balanced (pooled 45-55 %): **${c.verdict.medianBalanced ? "yes" : "NO"}**`,
+    `- Every cell in its band: **${c.verdict.allInBand ? "yes" : "NO"}**`,
+    ...(c.flags.length ? ["", ...c.flags.map((f) => `- ${f}`)] : []),
+    "",
+    `| level \\ six | ${c.brackets.join(" | ")} |`,
+    `|---|${c.brackets.map(() => "---").join("|")}|`,
+    ...c.cells.map((r, li) => `| **${c.levels[li]}** | ${r.map(row).join(" | ")} |`),
+    `| **all** | ${c.pooled.map(row).join(" | ")} |`,
+    ...(held ? [`| held-out seed ${held.seed} (all) | ${held.pooled.map(row).join(" | ")} |`] : []),
+    "",
+    "| bracket | quality score | synergy | offense | defense | diversity | kit | synergies formed | median duration | timeouts | survivors when the six wins |",
+    "|---|---|---|---|---|---|---|---|---|---|---|",
+    ...c.pooled.map((x) => `| ${x.bracket} | ${q(x.quality.score)} | ${q(x.quality.synergy)} | ${q(x.quality.offense)} | ${q(x.quality.defense)} | ${q(x.quality.diversity)} | ${q(x.quality.kit)} | ${x.synergies.toFixed(1)} | ${x.medianDuration.toFixed(1)} s | ${x.timeouts} | ${x.sixSurvivors.toFixed(1)} |`),
+    "",
+  ];
+  return lines.join("\n");
 }
 
 // ------------------------------------------------------------------------------------------ report

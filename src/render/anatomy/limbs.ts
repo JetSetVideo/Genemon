@@ -55,12 +55,37 @@ export interface Res {
   capRings: number;
   sphere: [number, number];
   grid: [number, number];
+  /** Pass 6: a dense colossus (thinner feather rows, fewer details). */
+  dense?: boolean;
 }
 
 export function resolution(q: Quality): Res {
   return q === "high"
     ? { radial: 20, limbRadial: 14, smallRadial: 8, stations: 8, limbStations: 7, capRings: 3, sphere: [14, 10], grid: [10, 6] }
     : { radial: 10, limbRadial: 8, smallRadial: 6, stations: 4, limbStations: 4, capRings: 2, sphere: [8, 6], grid: [5, 3] };
+}
+
+/** Joint count above which a body is DENSE (pass-6 colossi: many wings, arms, tentacles): every part gets coarser. */
+export const DENSE_JOINTS = 64;
+/** Above this the body is VERY dense: feet lose their toes (the hands keep their counted fingers). */
+export const VERY_DENSE_JOINTS = 120;
+
+/**
+ * Pass 6: the resolution for a body of `joints` joints. Up to DENSE_JOINTS it is `resolution(q)` exactly;
+ * a dense colossus is meshed coarser so it stays inside its triangle budget (60k high / 20k low).
+ */
+export function resolutionFor(q: Quality, joints: number): Res {
+  if (joints <= DENSE_JOINTS) return resolution(q);
+  return q === "high"
+    ? { radial: 14, limbRadial: 8, smallRadial: 6, stations: 5, limbStations: 4, capRings: 2, sphere: [8, 6], grid: [8, 5], dense: true }
+    : liteResolution("low");
+}
+
+/** The coarsest pass-6 step, for a dense colossus still over its cap (low tier: 6-sided limbs, no claws). */
+export function liteResolution(q: Quality): Res {
+  return q === "high"
+    ? { radial: 10, limbRadial: 6, smallRadial: 4, stations: 4, limbStations: 3, capRings: 1, sphere: [6, 5], grid: [6, 4], dense: true }
+    : { radial: 6, limbRadial: 4, smallRadial: 4, stations: 3, limbStations: 2, capRings: 1, sphere: [4, 3], grid: [3, 2], dense: true };
 }
 
 /** Mirror a vector into the side +1 canon (x negated for side -1). */
@@ -302,13 +327,15 @@ function digitPieces(j: JointDef, N: number, helix: MorphHelix, res: Res, clawSc
     padSt.push({ z: L * (0.45 + 0.5 * u), rx: footW * 0.42 * (0.8 + 0.2 * Math.sin(Math.PI * u)), ry: rEnd * 0.24 });
   }
   out.push({
-    geo: loftRings(boneRings(mul3(n, rEnd * 0.42), d, padSt, { t: d, x: s, y: up }), { radial: res.smallRadial, capRings: 2, capScale: 0.9 }),
+    geo: loftRings(boneRings(mul3(n, rEnd * 0.42), d, padSt, { t: d, x: s, y: up }), { radial: res.smallRadial, capRings: res.smallRadial <= 4 ? 1 : 2, capScale: 0.9 }),
     slots: ["belly"],
   });
   if (N === 0) return out;
   const spacing = N > 1 ? footW / (N - 1) : 0;
   const rd = Math.min(rEnd * (N <= 2 ? 0.5 : 0.4), N > 1 ? spacing * 0.5 : rEnd * 0.5);
-  const phal = depth >= 2 ? 3 : 2;
+  // Pass 6: a dense colossus on the low tier (smallRadial 4) gets two-phalanx digits with single-ring caps.
+  const lite = res.smallRadial <= 4;
+  const phal = depth >= 2 && !lite ? 3 : 2;
   const samples = phal * (res.limbStations > 5 ? 3 : 1) + 1;
   const curl = 0.5;
   for (let k = 0; k < N; k++) {
@@ -332,8 +359,8 @@ function digitPieces(j: JointDef, N: number, helix: MorphHelix, res: Res, clawSc
       const r = rd * (1 - 0.35 * u) * k2;
       return { rx: r, ry: r * 0.85, exp: 2 + 0.3 * A };
     };
-    out.push({ geo: loftRings(curveRings(pts, sectionAt, up), { radial: res.smallRadial, capRings: 2, capScale: [0.6, 0.8] }), slots: ["skin"] });
-    if (depth >= 2 && helix.clawLength > 0.02) {
+    out.push({ geo: loftRings(curveRings(pts, sectionAt, up), { radial: res.smallRadial, capRings: lite ? 1 : 2, capScale: [0.6, 0.8] }), slots: ["skin"] });
+    if (depth >= 2 && helix.clawLength > 0.02 && !lite) {
       const tip = pts[pts.length - 1];
       const td = norm3(sub3(tip, pts[pts.length - 2]));
       const Lc = Math.max(rd * 0.8, helix.clawLength * Ld * clawScale);
@@ -341,7 +368,7 @@ function digitPieces(j: JointDef, N: number, helix: MorphHelix, res: Res, clawSc
       const p1 = add3(tip, mul3(td, Lc * 0.45));
       const p2 = add3(add3(tip, mul3(td, Lc * 0.8)), mul3(n, Lc * 0.12));
       const p3 = add3(add3(tip, mul3(td, Lc * 0.95)), mul3(n, Lc * 0.5));
-      const cn = res.limbStations > 5 ? 8 : 4;
+      const cn = res.limbStations > 5 ? 8 : lite ? 3 : 4;
       const cpts: V3[] = [];
       for (let i = 0; i < cn; i++) cpts.push(bezier3(p0, p1, p2, p3, i / (cn - 1)));
       const cs = (u: number): Section => {
@@ -356,12 +383,16 @@ function digitPieces(j: JointDef, N: number, helix: MorphHelix, res: Res, clawSc
 
 /**
  * Digits of a foot (ankle) or hand (wrist) joint, in that joint's local frame: one merged mesh (skin
- * digits, belly pad, keratin claws) whose userData.digits = helix.digits. Serpents and blobs get none.
+ * digits, belly pad, keratin claws) whose userData.digits = helix.digits (or `count`, pass-6 hands: up to 7).
+ * Serpents and blobs get none unless the count is given.
  */
-export function buildDigits(joint: JointDef, ph: Phenotype, helix: MorphHelix, mats: SkinMaterials, quality: Quality): THREE.Object3D[] {
-  if (ph.kind === "serpent" || ph.kind === "blob") return [];
-  const N = Math.max(0, Math.min(5, Math.round(helix.digits)));
-  const pieces = digitPieces(canonJoint(joint), N, helix, resolution(quality), asymScale(helix, "claw", joint.side));
+export function buildDigits(joint: JointDef, ph: Phenotype, helix: MorphHelix, mats: SkinMaterials, quality: Quality, count?: number, res?: Res): THREE.Object3D[] {
+  // Pass 6: a counted hand (`count`, 0..7 fingers) grows on any body, the arms of a mythic blob included.
+  if (count === undefined && (ph.kind === "serpent" || ph.kind === "blob")) return [];
+  // A counted hand with no fingers is a plain stump: its pad alone would sit buried inside the wrist.
+  if (count !== undefined && Math.round(count) <= 0) return [];
+  const N = count === undefined ? Math.max(0, Math.min(5, Math.round(helix.digits))) : Math.max(0, Math.min(7, Math.round(Number.isFinite(count) ? count : 0)));
+  const pieces = digitPieces(canonJoint(joint), N, helix, res ?? resolution(quality), asymScale(helix, "claw", joint.side));
   const mesh = meshOf(pieces, mats, `${joint.id}:digits`, joint.side < 0);
   if (!mesh) return [];
   mesh.userData.digits = N;

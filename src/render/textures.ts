@@ -8,7 +8,11 @@
  *
  *  - paintSkin: the BACK — base colour, a dorsal/ventral countershade along u, the genome PATTERN
  *    (stripes, spots, mottle, rings, scales, gradient, veins), then up to 3 OVERLAY layers
- *    (mottle under spots under stripes; stripes element-coloured with SkinP5.stripes strength).
+ *    (mottle under spots under stripes, SkinP5.stripes strength).
+ *  - Pass 6 [P6-K1]: colours come from `rolesOf(ph)` = the phenotype's Palette3 attribution (src/genome/
+ *    palette.ts): back = the BODY role (primary, element hue), pattern + overlays = the MARKINGS role
+ *    (secondary), belly = a light tint of the BELLY role, vein glow = the GLOW role. Without `ph.palette3`
+ *    the pass-5 palette stands in (primary = base, secondary = accent, tertiary = glow).
  *  - paintBelly: the BELLY's own texture, lighter (SkinP5.bellyContrast) with transverse ventral SCUTES
  *    (serpents), soft fur (furred), plates (armoured), feather scallops, or soft folds.
  *  - paintRelief: the height field behind the normal map, per coat (scales, fur, feathers, leaves,
@@ -21,6 +25,7 @@ import { Rng } from "../core/rng.ts";
 import type { Phenotype } from "../genome/phenotype.ts";
 import type { CoatKind, SkinP5 } from "../genome/morphTypes.ts";
 import { ELEMENTS } from "../data/elements.ts";
+import { bellyTint, type ColourPart, DEFAULT_ATTRIBUTION, glowTint, partColor, roleOf } from "../genome/palette.ts";
 
 export type RGB = [number, number, number];
 
@@ -178,11 +183,50 @@ export function elementRGB(ph: Phenotype): RGB {
   return rgbOf(ELEMENTS[ph.elements.primary]?.color ?? ph.palette.accent);
 }
 
+/** The colour every renderer gives each body part [P6-K1] (0xRRGGBB). */
+export interface ColourRoles {
+  primary: number;
+  secondary: number;
+  tertiary: number;
+  /** Per part (body, back, head, markings, limbs, tail, wings, horns, eyes): the role colour it wears. */
+  part: Record<ColourPart, number>;
+  /** Light belly tint (of the belly role). */
+  belly: number;
+  /** Emissive glow colour (glow role: element core / hybrid glow when primary, bright tertiary otherwise). */
+  glow: number;
+  /** Details (claws, horn tips, eye rims, frill edges): the tertiary. */
+  detail: number;
+  /** True when the colours come from a pass-6 Palette3. */
+  p3: boolean;
+}
+
+/**
+ * Colour roles of a phenotype: from `ph.palette3` when present (Palette3 attribution), else the pass-5
+ * palette (primary = base, secondary = accent, tertiary = glow, DEFAULT_ATTRIBUTION).
+ */
+export function rolesOf(ph: Phenotype): ColourRoles {
+  const p3 = ph.palette3 ?? null;
+  const p = p3 ?? { primary: ph.palette.base, secondary: ph.palette.accent, tertiary: ph.palette.glow, attribution: DEFAULT_ATTRIBUTION };
+  const part = {} as Record<ColourPart, number>;
+  for (const k of Object.keys(DEFAULT_ATTRIBUTION) as ColourPart[]) part[k] = partColor(p, k);
+  return {
+    primary: p.primary,
+    secondary: p.secondary,
+    tertiary: p.tertiary,
+    part,
+    belly: p3 ? bellyTint(partColor(p3, "belly")) : ph.palette.belly,
+    glow: p3 && roleOf(p3, "glow") !== "primary" ? glowTint(partColor(p3, "glow")) : ph.palette.glow,
+    detail: p.tertiary,
+    p3: p3 !== null,
+  };
+}
+
 /** Back (dorsal) base colour and the belly colour for a given contrast. Belly is always >= back in luminance. */
-export function countershadeColors(ph: Phenotype, contrast: number): { back: RGB; belly: RGB } {
+export function countershadeColors(ph: Phenotype, contrast: number, body?: number): { back: RGB; belly: RGB } {
   const k = clamp01(contrast);
-  const base = rgbOf(ph.palette.base);
-  const pb = rgbOf(ph.palette.belly);
+  const roles = rolesOf(ph);
+  const base = rgbOf(body ?? roles.part.body);
+  const pb = rgbOf(roles.belly);
   // The belly keeps a trace of the base hue, lightened with contrast; never darker than the back.
   let belly = mixRGB(base, mixRGB(pb, WHITE, 0.18 + 0.32 * k), 0.25 + 0.75 * k);
   if (lum(belly) < lum(base) + 0.04 * k) belly = mixRGB(belly, WHITE, 0.25 * k + 0.05);
@@ -238,7 +282,7 @@ function patternLayer(r: Raster, kind: string, c: RGB, alpha: number, rng: Rng, 
       break;
     }
     case "veins": {
-      const glow = rgbOf(ph.palette.glow);
+      const glow = rgbOf(rolesOf(ph).glow);
       for (let k = 0; k < 9; k++) {
         let x = rng.next() * size, y = rng.next() * size;
         for (let s = 0; s < 14; s++) {
@@ -274,11 +318,20 @@ export interface SkinPaint {
   emissive: Raster | null;
 }
 
-/** The back: base colour + countershade along u + pattern + overlays. */
-export function paintSkin(ph: Phenotype, p5: SkinP5, seed: number, size = 256): SkinPaint {
+/** Colour overrides of paintSkin (e.g. a limbs map in the limbs role colour). */
+export interface SkinPaintColors {
+  /** Base (back) colour; default the BODY role. */
+  body?: number;
+  /** Pattern / overlay colour; default the MARKINGS role. */
+  markings?: number;
+}
+
+/** The back: base colour + countershade along u + pattern + overlays (markings in the MARKINGS role colour). */
+export function paintSkin(ph: Phenotype, p5: SkinP5, seed: number, size = 256, colors: SkinPaintColors = {}): SkinPaint {
   const rng = new Rng(seed);
-  const { back, belly } = countershadeColors(ph, p5.bellyContrast);
-  const accent = rgbOf(ph.palette.accent);
+  const roles = rolesOf(ph);
+  const { back, belly } = countershadeColors(ph, p5.bellyContrast, colors.body);
+  const accent = rgbOf(colors.markings ?? roles.part.markings);
   const r = new Raster(size, size, back);
   const k = clamp01(p5.bellyContrast);
   // Fine grain so even "solid" skins are not flat plastic.
@@ -293,16 +346,16 @@ export function paintSkin(ph: Phenotype, p5: SkinP5, seed: number, size = 256): 
   let emissive: Raster | null = null;
   if (ph.pattern === "veins") emissive = new Raster(size, size, BLACK);
   patternLayer(r, ph.pattern, accent, 1, rng, ph, emissive ?? undefined);
-  // Overlays (element-coloured): mottle darker accent, spots accent/element, stripes element colour.
-  const el = elementRGB(ph);
+  // Overlays in the MARKINGS role [P6-K1]: mottle = a darker blend toward it, spots = it, stripes = a
+  // deeper shade of it (the back keeps the primary / element colour).
   for (const layer of overlayLayers(ph, p5)) {
     const lr = new Rng((seed ^ (layer === "stripes" ? 0x5717 : layer === "spots" ? 0x5b07 : 0x3077)) >>> 0);
     if (layer === "mottle") patternLayer(r, "mottle", scaleRGB(mixRGB(back, accent, 0.5), 0.8), 0.8, lr, ph);
-    else if (layer === "spots") patternLayer(r, "spots", mixRGB(accent, el, 0.4), 0.85, lr, ph);
+    else if (layer === "spots") patternLayer(r, "spots", accent, 0.85, lr, ph);
     else {
       const strength = clamp01(p5.stripes);
       const n = STRIPE_N(ph) + (ph.pattern === "stripes" ? 3 : 0);
-      const col = mixRGB(scaleRGB(el, 0.7), scaleRGB(accent, 0.6), 0.3);
+      const col = scaleRGB(accent, 0.8);
       for (let i = 0; i < n; i++) {
         const cy = ((i + 0.25) / n) * size;
         r.band(cy, size / (n * 4.5) * (0.6 + 0.6 * lr.next()), col, strength, size * 0.02, i * 1.7, (x) => dorsalOf(x / size) * 0.85 + 0.15);

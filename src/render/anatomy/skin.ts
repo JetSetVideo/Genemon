@@ -20,6 +20,14 @@
  *  - FLAME: animated emissive flicker (noise scrolling with a time uniform) on fire wings (`tickSkin`).
  * Shared uniforms (time, age, cel bands) live in one `SkinShared` per creature: `skinShared(mats)`.
  *
+ * Pass 6 colour lane [P6-K1]: every colour comes from `rolesOf(ph)` (textures.ts), i.e. the Palette3
+ * attribution when `ph.palette3` exists: skin = BODY role (primary) with MARKINGS (secondary) painted in;
+ * belly = light tint of the BELLY role; accent (horns, spikes, tail ornaments, wing feathers) = HORNS role;
+ * membrane (wing panels, frills) = WINGS role; keratin (claws, teeth, beaks) = ivory tinted by the TERTIARY;
+ * emissive = GLOW role. Two NEW materials: `limbs` (the LIMBS role: the skin itself when it is the body
+ * colour, else a skin twin with its own painted map) and `detail` (the tertiary: horn tips, eye rims, frill
+ * edges) for the anatomy builders that adopt them.
+ *
  * Also here: `applyScars` (scar decals painted into per-joint copies of the skin colour texture),
  * `ageTint`, `tickSkin`, and the inverted-hull INK OUTLINE (`makeOutlineMaterial`, `addOutlines`).
  *
@@ -43,6 +51,8 @@ import {
   paintSkin,
   Raster,
   rgbOf,
+  rolesOf,
+  type ColourRoles,
   scarKindOf,
   type ScarStroke,
 } from "../textures.ts";
@@ -321,6 +331,12 @@ export interface SkinMaterialsP5 extends SkinMaterials {
   coat: CoatKind;
   /** 0..1 flame strength (fire wings / tail tips). */
   fire: number;
+  /** Pass 6 [P6-K1]: the LIMBS role material (=== skin when limbs wear the body colour). */
+  limbs: Mat;
+  /** Pass 6 [P6-K1]: the TERTIARY detail material (horn tips, eye rims, frill edges, crests). */
+  detail: Mat;
+  /** The colour roles every material was made from. */
+  roles: ColourRoles;
 }
 
 export interface SkinOptions {
@@ -339,6 +355,9 @@ export function makeSkinMaterials(ph: Phenotype, helix: MorphHelix, seed: number
   let map: THREE.Texture | null = null, emissiveMap: THREE.Texture | null = null, normalMap: THREE.Texture | null = null;
   let bellyMap: THREE.Texture | null = null, bellyNormal: THREE.Texture | null = null;
   let skinRaster: Raster | null = null;
+  let limbMap: THREE.Texture | null = null;
+  const roles = rolesOf(ph);
+  const limbsOwn = roles.part.limbs !== roles.part.body;
   const paint = opts.textures ?? typeof document !== "undefined";
   if (paint) {
     const size = hi ? 256 : 128;
@@ -346,6 +365,12 @@ export function makeSkinMaterials(ph: Phenotype, helix: MorphHelix, seed: number
     skinRaster = sp.map;
     map = dataTexture(sp.map, true);
     textures.push(map);
+    if (limbsOwn) {
+      // Limbs in another role: their own map (markings in the body colour when the limbs wear the markings').
+      const lp = paintSkin(ph, p5, seed, hi ? 128 : 64, { body: roles.part.limbs, markings: roles.part.limbs === roles.part.markings ? roles.part.body : roles.part.markings });
+      limbMap = dataTexture(lp.map, true);
+      textures.push(limbMap);
+    }
     if (sp.emissive) {
       emissiveMap = dataTexture(sp.emissive, true);
       textures.push(emissiveMap);
@@ -367,9 +392,14 @@ export function makeSkinMaterials(ph: Phenotype, helix: MorphHelix, seed: number
   const sheenK = clamp01(S.sheen);
   const fur = Math.max(clamp01(S.fur), look.sheen > 0.9 ? 0.6 : 0);
   const rough = clamp(ph.roughness * (1 - 0.35 * sheenK) + 0.15 * fur + look.rough, 0.05, 1);
-  const glowCol = new THREE.Color(ph.palette.glow);
-  const baseCol = new THREE.Color(ph.palette.base);
+  const glowCol = new THREE.Color(roles.glow);
+  const baseCol = new THREE.Color(roles.part.body);
+  const detailCol = new THREE.Color(roles.detail);
   const white = new THREE.Color(0xffffff);
+  // Pass 6 (orchestrator): a near-white body (light, ice, steam palettes) that also glows blows out to pure white
+  // under bloom and loses every detail (a light-element colossus read as a white wireframe). Damp the self-glow
+  // on pale bodies; creature.setCharge restarts from this resting value (userData.emissiveRest).
+  const paleK = 1 - 0.65 * clamp01((baseCol.getHSL({ h: 0, s: 0, l: 0 }).l - 0.55) / 0.4);
   const ns = (k: number) => new THREE.Vector2(1, 1).multiplyScalar((0.15 + 1.35 * bump) * k * look.normal);
   const opacity = (1 - tr * 0.55) * look.opacity;
   const transparent = transparentBase || opacity < 0.999;
@@ -387,7 +417,7 @@ export function makeSkinMaterials(ph: Phenotype, helix: MorphHelix, seed: number
     metalness: metal > 0.35 ? 0.55 : 0.04 + look.metal,
     emissive: selfGlow,
     emissiveMap,
-    emissiveIntensity: emissiveMap ? 0.9 : baseEmissive,
+    emissiveIntensity: (emissiveMap ? 0.9 : baseEmissive) * paleK,
     transparent,
     opacity,
     depthWrite: tr < 0.4,
@@ -403,9 +433,10 @@ export function makeSkinMaterials(ph: Phenotype, helix: MorphHelix, seed: number
       clearcoatRoughness: look.clear > 0 ? look.clearRough : 0.4 - 0.3 * sheenK,
     })
     : new THREE.MeshStandardMaterial({ ...skinParams, roughness: look.clear > 0.5 ? Math.max(0.08, rough - 0.1) : rough });
+  skin.userData.emissiveRest = skinParams.emissiveIntensity;
 
   const accentParams: THREE.MeshStandardMaterialParameters = {
-    color: ph.palette.accent,
+    color: roles.part.horns,
     normalMap,
     normalScale: ns(0.6),
     roughness: Math.max(0.2, rough - 0.2),
@@ -429,13 +460,14 @@ export function makeSkinMaterials(ph: Phenotype, helix: MorphHelix, seed: number
   };
   const belly: Mat = hi && look.clear > 0.5 ? new THREE.MeshPhysicalMaterial({ ...bellyParams, clearcoat: look.clear * 0.6, clearcoatRoughness: 0.2 }) : new THREE.MeshStandardMaterial(bellyParams);
 
-  const keratinCol = new THREE.Color(0xf2ead8).lerp(new THREE.Color(ph.palette.accent), 0.08);
+  // Claws / teeth / beaks: ivory tinted by the tertiary (details wear the tertiary) [P6-K1].
+  const keratinCol = new THREE.Color(0xf2ead8).lerp(detailCol, 0.25);
   const keratin: Mat = hi
     ? new THREE.MeshPhysicalMaterial({ color: keratinCol, roughness: 0.3, clearcoat: 0.5, clearcoatRoughness: 0.25 })
     : new THREE.MeshStandardMaterial({ color: keratinCol, roughness: 0.32 });
 
   const fire = fireAmount(ph, helix);
-  const memCol = new THREE.Color(ph.palette.accent).lerp(baseCol, 0.2);
+  const memCol = new THREE.Color(roles.part.wings).lerp(baseCol, 0.2);
   const membraneParams: THREE.MeshStandardMaterialParameters = {
     color: memCol,
     roughness: 0.55,
@@ -462,12 +494,32 @@ export function makeSkinMaterials(ph: Phenotype, helix: MorphHelix, seed: number
   installSkinShader(keratin, shared, matUniforms({ rimColor: rimCol, rim: 0.05, rimPower: 3, shade: 0.15 }), std);
   installSkinShader(membrane, shared, matUniforms({ rimColor: glowCol.clone().lerp(memCol, 0.4), rim: rimStrength * 0.8, rimPower: 2.2, shade: 0.3 * bc, belly: bellyCol, flame: fire, flameColor, flameCore }), { ...std, flame: fire > 0.05 });
   if (fire > 0.05) membrane.emissive.copy(flameColor);
-  for (const m of [skin, accent, belly, keratin, membrane]) {
+
+  // Pass 6: limbs (skin twin in the limbs role) and the tertiary detail material.
+  let limbs: Mat = skin;
+  if (limbsOwn) {
+    limbs = skin.clone() as Mat;
+    limbs.map = limbMap;
+    if (!limbMap) limbs.color.setHex(roles.part.limbs);
+    shareSkinShader(skin, limbs);
+    limbs.userData.role = "limbs";
+  }
+  const detailParams: THREE.MeshStandardMaterialParameters = {
+    color: detailCol,
+    roughness: Math.max(0.18, rough - 0.25),
+    metalness: metal > 0.35 ? 0.6 : 0.08,
+    emissive: glowCol,
+    emissiveIntensity: baseEmissive * 0.4,
+  };
+  const detail: Mat = hi ? new THREE.MeshPhysicalMaterial({ ...detailParams, clearcoat: 0.6, clearcoatRoughness: 0.2 }) : new THREE.MeshStandardMaterial(detailParams);
+  installSkinShader(detail, shared, matUniforms({ rimColor: rimCol, rim: rimStrength * 0.6, rimPower, shade: 0.25 * bc, belly: bellyCol }), std);
+  detail.userData.role = "detail";
+  for (const m of [skin, accent, belly, keratin, membrane, limbs, detail]) {
     BASE.set(m, { rough: m.roughness, clear: (m as THREE.MeshPhysicalMaterial).clearcoat ?? 0, sheen: (m as THREE.MeshPhysicalMaterial).sheen ?? 0 });
   }
   if (skinRaster) RASTERS.set(skin, skinRaster);
 
-  return { skin, accent, belly, keratin, membrane, textures, baseEmissive, shared, p5, coat, fire };
+  return { skin, accent, belly, keratin, membrane, textures, baseEmissive, shared, p5, coat, fire, limbs, detail, roles };
 }
 
 // ====================================================================== per-frame + age
@@ -492,7 +544,9 @@ export function ageTint(mats: SkinMaterials, phase: LifePhase | number): number 
   const a = ageAmount(phase);
   const st = STATE.get(mats.skin);
   if (st) st.shared.age.value = a;
-  for (const m of [mats.skin, mats.accent, mats.belly, mats.membrane]) {
+  const p6 = mats as Partial<SkinMaterialsP5>;
+  const extra = [p6.limbs, p6.detail].filter((m): m is Mat => !!m && m !== mats.skin);
+  for (const m of [mats.skin, mats.accent, mats.belly, mats.membrane, ...extra]) {
     const b = BASE.get(m);
     if (!b) continue;
     m.roughness = clamp(b.rough + 0.2 * a, 0, 1);
@@ -698,7 +752,7 @@ gl_Position = projectionMatrix * mvPosition;`;
 export function makeOutlineMaterial(ph: Phenotype, p5: SkinP5, height: number): THREE.MeshBasicMaterial | null {
   const k = clamp01(p5.outline);
   if (k < 0.05) return null;
-  const ink = new THREE.Color(ph.palette.base).multiplyScalar(0.12).lerp(new THREE.Color(0x0d0f16), 0.6);
+  const ink = new THREE.Color(rolesOf(ph).part.body).multiplyScalar(0.12).lerp(new THREE.Color(0x0d0f16), 0.6);
   const mat = new THREE.MeshBasicMaterial({ color: ink, side: THREE.BackSide });
   const width = { value: Math.max(0.05, height) * (0.003 + 0.009 * k) };
   const screen = { value: 0.0018 * k };

@@ -5,7 +5,9 @@
  *   (b) Breed N generations from my team: tournament selection on the archetype gauntlet's win rate,
  *       Mendelian breed + mutate; the generation curve (fitness, diversity, archetype drift) and the best
  *       child joins the collection as a hatchling (same economy as the Lab's Breed button).
- *   (c) How the numbers are made: slot costs, power budgets, the power index.
+ *   (c) Colossus vs six [P6-B1, P6-B2]: a lone XXL colossus against a poor / median / good six of small Genemon at
+ *       levels 10 / 25 / 50 - the six's win rate per cell (draws excluded), Wilson 95 % intervals, the target bands.
+ *   (d) How the numbers are made: slot costs, power budgets, the power index.
  * Work runs in setTimeout slices of ~40 ms (MatrixJob / BreedJob from src/sim/batch.ts), so the UI never
  * freezes; results live in this module for the session.
  */
@@ -20,6 +22,9 @@ import {
   BreedJob,
   type BreedBatchResult,
   classifyArchetype,
+  COLOSSUS_TARGET,
+  ColossusJob,
+  type ColossusResult,
   DOMINANT_ROW,
   gauntletFitness,
   LOPSIDED_CELL,
@@ -36,6 +41,7 @@ const BUDGET_MS = 40;
 const MATRIX_SIZES = ["4", "8", "16"] as const;
 const GEN_OPTIONS = ["3", "5", "8"] as const;
 const BREED_POP = 8;
+const COLOSSUS_SIZES = ["4", "8", "16"] as const;
 
 // Module state: survives re-renders and screen changes for the session.
 let matrixN: typeof MATRIX_SIZES[number] = "8";
@@ -50,7 +56,22 @@ let breedStop = false;
 let breedRes: BreedBatchResult | null = null;
 let breedChild: Genemon | null = null;
 let breedMsg = "";
-let ui: { mStatus: HTMLElement; mOut: HTMLElement; mBtn: HTMLButtonElement; bStatus: HTMLElement; bOut: HTMLElement; bBtn: HTMLButtonElement } | null = null;
+let colN: typeof COLOSSUS_SIZES[number] = "4";
+let colRuns = 0;
+let colJob: ColossusJob | null = null;
+let colStop = false;
+let colRes: ColossusResult | null = null;
+let ui: {
+  mStatus: HTMLElement;
+  mOut: HTMLElement;
+  mBtn: HTMLButtonElement;
+  bStatus: HTMLElement;
+  bOut: HTMLElement;
+  bBtn: HTMLButtonElement;
+  cStatus: HTMLElement;
+  cOut: HTMLElement;
+  cBtn: HTMLButtonElement;
+} | null = null;
 
 const label = (id: string) => ARCHETYPE_BY_ID[id as ArchetypeId]?.label ?? id;
 const color = (id: string) => ARCHETYPE_BY_ID[id as ArchetypeId]?.color ?? "#a7b3c6";
@@ -175,6 +196,87 @@ function paintMatrix(msg = ""): void {
     h("h3", {}, "Pros and cons (measured)"),
     prosCons(m),
     h("p", { class: "muted" }, `n = ${m.nPerCell} per pair is small: a cell's 95 % interval is wide. The CLI (deno task batch 48) runs the same matrix at scale and on a held-out seed.`),
+  );
+}
+
+// ------------------------------------------------------------------------------------------ (c) colossus vs six
+
+function startColossus(): void {
+  if (colJob) return;
+  colRuns++;
+  colStop = false;
+  colJob = new ColossusJob(Number(colN), hashSeed("batch-colossus-ui", colRuns));
+  paintColossus();
+  setTimeout(pumpColossus, 0);
+}
+
+function pumpColossus(): void {
+  const job = colJob;
+  if (!job) return;
+  if (colStop) {
+    colJob = null;
+    paintColossus(`Stopped after ${job.done}/${job.total} battles; nothing was kept.`);
+    return;
+  }
+  const deadline = performance.now() + BUDGET_MS;
+  let done = false;
+  try {
+    done = job.advance(() => performance.now() >= deadline, 8);
+  } catch (e) {
+    colJob = null;
+    paintColossus(`Failed: ${e instanceof Error ? e.message : String(e)}`);
+    return;
+  }
+  if (done) {
+    colRes = job.result();
+    colJob = null;
+  }
+  paintColossus();
+  if (!done) setTimeout(pumpColossus, 0);
+}
+
+function colossusTable(c: ColossusResult): HTMLElement {
+  const cell = (x: ColossusResult["pooled"][number]) =>
+    x.n === 0 ? h("td", { class: "bt5-cell bt5-na", title: `${x.draws} draws` }, "—") : h(
+      "td",
+      {
+        class: `bt5-cell ${x.p >= 0.5 ? "bt5-win" : "bt5-loss"}${x.inBand ? "" : " bt5-hot"}`,
+        vars: { "bt5-k": `${Math.round(Math.abs(x.p - 0.5) * 200)}%` },
+        title: `six ${x.wins} - colossus ${x.losses}${x.draws ? `, ${x.draws} draws` : ""} · 95% ${pct(x.lo)}-${pct(x.hi)} · target ${pct(COLOSSUS_TARGET[x.bracket][0])}-${pct(COLOSSUS_TARGET[x.bracket][1])} · quality ${x.quality.score.toFixed(2)} · median ${x.medianDuration.toFixed(1)} s`,
+      },
+      pct(x.p),
+    );
+  const head = h("tr", {}, h("th", {}, "level \\ six"), ...c.brackets.map((b) => h("th", {}, `${b} (${pct(COLOSSUS_TARGET[b][0])}-${pct(COLOSSUS_TARGET[b][1])})`)));
+  const rows = c.cells.map((row, li) => h("tr", {}, h("th", {}, `level ${c.levels[li]}`), ...row.map(cell)));
+  rows.push(h("tr", {}, h("th", {}, "all levels"), ...c.pooled.map(cell)));
+  return h("table", { class: "t bt5-matrix" }, h("thead", {}, head), h("tbody", {}, ...rows));
+}
+
+function paintColossus(msg = ""): void {
+  if (!ui || !ui.cOut.isConnected) return;
+  const job = colJob;
+  ui.cBtn.textContent = job ? "Stop" : colRes ? "Run again" : "Run colossus vs six";
+  ui.cBtn.className = job ? "btn" : "btn primary";
+  clear(ui.cStatus).append(
+    job
+      ? h("div", {}, h("p", { class: "muted" }, `Running ${job.done}/${job.total} battles…`), bar(job.done / job.total))
+      : h("p", { class: "muted" }, msg || (colRes ? `${colRes.battles} battles (seed ${colRes.seed}), ${colRes.draws} draws excluded. Hover a cell for its interval and team quality.` : "Not run yet.")),
+  );
+  const out = clear(ui.cOut);
+  const c = colRes;
+  if (!c) return;
+  const v = c.verdict;
+  out.append(
+    colossusTable(c),
+    h(
+      "ul",
+      { class: "bt5-verdict" },
+      h("li", { class: v.goodBeatsColossus ? "bt5-ok" : "bt5-bad" }, `A good six beats the colossus at every level: ${v.goodBeatsColossus ? "yes" : "NO"}`),
+      h("li", { class: v.poorLosesToColossus ? "bt5-ok" : "bt5-bad" }, `A poor six loses to it at every level: ${v.poorLosesToColossus ? "yes" : "NO"}`),
+      h("li", { class: v.medianBalanced ? "bt5-ok" : "bt5-bad" }, `A median six is balanced (all levels 45-55 %): ${v.medianBalanced ? "yes" : "NO"}`),
+      ...c.flags.map((f) => h("li", { class: "bt5-bad" }, f)),
+    ),
+    h("p", { class: "muted" }, `Win rate = the six's (the colossus's is 100 % minus it). n = ${c.nPerCell} per cell is small; the CLI (deno task batch 48) runs it at scale with a held-out seed.`),
   );
 }
 
@@ -322,7 +424,8 @@ function costsTable(): HTMLElement {
 export function renderBatch(app: App): HTMLElement {
   const mBtn = h("button", { class: "btn primary", onclick: () => (matrixJob ? (matrixStop = true) : startMatrix()) }) as HTMLButtonElement;
   const bBtn = h("button", { class: "btn primary", onclick: () => (breedJob ? (breedStop = true) : startBreed(app)) }) as HTMLButtonElement;
-  ui = { mStatus: h("div", {}), mOut: h("div", { class: "bt5-out" }), mBtn, bStatus: h("div", {}), bOut: h("div", { class: "bt5-out" }), bBtn };
+  const cBtn = h("button", { class: "btn primary", onclick: () => (colJob ? (colStop = true) : startColossus()) }) as HTMLButtonElement;
+  ui = { mStatus: h("div", {}), mOut: h("div", { class: "bt5-out" }), mBtn, bStatus: h("div", {}), bOut: h("div", { class: "bt5-out" }), bBtn, cStatus: h("div", {}), cOut: h("div", { class: "bt5-out" }), cBtn };
   const seedPop = seedPopulation(app);
   const root = h(
     "div",
@@ -334,6 +437,13 @@ export function renderBatch(app: App): HTMLElement {
       h("div", { class: "row" }, h("span", { class: "muted" }, "battles per pair"), select(MATRIX_SIZES, matrixN, (v) => (matrixN = v)), mBtn),
       ui.mStatus,
       ui.mOut,
+    ),
+    section(
+      "Colossus vs six",
+      h("p", {}, "A lone XXL colossus fills all six slots; six small Genemon (one slot each) face it at the same level. Poor six = one element, weak to the colossus, no mixed synergy; median = six random small Genemon; good = composed for coverage of the colossus's weaknesses, synergies and kits. The same colossus meets the three sixes."),
+      h("div", { class: "row" }, h("span", { class: "muted" }, "battles per cell"), select(COLOSSUS_SIZES, colN, (v) => (colN = v)), cBtn),
+      ui.cStatus,
+      ui.cOut,
     ),
     section(
       "Batch breeding",
@@ -353,6 +463,7 @@ export function renderBatch(app: App): HTMLElement {
     ),
   );
   paintMatrix();
+  paintColossus();
   paintBreed();
   return root;
 }

@@ -1,5 +1,5 @@
 {
- "generatedBy": "tools/batch.ts 48 6 12",
+ "generatedBy": "tools/batch.ts 48 6 12 48",
  "seed": 5,
  "nPerCell": 48,
  "options": {
@@ -24,17 +24,17 @@
    {
     "a": "fast",
     "b": "fast",
-    "wins": 21,
-    "losses": 27,
+    "wins": 27,
+    "losses": 21,
     "draws": 0,
     "n": 48,
-    "p": 0.4375,
-    "lo": 0.307,
-    "hi": 0.5773,
-    "medianDuration": 52.249999999999595,
-    "meanDealt": 575.9796805624437,
-    "meanTaken": 620.5607911994683,
-    "timeouts": 1
+    "p": 0.5625,
+    "lo": 0.4227,
+    "hi": 0.693,
+    "medianDuration": 49.03333333333311,
+    "meanDealt": 674.4929758353313,
+    "meanTaken": 650.0421422281909,
+    "timeouts": 0
    },
    {
     "a": "fast",
@@ -46,44 +46,29 @@
     "p": 0.25,
     "lo": 0.1492,
     "hi": 0.3878,
-    "medianDuration": 38.96666666666702,
-    "meanDealt": 509.720612762092,
-    "meanTaken": 658.6336882711065,
+    "medianDuration": 39.15000000000034,
+    "meanDealt": 570.0751714131428,
+    "meanTaken": 743.9855676926459,
     "timeouts": 0
    },
    {
     "a": "fast",
     "b": "clever",
-    "wins": 16,
-    "losses": 32,
+    "wins": 33,
+    "losses": 15,
     "draws": 0,
     "n": 48,
-    "p": 0.3333,
-    "lo": 0.2168,
-    "hi": 0.4746,
-    "medianDuration": 60.54999999999912,
-    "meanDealt": 618.1472112989703,
-    "meanTaken": 621.3876683460829,
+    "p": 0.6875,
+    "lo": 0.5467,
+    "hi": 0.8005,
+    "medianDuration": 61.633333333332395,
+    "meanDealt": 817.355998322913,
+    "meanTaken": 608.9574911262042,
     "timeouts": 0
    },
    {
     "a": "fast",
     "b": "tank",
-    "wins": 13,
-    "losses": 35,
-    "draws": 0,
-    "n": 48,
-    "p": 0.2708,
-    "lo": 0.1657,
-    "hi": 0.41,
-    "medianDuration": 59.43333333333252,
-    "meanDealt": 591.4939314097841,
-    "meanTaken": 623.6372593103561,
-    "timeouts": 1
-   },
-   {
-    "a": "fast",
-    "b": "sensory",
     "wins": 20,
     "losses": 28,
     "draws": 0,
@@ -91,25 +76,40 @@
     "p": 0.4167,
     "lo": 0.2885,
     "hi": 0.5572,
-    "medianDuration": 64.5499999999989,
-    "meanDealt": 622.4713922311023,
-    "meanTaken": 628.9284237321735,
-    "timeouts": 2
+    "medianDuration": 42.2333333333335,
+    "meanDealt": 671.1023271599503,
+    "meanTaken": 647.6459453111933,
+    "timeouts": 0
+   },
+   {
+    "a": "fast",
+    "b": "sensory",
+    "wins": 22,
+    "losses": 26,
+    "draws": 0,
+    "n": 48,
+    "p": 0.4583,
+    "lo": 0.3258,
+    "hi": 0.5971,
+    "medianDuration": 66.86666666666544,
+    "meanDealt": 717.5148573631745,
+    "meanTaken": 701.7781008955682,
+    "timeouts": 1
    },
    {
     "a": "fast",
     "b": "swarm",
-    "wins": 28,
-    "losses": 20,
+    "wins": 33,
+    "losses": 15,
     "draws": 0,
     "n": 48,
-    "p": 0.5833,
-    "lo": 0.4428,
-    "hi": 0.7115,
-    "medianDuration": 64.84999999999889,
-    "meanDealt": 672.9039729419177,
-    "meanTaken": 593.9495980062977,
-    "timeouts": 1
+    "p": 0.6875,
+    "lo": 0.5467,
+    "hi": 0.8005,
+    "medianDuration": 46.99999999999989,
+    "meanDealt": 693.5287823202237,
+    "meanTaken": 610.5030231799886,
+    "timeouts": 0
    }
   ],
   [
@@ -123,166 +123,59 @@
     "p": 0.75,
     "lo": 0.6122,
     "hi": 0.8508,
-    "medianDuration": 38.96666666666702,
-    "meanDealt": 658.6336882711065,
-    "meanTaken": 509.720612762092,
+    "medianDuration": 39.15000000000034,
+    "meanDealt": 743.9855676926459,
+    "meanTaken": 570.0751714131428,
     "timeouts": 0
    },
    {
     "a": "powerful",
     "b": "powerful",
-    "wins": 23,
-    "losses": 25,
+    "wins": 24,
+    "losses": 24,
     "draws": 0,
     "n": 48,
-    "p": 0.4792,
-    "lo": 0.3447,
-    "hi": 0.6167,
-    "medianDuration": 37.35000000000044,
-    "meanDealt": 637.5733220503377,
-    "meanTaken": 675.6126448056235,
+    "p": 0.5,
+    "lo": 0.3639,
+    "hi": 0.6361,
+    "medianDuration": 37.416666666667105,
+    "meanDealt": 722.3280240773717,
+    "meanTaken": 725.7024116876584,
     "timeouts": 0
    },
    {
     "a": "powerful",
     "b": "clever",
-    "wins": 25,
-    "losses": 23,
+    "wins": 27,
+    "losses": 21,
     "draws": 0,
     "n": 48,
-    "p": 0.5208,
-    "lo": 0.3833,
-    "hi": 0.6553,
-    "medianDuration": 45.283333333333324,
-    "meanDealt": 654.2475088400734,
-    "meanTaken": 632.3335019940081,
+    "p": 0.5625,
+    "lo": 0.4227,
+    "hi": 0.693,
+    "medianDuration": 49.49999999999975,
+    "meanDealt": 734.5681195478132,
+    "meanTaken": 695.226982647533,
     "timeouts": 0
    },
    {
     "a": "powerful",
     "b": "tank",
-    "wins": 26,
-    "losses": 22,
-    "draws": 0,
-    "n": 48,
-    "p": 0.5417,
-    "lo": 0.4029,
-    "hi": 0.6742,
-    "medianDuration": 52.916666666666224,
-    "meanDealt": 685.9033990993736,
-    "meanTaken": 598.9274224586592,
+    "wins": 16,
+    "losses": 31,
+    "draws": 1,
+    "n": 47,
+    "p": 0.3404,
+    "lo": 0.2217,
+    "hi": 0.4833,
+    "medianDuration": 52.06666666666627,
+    "meanDealt": 700.0718132565471,
+    "meanTaken": 780.8209873313444,
     "timeouts": 0
    },
    {
     "a": "powerful",
     "b": "sensory",
-    "wins": 35,
-    "losses": 13,
-    "draws": 0,
-    "n": 48,
-    "p": 0.7292,
-    "lo": 0.59,
-    "hi": 0.8343,
-    "medianDuration": 44.700000000000024,
-    "meanDealt": 739.6348645795265,
-    "meanTaken": 555.0000825451745,
-    "timeouts": 1
-   },
-   {
-    "a": "powerful",
-    "b": "swarm",
-    "wins": 42,
-    "losses": 6,
-    "draws": 0,
-    "n": 48,
-    "p": 0.875,
-    "lo": 0.753,
-    "hi": 0.9414,
-    "medianDuration": 39.93333333333363,
-    "meanDealt": 830.3818794250366,
-    "meanTaken": 407.17425852745663,
-    "timeouts": 0
-   }
-  ],
-  [
-   {
-    "a": "clever",
-    "b": "fast",
-    "wins": 32,
-    "losses": 16,
-    "draws": 0,
-    "n": 48,
-    "p": 0.6667,
-    "lo": 0.5254,
-    "hi": 0.7832,
-    "medianDuration": 60.54999999999912,
-    "meanDealt": 621.3876683460829,
-    "meanTaken": 618.1472112989703,
-    "timeouts": 0
-   },
-   {
-    "a": "clever",
-    "b": "powerful",
-    "wins": 23,
-    "losses": 25,
-    "draws": 0,
-    "n": 48,
-    "p": 0.4792,
-    "lo": 0.3447,
-    "hi": 0.6167,
-    "medianDuration": 45.283333333333324,
-    "meanDealt": 632.3335019940081,
-    "meanTaken": 654.2475088400734,
-    "timeouts": 0
-   },
-   {
-    "a": "clever",
-    "b": "clever",
-    "wins": 29,
-    "losses": 19,
-    "draws": 0,
-    "n": 48,
-    "p": 0.6042,
-    "lo": 0.4631,
-    "hi": 0.7298,
-    "medianDuration": 80.79999999999798,
-    "meanDealt": 701.5356949622063,
-    "meanTaken": 669.4674694603459,
-    "timeouts": 1
-   },
-   {
-    "a": "clever",
-    "b": "tank",
-    "wins": 34,
-    "losses": 14,
-    "draws": 0,
-    "n": 48,
-    "p": 0.7083,
-    "lo": 0.5682,
-    "hi": 0.8176,
-    "medianDuration": 53.78333333333284,
-    "meanDealt": 759.5411593277125,
-    "meanTaken": 478.5201733235111,
-    "timeouts": 0
-   },
-   {
-    "a": "clever",
-    "b": "sensory",
-    "wins": 26,
-    "losses": 22,
-    "draws": 0,
-    "n": 48,
-    "p": 0.5417,
-    "lo": 0.4029,
-    "hi": 0.6742,
-    "medianDuration": 68.16666666666536,
-    "meanDealt": 671.2977057722259,
-    "meanTaken": 663.743135171171,
-    "timeouts": 3
-   },
-   {
-    "a": "clever",
-    "b": "swarm",
     "wins": 30,
     "losses": 18,
     "draws": 0,
@@ -290,90 +183,13 @@
     "p": 0.625,
     "lo": 0.4836,
     "hi": 0.7478,
-    "medianDuration": 77.06666666666486,
-    "meanDealt": 629.1995569485697,
-    "meanTaken": 628.1354529598833,
-    "timeouts": 1
-   }
-  ],
-  [
-   {
-    "a": "tank",
-    "b": "fast",
-    "wins": 35,
-    "losses": 13,
-    "draws": 0,
-    "n": 48,
-    "p": 0.7292,
-    "lo": 0.59,
-    "hi": 0.8343,
-    "medianDuration": 59.43333333333252,
-    "meanDealt": 623.6372593103561,
-    "meanTaken": 591.4939314097841,
-    "timeouts": 1
-   },
-   {
-    "a": "tank",
-    "b": "powerful",
-    "wins": 22,
-    "losses": 26,
-    "draws": 0,
-    "n": 48,
-    "p": 0.4583,
-    "lo": 0.3258,
-    "hi": 0.5971,
-    "medianDuration": 52.916666666666224,
-    "meanDealt": 598.9274224586592,
-    "meanTaken": 685.9033990993736,
+    "medianDuration": 45.46666666666665,
+    "meanDealt": 811.8857094500569,
+    "meanTaken": 674.1176668590139,
     "timeouts": 0
    },
    {
-    "a": "tank",
-    "b": "clever",
-    "wins": 14,
-    "losses": 34,
-    "draws": 0,
-    "n": 48,
-    "p": 0.2917,
-    "lo": 0.1824,
-    "hi": 0.4318,
-    "medianDuration": 53.78333333333284,
-    "meanDealt": 478.5201733235111,
-    "meanTaken": 759.5411593277125,
-    "timeouts": 0
-   },
-   {
-    "a": "tank",
-    "b": "tank",
-    "wins": 26,
-    "losses": 22,
-    "draws": 0,
-    "n": 48,
-    "p": 0.5417,
-    "lo": 0.4029,
-    "hi": 0.6742,
-    "medianDuration": 91.91666666666401,
-    "meanDealt": 751.57371272228,
-    "meanTaken": 661.9702454891291,
-    "timeouts": 8
-   },
-   {
-    "a": "tank",
-    "b": "sensory",
-    "wins": 32,
-    "losses": 16,
-    "draws": 0,
-    "n": 48,
-    "p": 0.6667,
-    "lo": 0.5254,
-    "hi": 0.7832,
-    "medianDuration": 73.43333333333173,
-    "meanDealt": 681.718949210063,
-    "meanTaken": 693.9440615229264,
-    "timeouts": 5
-   },
-   {
-    "a": "tank",
+    "a": "powerful",
     "b": "swarm",
     "wins": 35,
     "losses": 13,
@@ -382,15 +198,107 @@
     "p": 0.7292,
     "lo": 0.59,
     "hi": 0.8343,
-    "medianDuration": 62.66666666666567,
-    "meanDealt": 670.1217825154049,
-    "meanTaken": 582.4286676201101,
-    "timeouts": 2
+    "medianDuration": 37.766666666667085,
+    "meanDealt": 838.9171011555571,
+    "meanTaken": 571.4860724839972,
+    "timeouts": 0
    }
   ],
   [
    {
-    "a": "sensory",
+    "a": "clever",
+    "b": "fast",
+    "wins": 15,
+    "losses": 33,
+    "draws": 0,
+    "n": 48,
+    "p": 0.3125,
+    "lo": 0.1995,
+    "hi": 0.4533,
+    "medianDuration": 61.633333333332395,
+    "meanDealt": 608.9574911262042,
+    "meanTaken": 817.355998322913,
+    "timeouts": 0
+   },
+   {
+    "a": "clever",
+    "b": "powerful",
+    "wins": 21,
+    "losses": 27,
+    "draws": 0,
+    "n": 48,
+    "p": 0.4375,
+    "lo": 0.307,
+    "hi": 0.5773,
+    "medianDuration": 49.49999999999975,
+    "meanDealt": 695.226982647533,
+    "meanTaken": 734.5681195478132,
+    "timeouts": 0
+   },
+   {
+    "a": "clever",
+    "b": "clever",
+    "wins": 23,
+    "losses": 25,
+    "draws": 0,
+    "n": 48,
+    "p": 0.4792,
+    "lo": 0.3447,
+    "hi": 0.6167,
+    "medianDuration": 84.73333333333109,
+    "meanDealt": 774.1857752817751,
+    "meanTaken": 731.3073934797427,
+    "timeouts": 1
+   },
+   {
+    "a": "clever",
+    "b": "tank",
+    "wins": 35,
+    "losses": 13,
+    "draws": 0,
+    "n": 48,
+    "p": 0.7292,
+    "lo": 0.59,
+    "hi": 0.8343,
+    "medianDuration": 47.89999999999984,
+    "meanDealt": 866.6139444344612,
+    "meanTaken": 515.7971961750708,
+    "timeouts": 1
+   },
+   {
+    "a": "clever",
+    "b": "sensory",
+    "wins": 21,
+    "losses": 27,
+    "draws": 0,
+    "n": 48,
+    "p": 0.4375,
+    "lo": 0.307,
+    "hi": 0.5773,
+    "medianDuration": 58.516666666665905,
+    "meanDealt": 727.2955138995294,
+    "meanTaken": 775.5428452977973,
+    "timeouts": 1
+   },
+   {
+    "a": "clever",
+    "b": "swarm",
+    "wins": 26,
+    "losses": 22,
+    "draws": 0,
+    "n": 48,
+    "p": 0.5417,
+    "lo": 0.4029,
+    "hi": 0.6742,
+    "medianDuration": 51.36666666666631,
+    "meanDealt": 564.2381460890158,
+    "meanTaken": 712.6519221952785,
+    "timeouts": 0
+   }
+  ],
+  [
+   {
+    "a": "tank",
     "b": "fast",
     "wins": 28,
     "losses": 20,
@@ -399,13 +307,197 @@
     "p": 0.5833,
     "lo": 0.4428,
     "hi": 0.7115,
-    "medianDuration": 64.5499999999989,
-    "meanDealt": 628.9284237321735,
-    "meanTaken": 622.4713922311023,
+    "medianDuration": 42.2333333333335,
+    "meanDealt": 647.6459453111933,
+    "meanTaken": 671.1023271599503,
+    "timeouts": 0
+   },
+   {
+    "a": "tank",
+    "b": "powerful",
+    "wins": 31,
+    "losses": 16,
+    "draws": 1,
+    "n": 47,
+    "p": 0.6596,
+    "lo": 0.5167,
+    "hi": 0.7783,
+    "medianDuration": 52.06666666666627,
+    "meanDealt": 780.8209873313444,
+    "meanTaken": 700.0718132565471,
+    "timeouts": 0
+   },
+   {
+    "a": "tank",
+    "b": "clever",
+    "wins": 13,
+    "losses": 35,
+    "draws": 0,
+    "n": 48,
+    "p": 0.2708,
+    "lo": 0.1657,
+    "hi": 0.41,
+    "medianDuration": 47.89999999999984,
+    "meanDealt": 515.7971961750708,
+    "meanTaken": 866.6139444344612,
+    "timeouts": 1
+   },
+   {
+    "a": "tank",
+    "b": "tank",
+    "wins": 25,
+    "losses": 23,
+    "draws": 0,
+    "n": 48,
+    "p": 0.5208,
+    "lo": 0.3833,
+    "hi": 0.6553,
+    "medianDuration": 71.46666666666518,
+    "meanDealt": 836.0707514509213,
+    "meanTaken": 770.9989787549395,
+    "timeouts": 4
+   },
+   {
+    "a": "tank",
+    "b": "sensory",
+    "wins": 29,
+    "losses": 19,
+    "draws": 0,
+    "n": 48,
+    "p": 0.6042,
+    "lo": 0.4631,
+    "hi": 0.7298,
+    "medianDuration": 67.04999999999876,
+    "meanDealt": 734.3836924853516,
+    "meanTaken": 819.2666201840358,
+    "timeouts": 5
+   },
+   {
+    "a": "tank",
+    "b": "swarm",
+    "wins": 35,
+    "losses": 13,
+    "draws": 0,
+    "n": 48,
+    "p": 0.7292,
+    "lo": 0.59,
+    "hi": 0.8343,
+    "medianDuration": 58.96666666666588,
+    "meanDealt": 647.5296291656315,
+    "meanTaken": 703.3362895111408,
     "timeouts": 2
+   }
+  ],
+  [
+   {
+    "a": "sensory",
+    "b": "fast",
+    "wins": 26,
+    "losses": 22,
+    "draws": 0,
+    "n": 48,
+    "p": 0.5417,
+    "lo": 0.4029,
+    "hi": 0.6742,
+    "medianDuration": 66.86666666666544,
+    "meanDealt": 701.7781008955682,
+    "meanTaken": 717.5148573631745,
+    "timeouts": 1
    },
    {
     "a": "sensory",
+    "b": "powerful",
+    "wins": 18,
+    "losses": 30,
+    "draws": 0,
+    "n": 48,
+    "p": 0.375,
+    "lo": 0.2522,
+    "hi": 0.5164,
+    "medianDuration": 45.46666666666665,
+    "meanDealt": 674.1176668590139,
+    "meanTaken": 811.8857094500569,
+    "timeouts": 0
+   },
+   {
+    "a": "sensory",
+    "b": "clever",
+    "wins": 27,
+    "losses": 21,
+    "draws": 0,
+    "n": 48,
+    "p": 0.5625,
+    "lo": 0.4227,
+    "hi": 0.693,
+    "medianDuration": 58.516666666665905,
+    "meanDealt": 775.5428452977973,
+    "meanTaken": 727.2955138995294,
+    "timeouts": 1
+   },
+   {
+    "a": "sensory",
+    "b": "tank",
+    "wins": 19,
+    "losses": 29,
+    "draws": 0,
+    "n": 48,
+    "p": 0.3958,
+    "lo": 0.2702,
+    "hi": 0.5369,
+    "medianDuration": 67.04999999999876,
+    "meanDealt": 819.2666201840358,
+    "meanTaken": 734.3836924853516,
+    "timeouts": 5
+   },
+   {
+    "a": "sensory",
+    "b": "sensory",
+    "wins": 19,
+    "losses": 29,
+    "draws": 0,
+    "n": 48,
+    "p": 0.3958,
+    "lo": 0.2702,
+    "hi": 0.5369,
+    "medianDuration": 79.63333333333138,
+    "meanDealt": 756.1284350967472,
+    "meanTaken": 772.1506576089133,
+    "timeouts": 0
+   },
+   {
+    "a": "sensory",
+    "b": "swarm",
+    "wins": 20,
+    "losses": 28,
+    "draws": 0,
+    "n": 48,
+    "p": 0.4167,
+    "lo": 0.2885,
+    "hi": 0.5572,
+    "medianDuration": 50.766666666666346,
+    "meanDealt": 497.3626906861695,
+    "meanTaken": 749.3106287237193,
+    "timeouts": 0
+   }
+  ],
+  [
+   {
+    "a": "swarm",
+    "b": "fast",
+    "wins": 15,
+    "losses": 33,
+    "draws": 0,
+    "n": 48,
+    "p": 0.3125,
+    "lo": 0.1995,
+    "hi": 0.4533,
+    "medianDuration": 46.99999999999989,
+    "meanDealt": 610.5030231799886,
+    "meanTaken": 693.5287823202237,
+    "timeouts": 0
+   },
+   {
+    "a": "swarm",
     "b": "powerful",
     "wins": 13,
     "losses": 35,
@@ -414,13 +506,13 @@
     "p": 0.2708,
     "lo": 0.1657,
     "hi": 0.41,
-    "medianDuration": 44.700000000000024,
-    "meanDealt": 555.0000825451745,
-    "meanTaken": 739.6348645795265,
-    "timeouts": 1
+    "medianDuration": 37.766666666667085,
+    "meanDealt": 571.4860724839972,
+    "meanTaken": 838.9171011555571,
+    "timeouts": 0
    },
    {
-    "a": "sensory",
+    "a": "swarm",
     "b": "clever",
     "wins": 22,
     "losses": 26,
@@ -429,102 +521,10 @@
     "p": 0.4583,
     "lo": 0.3258,
     "hi": 0.5971,
-    "medianDuration": 68.16666666666536,
-    "meanDealt": 663.743135171171,
-    "meanTaken": 671.2977057722259,
-    "timeouts": 3
-   },
-   {
-    "a": "sensory",
-    "b": "tank",
-    "wins": 16,
-    "losses": 32,
-    "draws": 0,
-    "n": 48,
-    "p": 0.3333,
-    "lo": 0.2168,
-    "hi": 0.4746,
-    "medianDuration": 73.43333333333173,
-    "meanDealt": 693.9440615229264,
-    "meanTaken": 681.718949210063,
-    "timeouts": 5
-   },
-   {
-    "a": "sensory",
-    "b": "sensory",
-    "wins": 24,
-    "losses": 24,
-    "draws": 0,
-    "n": 48,
-    "p": 0.5,
-    "lo": 0.3639,
-    "hi": 0.6361,
-    "medianDuration": 79.7666666666647,
-    "meanDealt": 696.3058755910847,
-    "meanTaken": 684.7969391636192,
-    "timeouts": 2
-   },
-   {
-    "a": "sensory",
-    "b": "swarm",
-    "wins": 34,
-    "losses": 14,
-    "draws": 0,
-    "n": 48,
-    "p": 0.7083,
-    "lo": 0.5682,
-    "hi": 0.8176,
-    "medianDuration": 67.98333333333204,
-    "meanDealt": 649.212669155042,
-    "meanTaken": 583.5792918062543,
-    "timeouts": 1
-   }
-  ],
-  [
-   {
-    "a": "swarm",
-    "b": "fast",
-    "wins": 20,
-    "losses": 28,
-    "draws": 0,
-    "n": 48,
-    "p": 0.4167,
-    "lo": 0.2885,
-    "hi": 0.5572,
-    "medianDuration": 64.84999999999889,
-    "meanDealt": 593.9495980062977,
-    "meanTaken": 672.9039729419177,
-    "timeouts": 1
-   },
-   {
-    "a": "swarm",
-    "b": "powerful",
-    "wins": 6,
-    "losses": 42,
-    "draws": 0,
-    "n": 48,
-    "p": 0.125,
-    "lo": 0.0586,
-    "hi": 0.247,
-    "medianDuration": 39.93333333333363,
-    "meanDealt": 407.17425852745663,
-    "meanTaken": 830.3818794250366,
+    "medianDuration": 51.36666666666631,
+    "meanDealt": 712.6519221952785,
+    "meanTaken": 564.2381460890158,
     "timeouts": 0
-   },
-   {
-    "a": "swarm",
-    "b": "clever",
-    "wins": 18,
-    "losses": 30,
-    "draws": 0,
-    "n": 48,
-    "p": 0.375,
-    "lo": 0.2522,
-    "hi": 0.5164,
-    "medianDuration": 77.06666666666486,
-    "meanDealt": 628.1354529598833,
-    "meanTaken": 629.1995569485697,
-    "timeouts": 1
    },
    {
     "a": "swarm",
@@ -536,25 +536,25 @@
     "p": 0.2708,
     "lo": 0.1657,
     "hi": 0.41,
-    "medianDuration": 62.66666666666567,
-    "meanDealt": 582.4286676201101,
-    "meanTaken": 670.1217825154049,
+    "medianDuration": 58.96666666666588,
+    "meanDealt": 703.3362895111408,
+    "meanTaken": 647.5296291656315,
     "timeouts": 2
    },
    {
     "a": "swarm",
     "b": "sensory",
-    "wins": 14,
-    "losses": 34,
+    "wins": 28,
+    "losses": 20,
     "draws": 0,
     "n": 48,
-    "p": 0.2917,
-    "lo": 0.1824,
-    "hi": 0.4318,
-    "medianDuration": 67.98333333333204,
-    "meanDealt": 583.5792918062543,
-    "meanTaken": 649.212669155042,
-    "timeouts": 1
+    "p": 0.5833,
+    "lo": 0.4428,
+    "hi": 0.7115,
+    "medianDuration": 50.766666666666346,
+    "meanDealt": 749.3106287237193,
+    "meanTaken": 497.3626906861695,
+    "timeouts": 0
    },
    {
     "a": "swarm",
@@ -566,9 +566,9 @@
     "p": 0.5,
     "lo": 0.3639,
     "hi": 0.6361,
-    "medianDuration": 73.84999999999837,
-    "meanDealt": 592.9479200587429,
-    "meanTaken": 608.8501237194585,
+    "medianDuration": 57.63333333333262,
+    "meanDealt": 580.7930324835951,
+    "meanTaken": 593.8130941829725,
     "timeouts": 1
    }
   ]
@@ -577,18 +577,23 @@
   {
    "id": "fast",
    "overall": {
-    "p": 0.37083333333333335,
-    "lo": 0.3122059841048854,
-    "hi": 0.4335305924267646,
-    "wins": 89,
+    "p": 0.5,
+    "lo": 0.43724155475169957,
+    "hi": 0.5627584452483004,
+    "wins": 120,
     "n": 240,
     "draws": 0
    },
    "beats": [
     {
+     "id": "clever",
+     "p": 0.6875,
+     "significant": true
+    },
+    {
      "id": "swarm",
-     "p": 0.5833333333333334,
-     "significant": false
+     "p": 0.6875,
+     "significant": true
     }
    ],
    "losesTo": [
@@ -599,289 +604,349 @@
     },
     {
      "id": "tank",
-     "p": 0.2708333333333333,
-     "significant": true
-    },
-    {
-     "id": "clever",
-     "p": 0.3333333333333333,
-     "significant": true
+     "p": 0.4166666666666667,
+     "significant": false
     },
     {
      "id": "sensory",
-     "p": 0.4166666666666667,
+     "p": 0.4583333333333333,
      "significant": false
     }
    ],
-   "medianDuration": 58.44999999999924,
-   "meanDealt": 602.9474241287733,
-   "meanTaken": 625.3073275332033,
-   "koRate": 0.9833333333333333,
+   "medianDuration": 50.91666666666634,
+   "meanDealt": 693.915427315881,
+   "meanTaken": 662.5740256411201,
+   "koRate": 0.9958333333333333,
    "profile": {
-    "power": 439.9218944070366,
-    "powerPerSlot": 176.60846697919075,
-    "hp": 281.5832608222253,
-    "atk": 59.89218304789266,
-    "def": 41.41630601885486,
-    "spd": 4.801256103757938,
-    "evasion": 0.20045112236901536,
-    "accuracy": 0.9027386706284544,
-    "crit": 0.07971084884357783,
-    "rate": 1.2092095614571345,
-    "regen": 10.99135604278952,
-    "reach": 1.5067135461967045
+    "power": 488.352443706823,
+    "powerPerSlot": 194.61399469665025,
+    "hp": 282.1827658542149,
+    "atk": 60.1458469646311,
+    "def": 40.92481347500507,
+    "spd": 4.9415915851869086,
+    "evasion": 0.20088303815720884,
+    "accuracy": 0.9023143940535101,
+    "crit": 0.07940146974366333,
+    "rate": 1.2096858304448013,
+    "regen": 10.978483032627006,
+    "reach": 1.5424185997416056
    },
    "pros": [
     "ground speed +49%",
     "evasion +45%",
-    "beats Swarm 58%"
+    "beats Clever 69% *",
+    "beats Swarm 69% *"
    ],
    "cons": [
-    "defence −18%",
-    "HP per budget unit −7%",
+    "defence −17%",
+    "HP per budget unit −8%",
     "loses to Powerful 25% *",
-    "loses to Tank 27% *",
-    "loses to Clever 33% *",
-    "loses to Sensory 42%"
+    "loses to Tank 42%",
+    "loses to Sensory 46%"
    ],
    "flags": []
   },
   {
    "id": "powerful",
    "overall": {
-    "p": 0.6833333333333333,
-    "lo": 0.6219861447223709,
-    "hi": 0.7389038756843194,
-    "wins": 164,
-    "n": 240,
-    "draws": 0
+    "p": 0.602510460251046,
+    "lo": 0.5393158046709222,
+    "hi": 0.6624618149790883,
+    "wins": 144,
+    "n": 239,
+    "draws": 1
    },
    "beats": [
-    {
-     "id": "swarm",
-     "p": 0.875,
-     "significant": true
-    },
     {
      "id": "fast",
      "p": 0.75,
      "significant": true
     },
     {
-     "id": "sensory",
+     "id": "swarm",
      "p": 0.7291666666666666,
      "significant": true
     },
     {
-     "id": "tank",
-     "p": 0.5416666666666666,
+     "id": "sensory",
+     "p": 0.625,
      "significant": false
     },
     {
      "id": "clever",
-     "p": 0.5208333333333334,
+     "p": 0.5625,
      "significant": false
     }
    ],
-   "losesTo": [],
-   "medianDuration": 44.41666666666671,
-   "meanDealt": 713.7602680430233,
-   "meanTaken": 540.6311756574781,
+   "losesTo": [
+    {
+     "id": "tank",
+     "p": 0.3404255319148936,
+     "significant": true
+    }
+   ],
+   "medianDuration": 43.73333333333341,
+   "meanDealt": 765.8856622205241,
+   "meanTaken": 658.3453761470063,
    "koRate": 0.9958333333333333,
    "profile": {
-    "power": 440.59553815634473,
-    "powerPerSlot": 176.94003344138386,
-    "hp": 307.17503286325825,
-    "atk": 75.24987407473799,
-    "def": 53.16245208041908,
-    "spd": 2.376013249861293,
-    "evasion": 0.08962418688444483,
-    "accuracy": 0.9027579341080949,
-    "crit": 0.08023998050448988,
-    "rate": 0.9044104730313891,
-    "regen": 10.976320331758608,
-    "reach": 1.288316587770452
+    "power": 489.61189486400207,
+    "powerPerSlot": 194.74861765437132,
+    "hp": 309.10625651888466,
+    "atk": 75.72616213616767,
+    "def": 51.3352333284649,
+    "spd": 2.4477085656948447,
+    "evasion": 0.08950246680005196,
+    "accuracy": 0.9027366268776779,
+    "crit": 0.08020698281667178,
+    "rate": 0.904581095458626,
+    "regen": 10.976828099303107,
+    "reach": 1.3167857903042088
    },
    "pros": [
     "attack per budget unit +17%",
-    "defence +6%",
-    "beats Swarm 88% *",
+    "defence +5%",
     "beats Fast 75% *",
-    "beats Sensory 73% *",
-    "beats Tank 54%",
-    "beats Clever 52%"
+    "beats Swarm 73% *",
+    "beats Sensory 63%",
+    "beats Clever 56%"
    ],
    "cons": [
     "evasion −35%",
-    "ground speed −26%"
+    "ground speed −26%",
+    "loses to Tank 34% *"
    ],
-   "flags": [
-    "DOMINANT: 68% overall > 65%",
-    "LOPSIDED: vs Swarm 88% > 85% (n=48)"
-   ]
+   "flags": []
   },
   {
    "id": "clever",
    "overall": {
-    "p": 0.6041666666666666,
-    "lo": 0.5411222476829078,
-    "hi": 0.6639289002754387,
-    "wins": 145,
+    "p": 0.49166666666666664,
+    "lo": 0.42904808854732723,
+    "hi": 0.5545478196160049,
+    "wins": 118,
     "n": 240,
     "draws": 0
    },
    "beats": [
     {
      "id": "tank",
-     "p": 0.7083333333333334,
-     "significant": true
-    },
-    {
-     "id": "fast",
-     "p": 0.6666666666666666,
+     "p": 0.7291666666666666,
      "significant": true
     },
     {
      "id": "swarm",
-     "p": 0.625,
-     "significant": false
-    },
-    {
-     "id": "sensory",
      "p": 0.5416666666666666,
      "significant": false
     }
    ],
    "losesTo": [
     {
+     "id": "fast",
+     "p": 0.3125,
+     "significant": true
+    },
+    {
      "id": "powerful",
-     "p": 0.4791666666666667,
+     "p": 0.4375,
+     "significant": false
+    },
+    {
+     "id": "sensory",
+     "p": 0.4375,
      "significant": false
     }
    ],
-   "medianDuration": 59.34999999999919,
-   "meanDealt": 662.7519184777198,
-   "meanTaken": 608.5586963187219,
-   "koRate": 0.9833333333333333,
+   "medianDuration": 52.916666666666224,
+   "meanDealt": 692.4664156393486,
+   "meanTaken": 711.1832163077746,
+   "koRate": 0.9916666666666667,
    "profile": {
-    "power": 440.70048523715644,
-    "powerPerSlot": 177.039025841371,
-    "hp": 312.5534380155904,
-    "atk": 63.097596944971414,
-    "def": 49.27755858253835,
-    "spd": 3.293034943598559,
-    "evasion": 0.13460313777960886,
-    "accuracy": 0.9273163694275613,
-    "crit": 0.09342157898381723,
-    "rate": 1.0102407771823128,
-    "regen": 11.011947487940347,
-    "reach": 1.417754488409334
+    "power": 490.79899883365243,
+    "powerPerSlot": 195.25231901033237,
+    "hp": 314.75704157997905,
+    "atk": 63.45790663131677,
+    "def": 48.12782335183141,
+    "spd": 3.374581336579346,
+    "evasion": 0.13423487986876,
+    "accuracy": 0.9273151432580955,
+    "crit": 0.09353811061402041,
+    "rate": 1.010237169454449,
+    "regen": 11.004604959667441,
+    "reach": 1.4526156430443538
    },
    "pros": [
     "crit chance +11%",
     "melee reach +10%",
-    "beats Tank 71% *",
-    "beats Fast 67% *",
-    "beats Swarm 63%",
-    "beats Sensory 54%"
+    "beats Tank 73% *",
+    "beats Swarm 54%"
    ],
    "cons": [
     "evasion −3%",
     "energy regen −3%",
-    "loses to Powerful 48%"
+    "loses to Fast 31% *",
+    "loses to Powerful 44%",
+    "loses to Sensory 44%"
    ],
    "flags": []
   },
   {
    "id": "tank",
    "overall": {
-    "p": 0.575,
-    "lo": 0.511758767825544,
-    "hi": 0.6358780587044657,
-    "wins": 138,
-    "n": 240,
-    "draws": 0
+    "p": 0.5690376569037657,
+    "lo": 0.5056507750568261,
+    "hi": 0.6302402749115484,
+    "wins": 136,
+    "n": 239,
+    "draws": 1
    },
    "beats": [
-    {
-     "id": "fast",
-     "p": 0.7291666666666666,
-     "significant": true
-    },
     {
      "id": "swarm",
      "p": 0.7291666666666666,
      "significant": true
     },
     {
-     "id": "sensory",
-     "p": 0.6666666666666666,
+     "id": "powerful",
+     "p": 0.6595744680851063,
      "significant": true
+    },
+    {
+     "id": "sensory",
+     "p": 0.6041666666666666,
+     "significant": false
+    },
+    {
+     "id": "fast",
+     "p": 0.5833333333333334,
+     "significant": false
     }
    ],
    "losesTo": [
     {
      "id": "clever",
-     "p": 0.2916666666666667,
+     "p": 0.2708333333333333,
      "significant": true
-    },
-    {
-     "id": "powerful",
-     "p": 0.4583333333333333,
-     "significant": false
     }
    ],
-   "medianDuration": 59.59999999999918,
-   "meanDealt": 610.5851173635988,
-   "meanTaken": 662.6622437959813,
-   "koRate": 0.9666666666666667,
+   "medianDuration": 53.3166666666662,
+   "meanDealt": 665.2354900937183,
+   "meanTaken": 752.0781989092271,
+   "koRate": 0.9625,
    "profile": {
-    "power": 441.13256931122174,
-    "powerPerSlot": 177.04363986312512,
-    "hp": 339.27416479249877,
-    "atk": 57.31267248385908,
-    "def": 60.63460251015625,
-    "spd": 2.182373316141266,
-    "evasion": 0.08670597411430722,
-    "accuracy": 0.9155409170615659,
-    "crit": 0.07978375469217835,
-    "rate": 0.8618200328928134,
-    "regen": 12.88560674731442,
-    "reach": 1.290801957022844
+    "power": 490.712335816014,
+    "powerPerSlot": 195.02975010070423,
+    "hp": 342.95561672581454,
+    "atk": 57.72417273525122,
+    "def": 58.026551733849104,
+    "spd": 2.2635472193984176,
+    "evasion": 0.08686023452688332,
+    "accuracy": 0.9153399811011673,
+    "crit": 0.07987721541865696,
+    "rate": 0.8624226346522509,
+    "regen": 12.889429794146405,
+    "reach": 1.3349524164413789
    },
    "pros": [
-    "defence +20%",
+    "defence +18%",
     "energy regen +14%",
-    "beats Fast 73% *",
     "beats Swarm 73% *",
-    "beats Sensory 67% *"
+    "beats Powerful 66% *",
+    "beats Sensory 60%",
+    "beats Fast 58%"
    ],
    "cons": [
     "evasion −37%",
     "ground speed −32%",
-    "loses to Clever 29% *",
-    "loses to Powerful 46%"
+    "loses to Clever 27% *"
    ],
    "flags": []
   },
   {
    "id": "sensory",
    "overall": {
-    "p": 0.4708333333333333,
-    "lo": 0.4086395764916525,
-    "hi": 0.5339461020800103,
-    "wins": 113,
+    "p": 0.4583333333333333,
+    "lo": 0.39644617109692387,
+    "hi": 0.5215333697197374,
+    "wins": 110,
     "n": 240,
     "draws": 0
    },
    "beats": [
     {
-     "id": "swarm",
-     "p": 0.7083333333333334,
-     "significant": true
+     "id": "clever",
+     "p": 0.5625,
+     "significant": false
     },
     {
      "id": "fast",
+     "p": 0.5416666666666666,
+     "significant": false
+    }
+   ],
+   "losesTo": [
+    {
+     "id": "powerful",
+     "p": 0.375,
+     "significant": false
+    },
+    {
+     "id": "tank",
+     "p": 0.3958333333333333,
+     "significant": false
+    },
+    {
+     "id": "swarm",
+     "p": 0.4166666666666667,
+     "significant": false
+    }
+   ],
+   "medianDuration": 56.999999999999325,
+   "meanDealt": 693.6135847845169,
+   "meanTaken": 748.0780803843663,
+   "koRate": 0.9708333333333333,
+   "profile": {
+    "power": 490.8605273370663,
+    "powerPerSlot": 195.11305803362308,
+    "hp": 313.10486112327646,
+    "atk": 64.7332053172582,
+    "def": 48.59105962732263,
+    "spd": 3.290758696412276,
+    "evasion": 0.13433164649293897,
+    "accuracy": 0.9110225034557945,
+    "crit": 0.09301297676594648,
+    "rate": 1.0080605892038006,
+    "regen": 10.998403198943326,
+    "reach": 1.4514413497108325
+   },
+   "pros": [
+    "crit chance +10%",
+    "melee reach +10%",
+    "beats Clever 56%",
+    "beats Fast 54%"
+   ],
+   "cons": [
+    "evasion −3%",
+    "energy regen −3%",
+    "loses to Powerful 38%",
+    "loses to Tank 40%",
+    "loses to Swarm 42%"
+   ],
+   "flags": []
+  },
+  {
+   "id": "swarm",
+   "overall": {
+    "p": 0.37916666666666665,
+    "lo": 0.3201423446530402,
+    "hi": 0.4419983237152774,
+    "wins": 91,
+    "n": 240,
+    "draws": 0
+   },
+   "beats": [
+    {
+     "id": "sensory",
      "p": 0.5833333333333334,
      "significant": false
     }
@@ -894,7 +959,12 @@
     },
     {
      "id": "tank",
-     "p": 0.3333333333333333,
+     "p": 0.2708333333333333,
+     "significant": true
+    },
+    {
+     "id": "fast",
+     "p": 0.3125,
      "significant": true
     },
     {
@@ -903,179 +973,102 @@
      "significant": false
     }
    ],
-   "medianDuration": 63.39999999999896,
-   "meanDealt": 638.1656744252975,
-   "meanTaken": 659.7404407198344,
-   "koRate": 0.95,
+   "medianDuration": 49.43333333333309,
+   "meanDealt": 669.457587218825,
+   "meanTaken": 648.3152698833195,
+   "koRate": 0.9916666666666667,
    "profile": {
-    "power": 441.56140599973287,
-    "powerPerSlot": 177.18757288108705,
-    "hp": 312.4452327564165,
-    "atk": 64.5227808074863,
-    "def": 49.36949559175847,
-    "spd": 3.2483434742742685,
-    "evasion": 0.13428978041544093,
-    "accuracy": 0.9111102517911669,
-    "crit": 0.09313342215913101,
-    "rate": 1.0080248081038015,
-    "regen": 10.99478052187885,
-    "reach": 1.423250425387338
-   },
-   "pros": [
-    "crit chance +10%",
-    "melee reach +10%",
-    "beats Swarm 71% *",
-    "beats Fast 58%"
-   ],
-   "cons": [
-    "evasion −3%",
-    "energy regen −3%",
-    "loses to Powerful 27% *",
-    "loses to Tank 33% *",
-    "loses to Clever 46%"
-   ],
-   "flags": []
-  },
-  {
-   "id": "swarm",
-   "overall": {
-    "p": 0.29583333333333334,
-    "lo": 0.24167167356650046,
-    "hi": 0.35642807643513985,
-    "wins": 71,
-    "n": 240,
-    "draws": 0
-   },
-   "beats": [],
-   "losesTo": [
-    {
-     "id": "powerful",
-     "p": 0.125,
-     "significant": true
-    },
-    {
-     "id": "tank",
-     "p": 0.2708333333333333,
-     "significant": true
-    },
-    {
-     "id": "sensory",
-     "p": 0.2916666666666667,
-     "significant": true
-    },
-    {
-     "id": "clever",
-     "p": 0.375,
-     "significant": false
-    },
-    {
-     "id": "fast",
-     "p": 0.4166666666666667,
-     "significant": false
-    }
-   ],
-   "medianDuration": 56.916666666665996,
-   "meanDealt": 559.0534537840005,
-   "meanTaken": 690.3639721971942,
-   "koRate": 0.9791666666666666,
-   "profile": {
-    "power": 180.42082645079745,
-    "powerPerSlot": 180.42082645079745,
-    "hp": 271.3516276614673,
-    "atk": 66.68410368328591,
-    "def": 48.10503242494484,
-    "spd": 3.49473077665443,
-    "evasion": 0.18653687746962777,
-    "accuracy": 0.9024079221703037,
-    "crit": 0.07968896676000327,
-    "rate": 1.100479032908975,
-    "regen": 10.985258651611268,
-    "reach": 0.8411913816592792
+    "power": 181.1979659440323,
+    "powerPerSlot": 180.10816977819144,
+    "hp": 271.9411001560678,
+    "atk": 66.9024208043817,
+    "def": 47.07851978910643,
+    "spd": 3.542430622188144,
+    "evasion": 0.18638784119618276,
+    "accuracy": 0.9022277022704175,
+    "crit": 0.07948837589220009,
+    "rate": 1.100293891630523,
+    "regen": 10.985876810421392,
+    "reach": 0.8529160824346863
    },
    "pros": [
     "evasion +34%",
-    "charge rate +8%"
+    "charge rate +8%",
+    "beats Sensory 58%"
    ],
    "cons": [
-    "melee reach −35%",
+    "melee reach −36%",
     "HP per budget unit −11%",
-    "loses to Powerful 13% *",
+    "loses to Powerful 27% *",
     "loses to Tank 27% *",
-    "loses to Sensory 29% *",
-    "loses to Clever 38%",
-    "loses to Fast 42%"
+    "loses to Fast 31% *",
+    "loses to Clever 46%"
    ],
-   "flags": [
-    "WEAK: 30% overall < 35%"
-   ]
+   "flags": []
   }
  ],
  "verdict": {
-  "noDominantRow": false,
-  "noLopsidedCell": false,
-  "allHaveProsAndCons": false
+  "noDominantRow": true,
+  "noLopsidedCell": true,
+  "allHaveProsAndCons": true
  },
- "flags": [
-  "Powerful: DOMINANT: 68% overall > 65%",
-  "Powerful: LOPSIDED: vs Swarm 88% > 85% (n=48)",
-  "Swarm: WEAK: 30% overall < 35%"
- ],
- "draws": 0,
+ "flags": [],
+ "draws": 1,
  "battles": 1008,
  "build": {
   "built": 2520,
-  "missed": 0,
-  "elementHits": 2448,
+  "missed": 2,
+  "elementHits": 2425,
   "strengthSum": 2364.7000000000007
  },
  "heldOut": {
   "seed": 1005,
   "overall": {
    "fast": {
-    "p": 0.3958333333333333,
-    "lo": 0.33607109972456106,
-    "hi": 0.45887775231709205,
-    "wins": 95,
+    "p": 0.48333333333333334,
+    "lo": 0.42087178881233117,
+    "hi": 0.5463200275143333,
+    "wins": 116,
     "n": 240,
     "draws": 0
    },
    "powerful": {
-    "p": 0.6208333333333333,
-    "lo": 0.5580016762847224,
-    "hi": 0.6798576553469597,
-    "wins": 149,
-    "n": 240,
-    "draws": 0
+    "p": 0.5397489539748954,
+    "lo": 0.476428504828689,
+    "hi": 0.6018117966682539,
+    "wins": 129,
+    "n": 239,
+    "draws": 1
    },
    "clever": {
-    "p": 0.6083333333333333,
-    "lo": 0.54533517048802,
-    "hi": 0.6679180233886604,
-    "wins": 146,
+    "p": 0.5,
+    "lo": 0.43724155475169957,
+    "hi": 0.5627584452483004,
+    "wins": 120,
     "n": 240,
     "draws": 0
    },
    "tank": {
-    "p": 0.6041666666666666,
-    "lo": 0.5411222476829078,
-    "hi": 0.6639289002754387,
-    "wins": 145,
-    "n": 240,
-    "draws": 0
+    "p": 0.5523012552301255,
+    "lo": 0.48892587490824874,
+    "hi": 0.6140218902193075,
+    "wins": 132,
+    "n": 239,
+    "draws": 1
    },
    "sensory": {
-    "p": 0.4708333333333333,
-    "lo": 0.4086395764916525,
-    "hi": 0.5339461020800103,
-    "wins": 113,
+    "p": 0.425,
+    "lo": 0.3641219412955342,
+    "hi": 0.48824123217445603,
+    "wins": 102,
     "n": 240,
     "draws": 0
    },
    "swarm": {
-    "p": 0.3,
-    "lo": 0.24554559424634673,
-    "hi": 0.36075620167362743,
-    "wins": 72,
+    "p": 0.5,
+    "lo": 0.43724155475169957,
+    "hi": 0.5627584452483004,
+    "wins": 120,
     "n": 240,
     "draws": 0
    }
@@ -1083,46 +1076,44 @@
   "verdict": {
    "noDominantRow": true,
    "noLopsidedCell": true,
-   "allHaveProsAndCons": false
+   "allHaveProsAndCons": true
   },
-  "flags": [
-   "Swarm: WEAK: 30% overall < 35%"
-  ]
+  "flags": []
  },
  "breeding": [
   {
    "gen": 0,
    "size": 12,
-   "meanFitness": 0.5277777777777778,
+   "meanFitness": 0.40277777777777773,
    "bestFitness": 0.8333333333333334,
    "meanStats": {
-    "power": 381.29341315577875,
-    "powerPerSlot": 177.60747691136012,
-    "hp": 314.4193325948734,
-    "atk": 64.23099974268585,
-    "def": 48.03258212221814,
-    "spd": 3.2793200854865785,
+    "power": 400.5731250565966,
+    "powerPerSlot": 189.66180992920235,
+    "hp": 315.68404071549656,
+    "atk": 64.55428910550799,
+    "def": 46.84125630464797,
+    "spd": 3.324329190567825,
     "evasion": 0.1460288103957058,
     "accuracy": 0.8966074756675213,
     "crit": 0.08057457852706457,
     "rate": 1.005934421462066,
     "regen": 11.14153999569119,
-    "reach": 1.289943424826849
+    "reach": 1.2979394322010378
    },
-   "meanPower": 381.29341315577875,
-   "powerPerSlot": 177.60747691136012,
+   "meanPower": 400.5731250565966,
+   "powerPerSlot": 189.66180992920235,
    "archetypeShare": {
     "fast": 0.41666666666666663,
-    "powerful": 0.25,
+    "powerful": 0.16666666666666666,
     "clever": 0.08333333333333333,
     "tank": 0.16666666666666666,
     "sensory": 0,
-    "swarm": 0.08333333333333333
+    "swarm": 0.16666666666666666
    },
    "diversity": 0.49436633387744294,
    "sizeShare": {
-    "M": 0.5833333333333333,
-    "S": 0.16666666666666666,
+    "M": 0.49999999999999994,
+    "S": 0.25,
     "L": 0.16666666666666666,
     "XL": 0.08333333333333333
    },
@@ -1133,24 +1124,24 @@
   {
    "gen": 1,
    "size": 12,
-   "meanFitness": 0.5694444444444444,
+   "meanFitness": 0.6111111111111112,
    "bestFitness": 1,
    "meanStats": {
-    "power": 349.28678144339074,
-    "powerPerSlot": 182.77350233814605,
-    "hp": 307.03436752162924,
-    "atk": 61.27540798967746,
-    "def": 47.93186580046255,
-    "spd": 3.7207352422844413,
-    "evasion": 0.1645404948684824,
-    "accuracy": 0.904193357601362,
-    "crit": 0.08486348003169329,
-    "rate": 1.0457642906280424,
-    "regen": 11.728933786015068,
-    "reach": 1.2518887210388228
+    "power": 383.5887731852133,
+    "powerPerSlot": 195.13114056239544,
+    "hp": 306.37068658653874,
+    "atk": 61.19687971121135,
+    "def": 46.68261253060485,
+    "spd": 3.8035121595495287,
+    "evasion": 0.17161990398052487,
+    "accuracy": 0.9123528154680502,
+    "crit": 0.08773597237383253,
+    "rate": 1.0549461229059423,
+    "regen": 11.83009302539505,
+    "reach": 1.205956993829374
    },
-   "meanPower": 349.28678144339074,
-   "powerPerSlot": 182.77350233814605,
+   "meanPower": 383.5887731852133,
+   "powerPerSlot": 195.13114056239544,
    "archetypeShare": {
     "fast": 0.41666666666666663,
     "powerful": 0,
@@ -1159,206 +1150,208 @@
     "sensory": 0,
     "swarm": 0.08333333333333333
    },
-   "diversity": 0.4859704375569705,
+   "diversity": 0.4808914644891553,
    "sizeShare": {
-    "M": 0.5833333333333333,
-    "L": 0.16666666666666666,
-    "S": 0.25
+    "M": 0.41666666666666663,
+    "L": 0.25,
+    "S": 0.3333333333333333
    },
-   "bestId": "g-d7e93dcc-m5fo",
-   "bestName": "Nullglhound",
+   "bestId": "g-cb8996b1-lmn7",
+   "bestName": "Solaqtusk",
    "bestArchetype": "clever"
   },
   {
    "gen": 2,
    "size": 12,
-   "meanFitness": 0.5277777777777778,
-   "bestFitness": 0.6666666666666666,
+   "meanFitness": 0.6944444444444443,
+   "bestFitness": 1,
    "meanStats": {
-    "power": 465.51147351845196,
-    "powerPerSlot": 186.72352147055676,
-    "hp": 317.21635068731877,
-    "atk": 65.10203653018787,
-    "def": 47.83362681639974,
-    "spd": 4.212206755654425,
-    "evasion": 0.16450078476355842,
-    "accuracy": 0.8973658799993838,
-    "crit": 0.0790242293592277,
-    "rate": 1.0648445779343236,
-    "regen": 11.357390178629933,
-    "reach": 1.4471892827432598
+    "power": 459.69917533656616,
+    "powerPerSlot": 202.83913979739802,
+    "hp": 309.6189081162027,
+    "atk": 60.74172926651946,
+    "def": 50.72063971582259,
+    "spd": 4.002933425989992,
+    "evasion": 0.17356603762101827,
+    "accuracy": 0.9175320599890374,
+    "crit": 0.08472913402261772,
+    "rate": 1.0633844565167105,
+    "regen": 11.878166992366806,
+    "reach": 1.3608692214966513
    },
-   "meanPower": 465.51147351845196,
-   "powerPerSlot": 186.72352147055676,
+   "meanPower": 459.69917533656616,
+   "powerPerSlot": 202.83913979739802,
    "archetypeShare": {
-    "fast": 0.49999999999999994,
+    "fast": 0.16666666666666666,
     "powerful": 0,
-    "clever": 0.25,
-    "tank": 0.08333333333333333,
+    "clever": 0.5833333333333333,
+    "tank": 0.25,
     "sensory": 0,
-    "swarm": 0.16666666666666666
+    "swarm": 0
    },
-   "diversity": 0.47899503943007565,
+   "diversity": 0.45932635062537525,
    "sizeShare": {
-    "M": 0.49999999999999994,
-    "L": 0.49999999999999994
+    "M": 0.5833333333333333,
+    "L": 0.3333333333333333,
+    "S": 0.08333333333333333
    },
-   "bestId": "g-aa106b2d-yw6l",
-   "bestName": "Lucidpaw",
-   "bestArchetype": "fast"
+   "bestId": "g-cb8996b1-lmn7",
+   "bestName": "Solaqtusk",
+   "bestArchetype": "clever"
   },
   {
    "gen": 3,
    "size": 12,
-   "meanFitness": 0.6111111111111112,
-   "bestFitness": 0.8333333333333334,
+   "meanFitness": 0.5972222222222223,
+   "bestFitness": 1,
    "meanStats": {
-    "power": 449.2640887533856,
-    "powerPerSlot": 186.83108734595268,
-    "hp": 314.7265064515953,
-    "atk": 64.352228265262,
-    "def": 47.56102345695384,
-    "spd": 4.161750653976733,
-    "evasion": 0.16645508196259387,
-    "accuracy": 0.9051862223916497,
-    "crit": 0.08187330858619789,
-    "rate": 1.0675326275006902,
-    "regen": 11.434058860374753,
-    "reach": 1.5023234131825933
+    "power": 458.3531435544087,
+    "powerPerSlot": 202.47671884433612,
+    "hp": 299.6793758356531,
+    "atk": 59.03839566394592,
+    "def": 51.714199017432094,
+    "spd": 4.153192653282033,
+    "evasion": 0.19616813786381118,
+    "accuracy": 0.915464343680528,
+    "crit": 0.07915286254942956,
+    "rate": 1.0712410675251174,
+    "regen": 12.181768626430078,
+    "reach": 1.3342511307775158
    },
-   "meanPower": 449.2640887533856,
-   "powerPerSlot": 186.83108734595268,
+   "meanPower": 458.3531435544087,
+   "powerPerSlot": 202.47671884433612,
    "archetypeShare": {
-    "fast": 0.5833333333333333,
+    "fast": 0.16666666666666666,
     "powerful": 0.08333333333333333,
     "clever": 0.3333333333333333,
-    "tank": 0,
+    "tank": 0.3333333333333333,
     "sensory": 0,
-    "swarm": 0
+    "swarm": 0.08333333333333333
    },
-   "diversity": 0.47850973206423153,
+   "diversity": 0.44429625813331985,
    "sizeShare": {
     "M": 0.5833333333333333,
-    "L": 0.41666666666666663
+    "L": 0.3333333333333333,
+    "S": 0.08333333333333333
    },
-   "bestId": "g-2a28eca1-cego",
-   "bestName": "Radimehound",
-   "bestArchetype": "fast"
+   "bestId": "g-0401f73d-dlda",
+   "bestName": "Voltvapaw",
+   "bestArchetype": "clever"
   },
   {
    "gen": 4,
    "size": 12,
-   "meanFitness": 0.5972222222222222,
-   "bestFitness": 0.8333333333333334,
+   "meanFitness": 0.8472222222222223,
+   "bestFitness": 1,
    "meanStats": {
-    "power": 490.1347493414985,
-    "powerPerSlot": 184.11234035092482,
-    "hp": 307.3646680801722,
-    "atk": 62.27216126238525,
-    "def": 50.34047569233977,
-    "spd": 4.040257764948682,
-    "evasion": 0.1639331666657245,
-    "accuracy": 0.9072959757878928,
-    "crit": 0.07984778377429483,
-    "rate": 1.079986662385843,
-    "regen": 11.577846373112758,
-    "reach": 1.5567120056722648
+    "power": 388.81457507114663,
+    "powerPerSlot": 201.63569502466274,
+    "hp": 310.93335584305834,
+    "atk": 62.04217121622364,
+    "def": 45.820570512564025,
+    "spd": 4.203470184467787,
+    "evasion": 0.1898502647694799,
+    "accuracy": 0.9148299470862264,
+    "crit": 0.0859953550633774,
+    "rate": 1.0741216464518375,
+    "regen": 11.965198909321943,
+    "reach": 1.3438352132391866
    },
-   "meanPower": 490.1347493414985,
-   "powerPerSlot": 184.11234035092482,
+   "meanPower": 388.81457507114663,
+   "powerPerSlot": 201.63569502466274,
    "archetypeShare": {
     "fast": 0.3333333333333333,
-    "powerful": 0.08333333333333333,
-    "clever": 0.25,
-    "tank": 0.3333333333333333,
-    "sensory": 0,
-    "swarm": 0
+    "powerful": 0,
+    "clever": 0.49999999999999994,
+    "tank": 0,
+    "sensory": 0.08333333333333333,
+    "swarm": 0.08333333333333333
    },
-   "diversity": 0.4317541550611763,
+   "diversity": 0.40869827692877936,
    "sizeShare": {
-    "M": 0.3333333333333333,
-    "L": 0.6666666666666666
+    "M": 0.75,
+    "S": 0.16666666666666666,
+    "L": 0.08333333333333333
    },
-   "bestId": "g-0d3df4f6-guk5",
-   "bestName": "Oractalon",
+   "bestId": "g-0401f73d-dlda",
+   "bestName": "Voltvapaw",
    "bestArchetype": "clever"
   },
   {
    "gen": 5,
    "size": 12,
-   "meanFitness": 0.7083333333333334,
+   "meanFitness": 0.6527777777777778,
    "bestFitness": 1,
    "meanStats": {
-    "power": 507.95879015883946,
-    "powerPerSlot": 184.7438860174634,
-    "hp": 298.1777897577054,
-    "atk": 65.96276290862279,
-    "def": 46.56580811329164,
-    "spd": 4.262356640471323,
-    "evasion": 0.16322372146130618,
-    "accuracy": 0.907794596024689,
-    "crit": 0.08285331074580356,
-    "rate": 1.0877942552036404,
-    "regen": 11.462831517856754,
-    "reach": 1.5382774234933354
+    "power": 429.0314908240143,
+    "powerPerSlot": 204.29050946363657,
+    "hp": 322.2530461962187,
+    "atk": 60.71258121467954,
+    "def": 45.80830619484161,
+    "spd": 4.32053571766238,
+    "evasion": 0.19514090163668688,
+    "accuracy": 0.9111340358742094,
+    "crit": 0.0852775128447449,
+    "rate": 1.0821583774119259,
+    "regen": 11.852580001461753,
+    "reach": 1.3667265611332604
    },
-   "meanPower": 507.95879015883946,
-   "powerPerSlot": 184.7438860174634,
+   "meanPower": 429.0314908240143,
+   "powerPerSlot": 204.29050946363657,
    "archetypeShare": {
-    "fast": 0.41666666666666663,
+    "fast": 0.3333333333333333,
     "powerful": 0,
     "clever": 0.49999999999999994,
-    "tank": 0.08333333333333333,
+    "tank": 0,
     "sensory": 0,
-    "swarm": 0
+    "swarm": 0.16666666666666666
    },
-   "diversity": 0.3986482197918608,
+   "diversity": 0.38715058030241,
    "sizeShare": {
-    "M": 0.3333333333333333,
-    "XL": 0.08333333333333333,
-    "L": 0.5833333333333333
+    "M": 0.5833333333333333,
+    "S": 0.16666666666666666,
+    "L": 0.25
    },
-   "bestId": "g-9aa3c689-4jru",
-   "bestName": "Ampluhound",
-   "bestArchetype": "fast"
+   "bestId": "g-a2860f1e-4jru",
+   "bestName": "Hollomulash",
+   "bestArchetype": "swarm"
   },
   {
    "gen": 6,
    "size": 12,
-   "meanFitness": 0.6805555555555557,
+   "meanFitness": 0.75,
    "bestFitness": 1,
    "meanStats": {
-    "power": 488.1469757887865,
-    "powerPerSlot": 183.5192036416146,
-    "hp": 291.55206733989036,
-    "atk": 66.47690284727547,
-    "def": 43.894077630727196,
-    "spd": 4.365424486197554,
-    "evasion": 0.16522860292797772,
-    "accuracy": 0.9112175574892888,
-    "crit": 0.0865561662808898,
-    "rate": 1.108070246298748,
-    "regen": 11.413110754930898,
-    "reach": 1.5683820387966803
+    "power": 410.01496707773305,
+    "powerPerSlot": 205.00748353886652,
+    "hp": 333.95524541012287,
+    "atk": 61.24052157808362,
+    "def": 43.746758339809126,
+    "spd": 4.32221429091408,
+    "evasion": 0.19092300931505926,
+    "accuracy": 0.9135193474322402,
+    "crit": 0.08383835417974729,
+    "rate": 1.0675946013954636,
+    "regen": 11.905747699551926,
+    "reach": 1.390831699397017
    },
-   "meanPower": 488.1469757887865,
-   "powerPerSlot": 183.5192036416146,
+   "meanPower": 410.01496707773305,
+   "powerPerSlot": 205.00748353886652,
    "archetypeShare": {
-    "fast": 0.5833333333333333,
-    "powerful": 0.08333333333333333,
-    "clever": 0.3333333333333333,
+    "fast": 0.08333333333333333,
+    "powerful": 0,
+    "clever": 0.9166666666666667,
     "tank": 0,
     "sensory": 0,
     "swarm": 0
    },
-   "diversity": 0.3788209596141576,
+   "diversity": 0.36127515892065387,
    "sizeShare": {
-    "L": 0.6666666666666666,
-    "M": 0.3333333333333333
+    "M": 1
    },
-   "bestId": "g-946f293e-kspz",
-   "bestName": "Gustspfowl",
-   "bestArchetype": "fast"
+   "bestId": "g-4d215c92-9jd5",
+   "bestName": "Umbrsttusk",
+   "bestArchetype": "clever"
   }
  ]
 }

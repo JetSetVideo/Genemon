@@ -121,6 +121,8 @@ const lin = (x: number, mean: number, slope: number) => clamp(1 + slope * (x - m
 /** Population reference mass (kg, geometric mean per class, 400 random level-35 Genemon). */
 export const MASS_REF: Record<SizeClass, number> = { XS: 2.7, S: 21, M: 104, L: 430, XL: 2050, XXL: 9000 };
 export const HEIGHT_REF: Record<SizeClass, number> = { XS: 0.4, S: 0.69, M: 1.07, L: 1.49, XL: 2.29, XXL: 3.8 };
+/** Exponents of the "mass" body part (slams, charges): (mass / class reference)^massExp x (height / reference)^heightExp. Tools may ablate them. */
+export const MASS_PART = { massExp: 0.25, heightExp: 0.1 };
 
 /**
  * Power multiplier in [0.7, 1.35] from the body part that delivers the move. Plan genes have a
@@ -140,7 +142,7 @@ export function bodyFactor(m: Move, ph: Phenotype, helix?: MorphHelix): number {
     case "aura":
       return m.element === "neutral" ? 1 : lin(ph.elements.affinity[m.element], 0, AURA_SLOPE);
     case "mass": {
-      const r = Math.pow(ph.massKg / MASS_REF[ph.sizeClass], 0.25) * Math.pow(ph.heightM / HEIGHT_REF[ph.sizeClass], 0.1);
+      const r = Math.pow(ph.massKg / MASS_REF[ph.sizeClass], MASS_PART.massExp) * Math.pow(ph.heightM / HEIGHT_REF[ph.sizeClass], MASS_PART.heightExp);
       return clamp(r, BAND_LO, BAND_HI);
     }
     case "claws":

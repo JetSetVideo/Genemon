@@ -28,13 +28,13 @@
  * - armFractal: branch / spiral / mandelbrot-like sub-branches on hands, front claws and horn tips (budgeted);
  * - tentacle chains (`tent<i>`) lofted as one tapering surface with a belly-coloured underside.
  */
-import type * as THREE from "../../lib/three.ts";
-import type { JointDef, Skeleton } from "../../body/skeleton.ts";
+import * as THREE from "../../lib/three.ts";
+import type { BodyPlan6, JointDef, Skeleton } from "../../body/skeleton.ts";
 import type { Phenotype } from "../../genome/phenotype.ts";
 import { type MorphHelix, type MorphOp, type MorphP5, type MorphRegion, P5_DEFAULTS } from "../../genome/morphTypes.ts";
 import type { BodyParts, JointMeshes, SkinMaterials } from "./types.ts";
 import { asymScale } from "./hitbox.ts";
-import { buildDigits, canon, canonJoint, fractalPieces, limbPieces, type LimbPart, meshOf, type Quality, type Res, resolution, type Slot, socketK } from "./limbs.ts";
+import { buildDigits, canon, canonJoint, DENSE_JOINTS, fractalPieces, limbPieces, type LimbPart, liteResolution, meshOf, type Quality, type Res, resolutionFor, type Slot, socketK, VERY_DENSE_JOINTS } from "./limbs.ts";
 import { buildWing, feather } from "./wings.ts";
 import { applyOps, opsFor, regionOfChain } from "./ops.ts";
 import {
@@ -48,10 +48,13 @@ import {
   curveRings,
   type Lobe,
   loftRings,
+  mergePieces,
   mul3,
   norm3,
   pair,
   type Piece,
+  type Ring,
+  rotate3,
   type Section,
   smoothstep,
   sphereGeo,
@@ -79,6 +82,9 @@ interface Ctx {
   baby: number;
   ops: (region: MorphRegion) => MorphOp[];
   pieces: Piece<Slot>[][];
+  /** Pass 6: the resolved body plan (sk.plan6), armour plates / molting shell pieces per joint (own meshes). */
+  P: BodyPlan6 | null;
+  shells: Piece<Slot>[][][];
 }
 
 /** Effective angularity [P5-V2, P5-V6]: element curvature bends it (rock / metal up, water / air down), babies are round. */
@@ -110,7 +116,7 @@ function angularLobes(A: number, groove: number, curv = 0): Lobe[] {
 }
 
 function chainCfg(ctx: Ctx, chain: string, lastHeadR: number, rbEnd: number): ChainCfg {
-  const { ph, A, F, helix, curv, p5 } = ctx;
+  const { ph, A, F, helix, curv, p5, P } = ctx;
   const G = clamp01(ph.plan.girth);
   const exp = clampExponent(1.9 + 0.55 * A - 0.06 * Math.max(0, curv));
   const hump = Math.max(0, Math.min(1.2, p5.body.shoulder.hump));
@@ -126,6 +132,13 @@ function chainCfg(ctx: Ctx, chain: string, lastHeadR: number, rbEnd: number): Ch
     dorsal: [0, 1, 0],
     vertical: [0, 0, -1],
   };
+  // Pass 6: the globe's hidden base and the chrysalis (a ribbed, pointed shell standing on its base).
+  if (P?.globe && chain === "stack") return { ...base, section: (_s, rb) => ({ rx: rb, ry: rb, exp: 2 }), caps: [1, 1] };
+  if (P?.form === "cocoon" && chain === "stack") {
+    const ribs: Lobe[] = [];
+    for (let k = 0; k < 6; k++) ribs.push({ angle: (k * Math.PI) / 3 + 0.2, amp: 0.07, sharp: 7 });
+    return { ...base, section: (s, rb) => ({ rx: rb * (1 + 0.04 * Math.sin(9 * s)), ry: rb * 0.93, exp: 2, lobes: ribs.map((l) => ({ ...l, angle: l.angle + 0.9 * s })) }), caps: [1, 1.3] };
+  }
   if (chain.startsWith("tent")) {
     // Octopus arm: round, a flat sucker underside (belly material), a dorsal ridge when angular.
     return {
@@ -136,7 +149,7 @@ function chainCfg(ctx: Ctx, chain: string, lastHeadR: number, rbEnd: number): Ch
       extStart: 0.6,
     };
   }
-  if (chain === "neck") {
+  if (chain.startsWith("neck")) {
     return {
       ...base,
       section: (_s, rb) => ({ rx: rb, ry: rb * 1.08, exp, lobes: [{ angle: -HALF_PI, amp: 0.06, sharp: 2 }, ...(A > 0.5 ? [{ angle: HALF_PI, amp: 0.08 * A, sharp: 10 }] : [])] }),
@@ -146,7 +159,7 @@ function chainCfg(ctx: Ctx, chain: string, lastHeadR: number, rbEnd: number): Ch
       extEnd: (0.6 * lastHeadR) / Math.max(1e-4, rbEnd),
     };
   }
-  if (chain === "tail") {
+  if (chain.startsWith("tail")) {
     const asym = asymScale(helix, "tail", helix.asymmetricSide) - 1;
     return {
       ...base,
@@ -161,7 +174,7 @@ function chainCfg(ctx: Ctx, chain: string, lastHeadR: number, rbEnd: number): Ch
       extStart: 0.8,
     };
   }
-  switch (ph.kind) {
+  switch (ctx.sk.kind) {
     case "quadruped":
       return {
         ...base,
@@ -249,6 +262,8 @@ function chainCfg(ctx: Ctx, chain: string, lastHeadR: number, rbEnd: number): Ch
         }),
         caps: [0.9, 1.6],
         belly: 0.7,
+        // Pass 6: a larva is a segmented grub (a pinch at every segment boundary).
+        pinch: P?.form === "larva" ? 0.16 : 0,
         spikes: true,
       };
     case "blob": {
@@ -308,7 +323,8 @@ function chainPieces(ctx: Ctx, ids: number[]): void {
     const ovNext = last ? 0 : rb((cum[k] + L) / T) * (0.25 + 0.75 * F);
     const a = first ? -cfg.extStart * rS[0] : -ovPrev;
     const b = last ? L + cfg.extEnd * rE[n - 1] : L + ovNext;
-    const nSt = (tent ? (res.limbStations > 5 ? 4 : 3) : res.stations) + (a < -0.3 * L || b > 1.3 * L ? 2 : 0);
+    // Pass 6: a dense colossus on the low tier lofts each (short, straight) tentacle segment with 2 stations.
+    const nSt = (tent ? (res.limbStations > 5 ? 4 : res.dense && res.limbStations <= 2 ? 2 : 3) : res.stations) + (a < -0.3 * L || b > 1.3 * L ? 2 : 0);
     const st: Station[] = [];
     for (let m = 0; m < nSt; m++) {
       const t = a + ((b - a) * m) / (nSt - 1);
@@ -329,7 +345,111 @@ function chainPieces(ctx: Ctx, ids: number[]): void {
       slots: cfg.belly > 0 ? ["skin", "belly"] : ["skin"],
     });
     if (cfg.spikes && ph.plan.spikes > 0.55) spikePieces(ctx, ids[k], frame, L, (t) => sectionAt((cum[k] + t) / T), rb((cum[k] + L / 2) / T));
+    // Pass 6 [P6-E4]: armour plates (armor+) on the trunk; a molting body's shell cracks into pieces.
+    const P = ctx.P;
+    const trunk = js[0].chain === "spine" || js[0].chain === "body" || js[0].chain === "abdomen" || (js[0].chain === "stack" && !P?.globe && P?.form !== "cocoon");
+    if (P && P.armor > 0 && trunk && P.form !== "larva") shellPieces(ctx, ids[k], frame, L, (t) => sectionAt((cum[k] + t) / T));
   }
+}
+
+/**
+ * Armour plates [P6-E4] on one trunk joint (its frame): a lens-shaped carapace plate sitting ON the back (its
+ * lower half buried in the trunk, its rim overhanging the flanks), thicker with every armor+. A MOLTING body's
+ * plate is cracked into four pieces (split along the spine and across), each tilted outward and lifted a little:
+ * every piece still roots in the trunk, and each is its OWN mesh so the viability check sees every piece.
+ */
+function shellPieces(ctx: Ctx, idx: number, frame: { t: V3; x: V3; y: V3 }, L0: number, secAt: (t: number) => Section): void {
+  const P = ctx.P!;
+  // The plate stops short of a neck or a tail rooted on this joint: its socket would swallow the plate (a
+  // molting serpent's rear shell pieces vanished inside the sockets of its tail forks).
+  const rooted = ctx.sk.joints.some((c) => c.parent === idx && (c.role === "neck" || c.role === "tail"));
+  const L = rooted ? 0.55 * L0 : L0;
+  const high = ctx.res.limbStations > 5;
+  const nSt = high ? 5 : 3;
+  // A serpent's thin, overlapping segments need a thicker plate to show above the neighbours' overlap.
+  const thick = (1 + 0.25 * Math.min(3, Math.max(0, P.armor - 1))) * (ctx.sk.kind === "serpent" ? 1.35 : 1);
+  const normal = norm3([frame.x[1] * frame.y[2] - frame.x[2] * frame.y[1], frame.x[2] * frame.y[0] - frame.x[0] * frame.y[2], frame.x[0] * frame.y[1] - frame.x[1] * frame.y[0]]);
+  const piece = (t0: number, t1: number, ox: number, ang: number, wK: number, lift: number): Piece<Slot> => {
+    const xa = rotate3(frame.x, normal, ang), ya = rotate3(frame.y, normal, ang);
+    const rings: Ring[] = [];
+    for (let m = 0; m < nSt; m++) {
+      const u = m / (nSt - 1);
+      const t = t0 + (t1 - t0) * u;
+      const sec = secAt(Math.max(0, Math.min(L, t)));
+      const [, py] = superSection(HALF_PI, sec.rx, sec.ry, sec.exp ?? 2, sec.lobes);
+      const w = sec.rx * 0.95 * wK * (0.72 + 0.28 * Math.sin(Math.PI * (0.1 + 0.8 * u)));
+      // Centre 0.86 of the dorsal radius, half-thickness 0.3: the top clears the back (and the overlap of a
+      // fatter neighbouring segment) by ~0.15 of the radius, the bottom stays buried in the trunk.
+      const c = add3(add3(mul3(frame.t, t), mul3(frame.x, ox * sec.rx)), mul3(frame.y, py * ((ctx.sk.kind === "serpent" ? 0.95 : 0.86) + lift)));
+      rings.push({ rx: Math.max(1e-4, w), ry: Math.max(1e-4, py * 0.3 * thick), exp: 2.3, lobes: [{ angle: HALF_PI, amp: 0.2, sharp: 2 }], c, x: xa, y: ya });
+    }
+    return { geo: loftRings(rings, { radial: ctx.res.limbRadial, capRings: 1, capScale: [0.5, 0.5] }), slots: ["keratin"] };
+  };
+  if (!P.molting) {
+    ctx.shells[idx].push([piece(-0.02 * L, 1.02 * L, 0, 0, 1, 0)]);
+    return;
+  }
+  for (const side of [-1, 1]) {
+    for (const [a, b] of [[0.02, 0.47], [0.55, 0.98]]) ctx.shells[idx].push([piece(a * L, b * L, side * 0.5, -side * 0.38, 0.5, ctx.sk.kind === "serpent" ? 0.2 : 0.1)]);
+  }
+}
+
+/**
+ * The second MOUTH [P6-C1] of a one-headed creature: a ventral / chest maw on the front of the host trunk
+ * joint (the loft vertex furthest toward the front-low direction), a lip ring, a dark throat and a ring of
+ * inward teeth, as its own mesh (the dark throat material is returned for disposal).
+ */
+function mawMesh(ctx: Ctx, hi: number, mats: SkinMaterials, quality: Quality): { mesh: THREE.Mesh; dark: THREE.Material } | null {
+  const loft = ctx.pieces[hi][0]?.geo;
+  if (!loft) return null;
+  const upright = ctx.sk.kind === "biped" || ctx.sk.kind === "blob";
+  const want = new THREE.Vector3(0, upright ? -0.15 : -0.8, upright ? 1 : 0.6).normalize();
+  const Pos = loft.getAttribute("position"), Nor = loft.getAttribute("normal");
+  const c0 = new THREE.Vector3(), v = new THREE.Vector3();
+  for (let i = 0; i < Pos.count; i++) c0.add(v.fromBufferAttribute(Pos, i));
+  c0.multiplyScalar(1 / Math.max(1, Pos.count));
+  let best = 0, bd = -Infinity;
+  for (let i = 0; i < Pos.count; i++) {
+    const d = v.fromBufferAttribute(Pos, i).sub(c0).dot(want);
+    if (d > bd) bd = d, best = i;
+  }
+  const p = new THREE.Vector3().fromBufferAttribute(Pos, best);
+  const n = Nor ? new THREE.Vector3().fromBufferAttribute(Nor, best).normalize() : want.clone();
+  if (!Number.isFinite(n.x) || n.lengthSq() < 0.5) n.copy(want);
+  const j = ctx.sk.joints[hi];
+  const mw = Math.max(1e-3, ((j.r0 + j.r1) / 2) * 0.4);
+  const z = n.clone();
+  const x = new THREE.Vector3(0, 1, 0).cross(z);
+  if (x.lengthSq() < 1e-6) x.set(1, 0, 0);
+  x.normalize();
+  const y = z.clone().cross(x).normalize();
+  const M = new THREE.Matrix4().makeBasis(x, y, z).setPosition(p.clone().addScaledVector(n, -0.08 * mw));
+  const hiQ = quality === "high";
+  const pieces: Piece<Slot | "dark">[] = [];
+  const lip = new THREE.TorusGeometry(mw, mw * 0.2, hiQ ? 8 : 5, hiQ ? 20 : 12).scale(1, 0.62, 1).applyMatrix4(M);
+  pieces.push({ geo: lip, slots: ["accent"] });
+  const throat = new THREE.SphereGeometry(1, hiQ ? 14 : 8, hiQ ? 8 : 5).scale(mw * 0.95, mw * 0.6, mw * 0.3).translate(0, 0, -0.05 * mw).applyMatrix4(M);
+  pieces.push({ geo: throat, slots: ["dark"] });
+  const nT = hiQ ? 10 : 6;
+  for (let k = 0; k < nT; k++) {
+    const a = ((k + 0.5) / nT) * Math.PI * 2;
+    const at = new THREE.Vector3(mw * 0.92 * Math.cos(a), mw * 0.62 * 0.92 * Math.sin(a), 0.04 * mw);
+    const dir = at.clone().multiplyScalar(-1).normalize().add(new THREE.Vector3(0, 0, 0.5)).normalize();
+    const tooth = new THREE.ConeGeometry(mw * 0.09, mw * 0.4, hiQ ? 6 : 4).translate(0, mw * 0.16, 0);
+    tooth.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir)).translate(at.x, at.y, at.z).applyMatrix4(M);
+    pieces.push({ geo: tooth, slots: ["keratin"] });
+  }
+  const m = mergePieces(pieces, ["accent", "keratin", "dark"] as const);
+  for (const pc of pieces) pc.geo.dispose();
+  if (!m) return null;
+  const dark = new THREE.MeshStandardMaterial({ color: 0x2a0b12, roughness: 0.9 });
+  const list = m.slots.map((sl) => (sl === "dark" ? dark : mats[sl]));
+  m.geo.computeBoundingBox();
+  m.geo.computeBoundingSphere();
+  const mesh = new THREE.Mesh(m.geo, list.length === 1 ? list[0] : list);
+  mesh.name = `${j.id}:maw`;
+  mesh.userData = { maw: true, width: 2 * mw };
+  return { mesh, dark };
 }
 
 /** Curved cones along the dorsal surface, rooted ON the loft (the section's dorsal point), leaning back. */
@@ -494,7 +614,8 @@ function hornPieces(ctx: Ctx, j: JointDef): Piece<Slot>[] {
     return { rx: r, ry: r * (1 + 0.15 * A), exp: 2 + 0.4 * A, lobes: A > 0.1 ? [{ angle: HALF_PI, amp: 0.15 * A, sharp: 6 }] : [] };
   };
   const out: Piece<Slot>[] = [{ geo: loftRings(curveRings(pts, sec, [0, 0, 1]), { radial: res.smallRadial + 2, capRings: 2, capScale: [0.6, 1.2] }), slots: ["accent"] }];
-  if (depth >= 3) {
+  // Pass 6: a dense colossus keeps plain horns (no tines, no fractal antlers): budget.
+  if (depth >= 3 && !res.dense) {
     const tines = high ? [0.42, 0.68] : [0.55];
     tines.forEach((u, i) => {
       const base = bezier3(P0, P1, P2, P3, u);
@@ -512,7 +633,7 @@ function hornPieces(ctx: Ctx, j: JointDef): Piece<Slot>[] {
   }
   // armFractal on the horn: antler-like sub-branches from the upper horn (depth capped at 3).
   const af = ctx.p5.body.armFractal;
-  if (af.mode !== "none" && af.depth >= 1) {
+  if (af.mode !== "none" && af.depth >= 1 && !res.dense) {
     const u0 = 0.62;
     const base = bezier3(P0, P1, P2, P3, u0);
     const tan = norm3(sub3(bezier3(P0, P1, P2, P3, u0 + 0.03), bezier3(P0, P1, P2, P3, u0 - 0.03)));
@@ -565,8 +686,33 @@ export function tailJoints(sk: Skeleton): number[] {
 /** Station range of each limb part along the whole limb (morph ops with region "limb" use it). */
 const LIMB_U: Record<LimbPart, [number, number]> = { upper: [0, 0.4], lower: [0.4, 0.8], foot: [0.8, 1], pod: [0, 0.7], podTip: [0.7, 1], wing: [0, 1] };
 
+/**
+ * Pass-6 body triangle cap: the creature total (normal 40k high / 15k low; a colossus, mythic or more than
+ * DENSE_JOINTS joints, 60k / 20k) minus the head + face allowance of every head (6k / 3.5k each).
+ */
+export function bodyTriangleCap(sk: Skeleton, quality: Quality): number {
+  const colossus = sk.plan6?.tier === "mythic" || sk.joints.length > DENSE_JOINTS;
+  const heads = Math.max(1, sk.joints.filter((j) => j.role === "head").length);
+  const total = quality === "high" ? (colossus ? 60000 : 40000) : (colossus ? 20000 : 15000);
+  return total - heads * (quality === "high" ? 6000 : 3500);
+}
+
 export function buildBody(ph: Phenotype, sk: Skeleton, helix: MorphHelix, mats: SkinMaterials, quality: Quality): BodyParts {
-  const res = resolution(quality);
+  // Pass 6: a dense colossus (many joints) is meshed coarser; a pass-6 body over its cap is rebuilt one step
+  // coarser (dense resolution, then the lite one).
+  const dense = sk.joints.length > DENSE_JOINTS;
+  const first = buildBodyAt(ph, sk, helix, mats, quality, resolutionFor(quality, sk.joints.length));
+  if (!sk.plan6 || first.triangles <= bodyTriangleCap(sk, quality)) return first;
+  disposeParts(first);
+  return buildBodyAt(ph, sk, helix, mats, quality, dense ? liteResolution(quality) : resolutionFor(quality, DENSE_JOINTS + 1));
+}
+
+function disposeParts(p: BodyParts): void {
+  p.perJoint.forEach((objs) => objs.forEach((o) => o.traverse((x) => (x as THREE.Mesh).isMesh && (x as THREE.Mesh).geometry.dispose())));
+  for (const m of p.materials ?? []) m.dispose();
+}
+
+function buildBodyAt(ph: Phenotype, sk: Skeleton, helix: MorphHelix, mats: SkinMaterials, quality: Quality, res: Res): BodyParts {
   const p5 = helix.p5 ?? P5_DEFAULTS;
   const curv = Math.max(-1, Math.min(1, Number.isFinite(p5.body.curvature) ? p5.body.curvature : 0));
   const baby = clamp01(sk.dev?.baby ?? 0);
@@ -582,7 +728,11 @@ export function buildBody(ph: Phenotype, sk: Skeleton, helix: MorphHelix, mats: 
     baby,
     ops: (region) => opsFor(p5.body.ops, region),
     pieces: sk.joints.map(() => []),
+    P: sk.plan6 ?? null,
+    shells: sk.joints.map(() => []),
   };
+  const P = ctx.P;
+  const materials: THREE.Material[] = [];
   const J = sk.joints;
   const perJoint: JointMeshes = new Map();
   const extra = new Map<number, THREE.Object3D[]>();
@@ -612,9 +762,8 @@ export function buildBody(ph: Phenotype, sk: Skeleton, helix: MorphHelix, mats: 
     chainPieces(ctx, ids);
   });
 
-  // 1b. Tail tip shape on the last tail joint (a serpent's tail is the end of its body chain).
-  const tails = tailJoints(sk);
-  if (tails.length > 0) {
+  // 1b. Tail tip shape on the last joint of EVERY tail (a serpent's tail is the end of its body chain).
+  for (const tails of tailChains(sk)) {
     const last = tails[tails.length - 1];
     ctx.pieces[last].push(...tailTipPieces(ctx, J[last], J[tails[0]].r0));
   }
@@ -647,7 +796,11 @@ export function buildBody(ph: Phenotype, sk: Skeleton, helix: MorphHelix, mats: 
       // armFractal: a fractal HAND replaces the fingers of a wrist; front feet get fractal claws from depth 2.
       const frontFoot = j.role === "ankle" && J[J[j.parent]?.parent ?? -1]?.role === "shoulder";
       const fractalHand = fractalOn && j.role === "wrist";
-      if ((j.role === "ankle" || j.role === "wrist") && part === "foot" && !fractalHand) extra.set(i, buildDigits(j, ph, helix, mats, quality));
+      // Pass 6: hands carry the counted fingers (up to 7; fingers+ adds); a larva's stubby legs have none.
+      const handN = P && j.role === "wrist" ? (P.source === "p6" ? P.counts.fingers : Math.round(helix.digits) + P.fingerBonus) : undefined;
+      // A very dense body (or a dense one on the low tier) keeps only its hands' fingers: toes go.
+      const toes = j.role === "wrist" || !(J.length > VERY_DENSE_JOINTS || (J.length > DENSE_JOINTS && quality === "low"));
+      if ((j.role === "ankle" || j.role === "wrist") && part === "foot" && !fractalHand && P?.form !== "larva" && toes) extra.set(i, buildDigits(j, ph, helix, mats, quality, handN, res));
       if (fractalHand || (fractalOn && frontFoot && af.depth >= 2)) {
         const d = norm3(jc.dir);
         const handUp = norm3(add3(d, [0, 0, 0.35]));
@@ -660,12 +813,30 @@ export function buildBody(ph: Phenotype, sk: Skeleton, helix: MorphHelix, mats: 
     else if (j.role === "ear") ctx.pieces[i].push(...earPieces(ctx, jc));
   });
 
-  // 4. Merge per joint; mirror side -1; asymmetric scale for horns / ears.
+  // 3b. The second mouth of a one-headed body: a maw on the chest (pass 6).
+  if (P && P.counts.mouths >= 2 && J.filter((j) => j.role === "head").length < 2 && !P.globe && P.form !== "cocoon" && P.form !== "larva") {
+    const host = J.findIndex((j) => j.role === "chest");
+    const maw = mawMesh(ctx, host >= 0 ? host : 0, mats, quality);
+    if (maw) {
+      const at = host >= 0 ? host : 0;
+      extra.set(at, [...(extra.get(at) ?? []), maw.mesh]);
+      materials.push(maw.dark);
+    }
+  }
+
+  // 4. Merge per joint; mirror side -1; asymmetric scale for horns / ears; armour / shell pieces as own meshes.
   J.forEach((j, i) => {
     const scale = j.role === "horn" ? asymScale(helix, "horn", j.side) : j.role === "ear" ? asymScale(helix, "ear", j.side) : 1;
     const m = meshOf(ctx.pieces[i], mats, `${j.id}:body`, j.side < 0, scale);
     const list: THREE.Object3D[] = [];
     if (m) list.push(m);
+    ctx.shells[i].forEach((group, k) => {
+      const sm = meshOf(group, mats, P?.molting ? `${j.id}:shell${k}` : `${j.id}:armor`, j.side < 0);
+      if (sm) {
+        sm.userData = { shell: true, molting: !!P?.molting };
+        list.push(sm);
+      }
+    });
     list.push(...(extra.get(i) ?? []));
     if (list.length) perJoint.set(i, list);
   });
@@ -677,7 +848,13 @@ export function buildBody(ph: Phenotype, sk: Skeleton, helix: MorphHelix, mats: 
     const tip = mid >= 0 ? J.findIndex((c) => c.parent === mid && c.role === "wingTip") : -1;
     if (mid < 0 || tip < 0) return;
     const idx = [i, mid, tip];
-    const w = buildWing(idx.map((k) => J[k]), ph, helix, mats, quality);
+    // Pass 6: every extra pair is smaller (x0.78 per pair), wings+ grows the span; an imago gets insect panes.
+    const spanK = (P?.wingSpan ?? 1) * Math.pow(0.78, j.pair ?? 0);
+    const imagoKind = P?.form === "imago" && helix.wings.kind === "none";
+    const wh: MorphHelix = spanK !== 1 || imagoKind
+      ? { ...helix, wings: { ...helix.wings, kind: imagoKind ? "insect" : helix.wings.kind, span: (helix.wings.span > 0 ? helix.wings.span : 1.4) * spanK } }
+      : helix;
+    const w = buildWing(idx.map((k) => J[k]), ph, wh, mats, quality, res);
     w.perJoint.forEach((objs, k) => {
       const at = idx[k];
       perJoint.set(at, [...(perJoint.get(at) ?? []), ...objs]);
@@ -694,5 +871,16 @@ export function buildBody(ph: Phenotype, sk: Skeleton, helix: MorphHelix, mats: 
       })
     )
   );
-  return { perJoint, wings, triangles };
+  return { perJoint, wings, triangles, ...(materials.length ? { materials } : {}) };
+}
+
+/** Every tail chain (root first): one per extra tail (pass 6); a serpent without tail joints ends in its body chain. */
+export function tailChains(sk: Skeleton): number[][] {
+  const groups = new Map<string, number[]>();
+  sk.joints.forEach((j, i) => {
+    if (j.role === "tail") groups.set(j.chain, [...(groups.get(j.chain) ?? []), i]);
+  });
+  if (groups.size > 0) return [...groups.values()];
+  const t = tailJoints(sk);
+  return t.length > 0 ? [t] : [];
 }

@@ -349,14 +349,44 @@ interface EyeSlot {
 
 const sideOf = (az: number): -1 | 0 | 1 => (Math.abs(az) < 1e-6 ? 0 : az < 0 ? -1 : 1);
 
-/** Angular slots of `n` eyes for a layout, symmetric about the midline (odd counts put one on it). */
-function eyeSlots(n: number, layout: EyeLayout, P: EyeP5): EyeSlot[] {
+/**
+ * Angular slots of `n` eyes for a layout, symmetric about the midline (odd counts put one on it).
+ * Pass 6 `complex` (6-8 counted eyes, the mythic face): a CROWN (a big central eye ringed by the others) or,
+ * for cluster layouts and compound eyes, two COMPOUND CLUSTERS (a tight rosette of small eyes per side).
+ */
+function eyeSlots(n: number, layout: EyeLayout, P: EyeP5, complex: "crown" | "clusters" | null = null): EyeSlot[] {
   const el0 = clamp(0.2 + 0.4 * P.height, -0.3, 0.85);
   const az0 = 0.3 + 0.6 * clamp(P.spread, 0, 1);
   const out: EyeSlot[] = [];
   const push = (az: number, el: number, k: number) => out.push({ az: clamp(az, -1.45, 1.45), el: clamp(el, -0.5, 1.25), k, s: sideOf(az) });
   if (n === 1) {
     push(0, el0 + 0.05, 1.3);
+    return out;
+  }
+  if (complex === "crown" && n >= 4) {
+    const elC = clamp(el0 + 0.05, 0.05, 0.6);
+    push(0, elC, 1.35);
+    const ring = n - 1, m = Math.floor(ring / 2);
+    if (ring % 2 === 1) push(0, elC + 0.46, 0.6);
+    for (let j = 0; j < m; j++) {
+      const th = Math.PI / 2 - (Math.PI * (j + (ring % 2 === 1 ? 1 : 0.5))) / (m + (ring % 2 === 1 ? 1 : 0));
+      const az = 0.62 * Math.cos(th), el = elC + 0.44 * Math.sin(th);
+      push(-Math.abs(az) - 0.08, el, 0.6);
+      push(Math.abs(az) + 0.08, el, 0.6);
+    }
+    return out;
+  }
+  if (complex === "clusters" && n >= 4) {
+    const per = Math.floor(n / 2);
+    for (const s of [-1, 1]) {
+      const ca = s * (az0 * 0.8 + 0.12), ce = el0 + 0.05;
+      push(ca, ce, 0.62);
+      for (let k = 1; k < per; k++) {
+        const th = Math.PI / 2 + (2 * Math.PI * (k - 1)) / Math.max(1, per - 1);
+        push(ca + s * 0.27 * Math.cos(th), ce + 0.25 * Math.sin(th), 0.5);
+      }
+    }
+    if (n % 2 === 1) push(0, el0 + 0.42, 0.55);
     return out;
   }
   if (n === 2 || layout === "pair" || layout === "cyclops") {
@@ -451,11 +481,25 @@ const STYLE_SCALE: Partial<Record<EyeStyle, [number, number, number]>> = { sharp
  * embedded by (0.25 + 0.75 socketDepth) of the eyeball depth; gaze yawed by `yaw`, outline tilted by
  * `tilt` (mirrored per side).
  */
+/** Eyes on THIS head: the pass-6 face spec of the head joint (counted eyes, eyes+), else the helix genes. */
+export function eyeCountOf(head: JointDef, helix: MorphHelix): number {
+  const F = head.face;
+  const base = F?.eyes ?? faceGenes(helix).eyes.count;
+  return Math.round(clamp(base + (F?.eyeBonus ?? 0), 1, 8));
+}
+
+/** Socket depth of the eyes of THIS head: the gene, but the globe's big single eye always sits deep (no bulge). */
+function socketDepthOf(head: JointDef, P: EyeP5): number {
+  const d = clamp(P.socketDepth, 0, 1);
+  return head.face?.globe ? Math.max(d, 0.75) : d;
+}
+
 export function eyePlacements(head: JointDef, ph: Phenotype, helix: MorphHelix): EyePlacement[] {
   const H = headVolume(head), f = H.f, r = H.a;
   const P = faceGenes(helix).eyes;
-  const n = Math.round(clamp(P.count, 1, 8));
-  const slots = eyeSlots(n, n === 1 ? "cyclops" : n === 2 ? "pair" : P.layout, P);
+  const n = eyeCountOf(head, helix);
+  const complex = head.face?.complex && n >= 4 ? (P.layout === "cluster" || helix.eyes.style === "compound" ? "clusters" : "crown") : null;
+  const slots = eyeSlots(n, n === 1 ? "cyclops" : n === 2 ? "pair" : P.layout, P, complex);
   const st = STYLE_SCALE[helix.eyes.style] ?? [1, 1, 1];
   const scale: [number, number, number] = [
     clamp(P.scale[0], 0.6, 1.5) * st[0],
@@ -465,12 +509,12 @@ export function eyePlacements(head: JointDef, ph: Phenotype, helix: MorphHelix):
   const smax = Math.max(scale[0], scale[1]);
   const baby = 1 + 0.5 * (1 - clamp(ph.growth, 0, 1)) * (0.4 + 0.6 * clamp(faceGenes(helix).growth.neoteny, 0, 1));
   const countK = n <= 2 ? 1 : Math.sqrt(2 / n) * 1.1;
-  const depth = clamp(P.socketDepth, 0, 1);
+  const depth = socketDepthOf(head, P);
   const yaw = clamp(P.yaw, 0, 1.3), tilt = clamp(P.tilt, -0.6, 0.6);
   let er0 = clamp(helix.eyes.size, 0.12, 0.45) * r * countK * baby;
   const place = (er0: number): EyePlacement[] =>
     slots.map((slot, index) => {
-      const er = Math.min(er0 * slot.k, 0.55 * r / smax);
+      const er = Math.min(er0 * slot.k, (head.face?.globe ? 0.4 : 0.55) * r / smax);
       const { p, n: nn } = surface(H, slot.az, slot.el);
       const yawDir = f.fwd.clone().multiplyScalar(Math.cos(yaw)).addScaledVector(f.side, slot.s * Math.sin(yaw));
       const look = nn.clone().addScaledVector(slot.s === 0 ? f.fwd : yawDir, 1.1).normalize();
@@ -514,7 +558,9 @@ export function eyePlacements(head: JointDef, ph: Phenotype, helix: MorphHelix):
 export function buildHead(head: JointDef, ph: Phenotype, helix: MorphHelix, mats: SkinMaterials, quality: Quality): THREE.Object3D[] {
   const H = headVolume(head), f = H.f;
   const hi = quality === "high";
-  const NU = hi ? 38 : 24, NV = hi ? 22 : 12;
+  // Pass 6: on the low tier a mythic head (complex eyes or a second head) is meshed a little coarser (budget).
+  const coarse = !hi && !!(head.face?.complex || head.face?.second);
+  const NU = hi ? 38 : coarse ? 18 : 24, NV = hi ? 22 : coarse ? 10 : 12;
   // Parameter warp: denser near the front / the eye line, sparser at the back of the skull.
   const warp = (t: number, A: number) => t * (A + (1 - A) * t * t);
   const pos: number[] = [], uv: number[] = [], idx: number[] = [];
@@ -540,7 +586,7 @@ export function buildHead(head: JointDef, ph: Phenotype, helix: MorphHelix, mats
   const eyes = eyePlacements(head, ph, helix);
   const P = faceGenes(helix).eyes;
   const brow = helix.eyes.style === "compound" ? 0 : clamp(P.brow, 0, 1);
-  const depth = clamp(P.socketDepth, 0, 1);
+  const depth = socketDepthOf(head, P);
   const V = new THREE.Vector3(), d = new THREE.Vector3();
   const count = pos.length / 3;
   // 1) brow ridges (before carving, so a carve always wins near the eye).
@@ -594,7 +640,12 @@ export function buildHead(head: JointDef, ph: Phenotype, helix: MorphHelix, mats
   const mesh = new THREE.Mesh(g, mats.skin);
   mesh.name = "head";
   mesh.userData = { head: true, sockets: eyes.length, frame: f };
-  return [mesh];
+  if (!head.face?.second) return [mesh];
+  // Pass 6: a SECOND head carries its own face (eyes, mouth line, upper teeth): the views attach every head
+  // mesh but build the face of the first head only. userData.face exposes its pupils / lids for blinking.
+  const face = buildFace(head, undefined, ph, helix, mats, quality);
+  mesh.userData.face = { pupils: face.pupils, lids: face.lids, eyeMaterials: face.eyeMaterials };
+  return [mesh, ...face.head];
 }
 
 /** The JAW mesh (JAW joint frame): the jaw ellipsoid scaled by MouthP5.scale. */
@@ -701,6 +752,9 @@ export function buildFace(head: JointDef, jaw: JointDef | undefined, ph: Phenoty
   const hf = H.f;
   const E = helix.eyes, M = helix.mouth, G = faceGenes(helix);
   const style = E.style;
+  // Pass 6: the globe's face is clean and cute (a small toothless mouth); 6-8 counted eyes are ringed.
+  const globe = !!head.face?.globe;
+  const complexEyes = !!head.face?.complex;
   const glow = clamp(E.glow, 0, 1);
   const lidAngle = clamp(E.lidAngle, -0.8, 0.8);
 
@@ -736,6 +790,11 @@ export function buildFace(head: JointDef, jaw: JointDef | undefined, ph: Phenoty
   const pupilMat = new THREE.MeshBasicMaterial({ color: 0x07070c });
   const white = new THREE.MeshBasicMaterial({ color: 0xffffff });
   eyeMaterials.push(sclera, iris, pupilMat, white);
+  let ringMat: THREE.MeshBasicMaterial | null = null;
+  if (complexEyes) {
+    ringMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(ph.palette.glow).lerp(new THREE.Color(0xffffff), 0.2) });
+    eyeMaterials.push(ringMat);
+  }
   let bead: THREE.MeshBasicMaterial | null = null;
   if (glowing && style !== "blank") {
     // Hot bead: lighter than the shell and above 1.0 so it is the part that blooms.
@@ -773,6 +832,17 @@ export function buildFace(head: JointDef, jaw: JointDef | undefined, ph: Phenoty
       if (style !== "blank") {
         const ir = er * (style === "sparkle" ? 0.78 : style === "sharp" ? 0.66 : 0.62);
         eye.add(new THREE.Mesh(shellPatch(er * 1.012, ir, ir, { rings: hi ? 3 : 1, segs: seg }), iris));
+        if (ringMat) {
+          // Complex (mythic) eye: a dark limbal ring at the iris edge and a glowing inner ring around the pupil.
+          const lr = new THREE.Mesh(shellPatch(er * 1.016, ir, ir, { inner: 0.84, rings: 1, segs: seg }), pupilMat);
+          lr.userData.limbal = true;
+          eye.add(lr);
+          if (hi) {
+            const gr = new THREE.Mesh(shellPatch(er * 1.017, ir * 0.62, ir * 0.62, { inner: 0.78, rings: 1, segs: seg }), ringMat);
+            gr.userData.innerRing = true;
+            eye.add(gr);
+          }
+        }
         if (bead) eye.add(new THREE.Mesh(shellPatch(er * 1.02, ir * 0.36, ir * 0.15, { cy: -ir * 0.64, rings: hi ? 2 : 1, segs: Math.max(8, Math.round(seg * 0.7)) }), bead));
         const pr = er * (style === "sparkle" ? 0.28 : 0.3);
         let pupil: THREE.Object3D | null = null;
@@ -838,7 +908,7 @@ export function buildFace(head: JointDef, jaw: JointDef | undefined, ph: Phenoty
   const MP = G.mouth;
   const [msx, msy, msz] = MP.scale.map((v) => clamp(v, 0.6, 1.5));
   const width = clamp(M.width, 0.3, 1);
-  const aw = clamp((0.18 + 0.75 * width) * msx, 0.15, 1.3);
+  const aw = clamp((0.18 + 0.75 * width) * msx, 0.15, 1.3) * (globe ? 0.42 : 1);
   const jaf = jaw ? frameOf(jaw.dir) : null;
   const jawOff = jaw ? new THREE.Vector3(jaw.offset[0], jaw.offset[1], jaw.offset[2]) : null;
   const lipUp = jaw && jawOff ? jawOff.dot(hf.up) + 0.1 * jaw.r0 : -0.33 * r;
@@ -847,7 +917,7 @@ export function buildFace(head: JointDef, jaw: JointDef | undefined, ph: Phenoty
   eyeMaterials.push(dark);
   // Lip curve: + smile lifts the corners, - frown drops them (legacy helices: from the lid angle).
   const corner = helix.p5 ? 0.16 * clamp(MP.lipCurve, -1, 1) : lidAngle > 0.15 ? -0.08 : 0.05;
-  const beak: BeakKind = MP.beak !== "none" ? MP.beak : M.teeth === "beak" ? "hooked" : "none";
+  const beak: BeakKind = globe ? "none" : MP.beak !== "none" ? MP.beak : M.teeth === "beak" ? "hooked" : "none";
   const lipPts: V3[] = [], upperLip: V3[] = [];
   for (let i = 0; i <= 12; i++) {
     const t = i / 6 - 1;
@@ -882,7 +952,7 @@ export function buildFace(head: JointDef, jaw: JointDef | undefined, ph: Phenoty
   // ------------------------------------------------------------------ teeth / beak / tongue
   const kind: TeethKind = M.teeth;
   const len = (0.05 + clamp(M.toothLength, 0, 0.6)) * r;
-  const n = kind === "none" || kind === "beak" || beak !== "none" ? 0 : Math.round(clamp(M.teethCount, 1, 12));
+  const n = globe || kind === "none" || kind === "beak" || beak !== "none" ? 0 : Math.round(clamp(M.teethCount, 1, 12));
   // Teeth cones: fewer facets on the low tier.
   const cone = (rb: number, len: number, bend: number, radial = 7) => bentCone(rb, len, bend, hi ? radial : Math.max(4, radial - 2), hi ? 3 : 2);
   if (n > 0) {

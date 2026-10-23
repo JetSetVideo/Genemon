@@ -23,7 +23,7 @@ import { type WeatherId, WEATHERS } from "../data/weather.ts";
 import { type Genemon, phenotypeOf } from "../genome/genemon.ts";
 import { helixOf } from "../genome/helix.ts";
 import type { SenseProfile } from "../genome/lifeTypes.ts";
-import { senseDamageMult, sensesOf } from "../genome/senses.ts";
+import { SENSE_MEAN, senseDamageMult, sensesOf } from "../genome/senses.ts";
 import type { Emotions, Phenotype, Stats } from "../genome/phenotype.ts";
 import { EVASION_CAP } from "../genome/phenotype.ts";
 import { noteActivity } from "../genome/epigenetics.ts";
@@ -31,7 +31,7 @@ import { type Arena, type ArenaSpec, generateArena, spawnAnchor } from "../world
 import { applyImpulse, type Body, makeBody, stepPhysics } from "../world/physics.ts";
 import { isDamaging, type MetaUsage, type Move, moveCost, type StatusId } from "./moves.ts";
 import { type Synergy, synergies, type Team } from "./team.ts";
-import { ALL_MOVE_BY_ID, bodyFactor, counterValue, fieldStatus, HARD_STATUS, interrupts } from "./kit.ts";
+import { ALL_MOVE_BY_ID, bodyFactor, counterValue, fieldStatus, HARD_STATUS, interrupts, MASS_REF } from "./kit.ts";
 import {
   angleDiff,
   bearing,
@@ -336,12 +336,96 @@ export const MELEE_LUNGE = 0.9;
 /** Every heal a fighter casts in one battle restores HEAL_DECAY x the previous one (0.3, 0.18, 0.11 ...). */
 export const HEAL_DECAY = 0.6;
 
+/**
+ * Balance knobs of the battle engine [P6-B1, P5-1], grouped so the balance tools can ablate one at a time
+ * (tools mutate a field, run a batch, restore it). Gameplay code never writes them: same knobs + same seed =
+ * same battle.
+ */
+export const TUNING = {
+  /** Contact size factor (sizeK): (class reference mass ratio)^sizeExp x (within-class mass ratio)^sizeExpIn, x2.2 on massScaled slams. */
+  sizeExp: 0.1,
+  sizeExpIn: 0.08,
+  sizeLo: 0.75,
+  sizeHi: 1.4,
+  /** Cleave: a body of cleaveSlots+ slots that strikes in melee also hits other enemies in its frontal arc for cleaveFrac. */
+  cleaveFrac: 0.5,
+  cleaveSlots: 3,
+  cleaveArc: Math.PI / 3,
+  /** At most this many extra bodies are caught by one cleave (nearest first). */
+  cleaveMax: 99,
+  /** Tenacity: a harmful status on a big body lasts 1 / (1 + tenacity x (slots - 1)). */
+  tenacity: 0.2,
+  /** Type multipliers to and from a colossus (XXL) are raised to this power (1 = the plain chart). */
+  colossusTypeExp: 0.3,
+  /** A colossus's cleave: fraction and most extra bodies caught (its sweep is wide but slow to connect). */
+  colossusCleaveFrac: 0.35,
+  colossusCleaveMax: 1,
+  /** Stagger resistance of a colossus: harmful statuses on an XXL body last a further 1 / colossusTenacity. */
+  colossusTenacity: 2,
+  /** A colossus cannot be interrupted: a stun / freeze on its charge does not cancel the move (it still loses the time). */
+  colossusUnstoppable: true,
+  /** Burn damage over time, fraction of max HP per second (before PACE / RATE_K); pass 4-5: 0.016. */
+  burnDot: 0.016,
+  /** A colossus's bulk dilutes damage over time: burn / poison / hazard / zone damage on an XXL body x colossusDot. */
+  colossusDot: 0.3,
+  /** Contact size factor to and from a colossus is clamped to colossusSizeLo .. colossusSizeHi. */
+  colossusSizeLo: 0.9,
+  colossusSizeHi: 1.15,
+  /** Focus fire: +focusFire damage per OTHER ally that hit the same target within focusWindow x TEMPO s (at most focusMax). */
+  focusFire: 0.15,
+  focusWindow: 2.5,
+  focusMax: 2,
+  /** Energy regeneration x (charge rate / RATE_REF)^regenRateExp: the power index prices rate as throughput. */
+  regenRateExp: 0.5,
+  /** Damage x flankDamage on a hit from the target's blind side (outside its field of view). */
+  flankDamage: 1.15,
+  /**
+   * Agility vs ranged fire: a target that SEES the shooter (not on its blind side, not resting) gains
+   * rangedDodge evasion per m/s of ground speed above dodgeRef (full at dodgeRef + 2 m/s), divided by the
+   * shooter's tracking (keen eyes track a fast body).
+   */
+  rangedDodge: 0.2,
+  dodgeRef: 3.6,
+  /** Population median vision acuity ratio (the shooter's tracking is vision ratio / this, clamped 0.75 .. 1.5). */
+  dodgeVisionRef: 1.8,
+  /** Keen hearing hears the flanker: the flank damage bonus fades from hearing ratio flankHearLo (full) to flankHearHi (none). */
+  flankHearLo: 1.7,
+  flankHearHi: 2.3,
+  /**
+   * Anticipation: a target with keen senses that knows its attacker reads a long wind-up and sidesteps it -
+   * hit chance x (1 - anticipate x ...), outside the evasion cap, scaled by its sense ratio ((vision + hearing) / 2 / SENSE_MEAN) from senseLo (none) to
+   * senseHi (full) and by the move's charge (seconds before TEMPO / attacker rate) from 0.45 (none) to 0.75 (full).
+   * Areas (burst, zone) and billowing fire cannot be sidestepped by reading them.
+   */
+  anticipate: 0.25,
+  readLo: 0.45,
+  readHi: 0.75,
+  /** Keen senses track an agile body: rangedDodge x (1 - keenTrack x keen(shooter)). */
+  keenTrack: 1,
+  /** Keen senses find the weak spot: crit chance + keenCrit x keen(attacker). */
+  keenCrit: 0.04,
+  /** Keen senses see through agility: the target's evasion x (1 - keenEvasion x keen(attacker)). */
+  keenEvasion: 0.5,
+  senseLo: 1.75,
+  senseHi: 2.25,
+  /** Sensory overload: a keen-sensed fighter perceiving n >= 2 enemies hits x (1 - overload x keen x min(1, (n - 1) / 2)); a colossus is exempt. */
+  overload: 0.6,
+  /** Spiked armour: a contact hit on a hard body (hardness axis hardLo -> hardHi) returns recoil x its damage to the striker. */
+  recoil: 0.3,
+  hardLo: 0.6,
+  hardHi: 0.85,
+};
+/** Population mean charge rate (0.75 + 0.5 x tempo01 at tempo 0). */
+export const RATE_REF = 1;
+
 /** Statuses that hurt their bearer (tenacity applies to these only). */
 const HARMFUL = new Set<StatusId>(["burn", "wet", "frozen", "paralyzed", "poisoned", "slowed", "blinded", "feared", "confused", "staggered", "softened", "stunned"]);
 /** Harmful statuses that count toward STATUS_CAP (wet is weather / water, a state of the body). */
 const CAPPED = new Set<StatusId>([...HARMFUL].filter((s) => s !== "wet"));
 /** Shapes that strike along the attacker's facing (it must look at its target to aim). */
 const FRONTAL = new Set<string>(["melee", "beam", "cone", "projectile", "dash"]);
+/** Shapes fired from range that an agile target can sidestep (TUNING.rangedDodge). */
+const RANGED_SHAPES = new Set<string>(["projectile", "beam"]);
 /** Statuses that cancel a charge they land on (the counter to long wind-ups) [P4-M6]. */
 const INTERRUPTING = new Set<StatusId>(["stunned", "frozen"]);
 
@@ -401,6 +485,8 @@ export class Battle {
   private pendingSwitches: SwitchOrder[] = [];
   private switchCd: [number, number] = [0, 0];
   private interruptCount = 0;
+  /** Who hit whom lately: target idx -> attacker idx -> battle time of the last landed hit (focus fire). */
+  private hitLog = new Map<number, Map<number, number>>();
 
   constructor(setup: BattleSetup) {
     this.setup = setup;
@@ -606,12 +692,67 @@ export class Battle {
   }
 
   private knownType(f: Fighter, el: ElementId, t: Fighter): number {
-    const truth = typeMultiplier(el, t.types);
+    const truth = this.typeK(el, t, f);
     const w = u01(f.ph.axes.wisdom);
     const key = `${el}>${t.types[0]}`;
     const learned = f.memory[key];
     if (learned !== undefined) return learned;
     return w > 0.65 ? truth : 1 + (truth - 1) * w * 0.6;
+  }
+
+  /**
+   * Type multiplier of element `el` on `t` (attacker `f`, may be null). A colossus's layered bulk softens the chart
+   * both ways: to and from an XXL body the multiplier is raised to TUNING.colossusTypeExp [P6-B1].
+   */
+  private typeK(el: ElementId, t: Fighter, f: Fighter | null): number {
+    const k = typeMultiplier(el, t.types);
+    return TUNING.colossusTypeExp !== 1 && (t.ph.sizeClass === "XXL" || f?.ph.sizeClass === "XXL") ? Math.pow(k, TUNING.colossusTypeExp) : k;
+  }
+
+  /** Keen senses in [0, 1]: (vision + hearing) / 2 / SENSE_MEAN mapped from TUNING.senseLo to senseHi. */
+  private keen(f: Fighter): number {
+    const a = fighterSenses(f).acuity;
+    return clamp(((a.vision + a.hearing) / 2 / SENSE_MEAN - TUNING.senseLo) / (TUNING.senseHi - TUNING.senseLo), 0, 1);
+  }
+
+  /** Flank damage multiplier on a blind-side hit on `t`: keen hearing (acuity / mean) cancels it. */
+  private flankK(t: Fighter): number {
+    if (TUNING.flankDamage === 1) return 1;
+    const hear = fighterSenses(t).acuity.hearing / SENSE_MEAN;
+    return 1 + (TUNING.flankDamage - 1) * clamp((TUNING.flankHearHi - hear) / (TUNING.flankHearHi - TUNING.flankHearLo), 0, 1);
+  }
+
+  /**
+   * Contact size factor [P6-B1, P5-1]: the size-CLASS gap (reference masses, MASS_REF) at TUNING.sizeExp and the
+   * heaviness WITHIN the classes at TUNING.sizeExpIn (x2 for massScaled slams), clamped sizeLo..sizeHi. A dense
+   * body of the same class no longer double-dips (mass is already in its "mass" body part).
+   */
+  sizeK(f: Fighter, t: Fighter, m: Move): number {
+    const k = m.tags.includes("massScaled") ? 2.2 : 1;
+    const ref = MASS_REF[f.ph.sizeClass] / MASS_REF[t.ph.sizeClass];
+    const within = (Math.max(0.5, f.body.mass) / Math.max(0.5, t.body.mass)) / ref;
+    const v = clamp(Math.pow(ref, TUNING.sizeExp * k) * Math.pow(within, TUNING.sizeExpIn * k), TUNING.sizeLo, TUNING.sizeHi);
+    // A colossus cannot put its whole weight into a tiny target, and small bodies climb it: its contact factor is narrower.
+    return f.ph.sizeClass === "XXL" || t.ph.sizeClass === "XXL" ? clamp(v, TUNING.colossusSizeLo, TUNING.colossusSizeHi) : v;
+  }
+
+  /** Energy throughput factor of a fighter's charge rate (TUNING.regenRateExp). */
+  private regenK(f: Fighter): number {
+    return TUNING.regenRateExp === 0 ? 1 : Math.pow(f.stats.rate / RATE_REF, TUNING.regenRateExp);
+  }
+
+  /**
+   * Focus fire [P6-B1]: 1 + TUNING.focusFire per OTHER ally of `f` that landed a hit on `t` within
+   * TUNING.focusWindow x TEMPO seconds (at most TUNING.focusMax allies): a team that converges on one target
+   * hits it harder - the answer of many small bodies to one big one.
+   */
+  focusFire(f: Fighter, t: Fighter): number {
+    if (TUNING.focusFire === 0 || t.team === f.team) return 1;
+    const log = this.hitLog.get(t.idx);
+    if (!log) return 1;
+    let n = 0;
+    for (const [a, at] of log) if (a !== f.idx && this.t - at <= TUNING.focusWindow * TEMPO && !this.fighters[a].ko) n++;
+    return 1 + TUNING.focusFire * Math.min(TUNING.focusMax, n);
   }
 
   private teamMult(f: Fighter, el: ElementId): number {
@@ -683,6 +824,26 @@ export class Battle {
       ev *= 0.5;
       p *= BLIND_HIT;
     }
+    if (TUNING.rangedDodge > 0 && RANGED_SHAPES.has(m.shape) && t !== f && t.phase !== "rest" && !this.blindSide(t, f)) {
+      const track = clamp(fighterSenses(f).acuity.vision / SENSE_MEAN / TUNING.dodgeVisionRef, 0.75, 1.5);
+      // Outside the evasion cap (a sidestep of a shot it saw coming, not a dodge roll).
+      p *= 1 - (TUNING.rangedDodge * clamp((t.stats.spd - TUNING.dodgeRef) / 2, 0, 1) * (1 - TUNING.keenTrack * this.keen(f))) / track;
+    }
+    if (TUNING.anticipate > 0 && t !== f && t.team !== f.team && m.shape !== "burst" && m.shape !== "zone" && m.element !== "fire" && t.phase !== "rest" && this.knows(t, f)) {
+      const read = clamp((m.charge / Math.max(0.3, f.stats.rate) - TUNING.readLo) / (TUNING.readHi - TUNING.readLo), 0, 1);
+      // A read wind-up is sidestepped on top of (not inside) the evasion cap: it is reading, not agility.
+      if (read > 0) p *= 1 - TUNING.anticipate * read * this.keen(t);
+    }
+    if (TUNING.overload > 0 && f.ph.sizeClass !== "XXL") {
+      const k = this.keen(f);
+      if (k > 0) {
+        const near = this.fighters.filter((o) => o.team !== f.team && this.live(o) && this.knows(f, o)).length;
+        // Bounded: 2 enemies cost half of overload x keen, 3 or more the whole of it.
+        if (near >= 2) p *= 1 - TUNING.overload * k * Math.min(1, (near - 1) / 2);
+      }
+    }
+    // Keen senses see through agility: a keen attacker ignores keenEvasion of its target's dodge.
+    if (TUNING.keenEvasion > 0 && t !== f) ev *= 1 - TUNING.keenEvasion * this.keen(f);
     if (FRONTAL.has(m.shape) && t !== f) {
       const off = Math.abs(angleDiff(bearing(f.body.pos.x, f.body.pos.z, t.body.pos.x, t.body.pos.z), f.body.yaw));
       p *= 1 - 0.25 * clamp((off - 1) / 1.2, 0, 1);
@@ -1039,16 +1200,20 @@ export class Battle {
         if (!t.ko && gap <= f.stats.reach + m.range + MELEE_LUNGE && this.canReach(f, t, m)) {
           this.hit(f, t, m, 1, "melee", t.body.pos);
           // Cleave: a large body (3+ slots) sweeps every other enemy in its frontal arc and reach.
-          if (f.ph.slots >= 3) {
+          if (f.ph.slots >= TUNING.cleaveSlots) {
             const fwd = Math.atan2(dirx, dirz);
+            const caught: { o: Fighter; og: number }[] = [];
             for (const o of this.enemiesOf(f)) {
               if (o === t || !this.canReach(f, o, m)) continue;
               const og = distXZ(fp, o.body.pos) - f.body.radius - o.body.radius;
               let da = Math.atan2(o.body.pos.x - fp.x, o.body.pos.z - fp.z) - fwd;
               while (da > Math.PI) da -= Math.PI * 2;
               while (da < -Math.PI) da += Math.PI * 2;
-              if (og <= f.stats.reach + m.range + MELEE_LUNGE && Math.abs(da) < Math.PI / 3) this.hit(f, o, m, 0.5, "cleave", o.body.pos);
+              if (og <= f.stats.reach + m.range + MELEE_LUNGE && Math.abs(da) < TUNING.cleaveArc) caught.push({ o, og });
             }
+            caught.sort((a, b) => a.og - b.og || a.o.idx - b.o.idx);
+            const xxl = f.ph.sizeClass === "XXL";
+            for (const c of caught.slice(0, xxl ? TUNING.colossusCleaveMax : TUNING.cleaveMax)) this.hit(f, c.o, m, xxl ? TUNING.colossusCleaveFrac : TUNING.cleaveFrac, "cleave", c.o.body.pos);
           }
         } else this.miss(f, t, m, `out of reach (gap ${r3(gap)} m)`);
         break;
@@ -1290,7 +1455,7 @@ export class Battle {
     dur *= TEMPO;
     // Tenacity: big bodies shake off harmful statuses faster (XL x0.63, L x0.71, M x0.83). Without
     // it, damage-over-time scales with the VICTIM's max HP while a swarm applies it N times as often.
-    if (by !== t && HARMFUL.has(s)) dur /= 1 + 0.2 * (t.ph.slots - 1);
+    if (by !== t && HARMFUL.has(s)) dur /= (1 + TUNING.tenacity * (t.ph.slots - 1)) * (t.ph.sizeClass === "XXL" ? TUNING.colossusTenacity : 1);
     const had = t.status.has(s);
     // Fewer simultaneous statuses [P5-B1]: at most STATUS_CAP harmful ones; the newest replaces the oldest.
     if (!had && CAPPED.has(s)) {
@@ -1300,7 +1465,7 @@ export class Battle {
     t.status.set(s, Math.max(t.status.get(s) ?? 0, dur));
     if (s === "frozen") t.body.mode = "frozen";
     if (s === "staggered") t.body.stagger = Math.max(t.body.stagger, dur);
-    if (INTERRUPTING.has(s) && t.phase === "charge" && t.move && by && by.team !== t.team) this.interrupt(t, by, s);
+    if (INTERRUPTING.has(s) && t.phase === "charge" && t.move && by && by.team !== t.team && !(TUNING.colossusUnstoppable && t.ph.sizeClass === "XXL")) this.interrupt(t, by, s);
     if (s === "wet" && t.status.has("burn")) {
       t.status.delete("burn");
       this.react(by, "water", "fire", t.body.pos, "wet body quenched a burn");
@@ -1370,13 +1535,13 @@ export class Battle {
     const atkF = (f.stats.atk / 40) * offK / guardK;
     const defEff = t.stats.def * (t.status.has("shielded") ? 1.6 : 1) * (t.status.has("softened") ? 0.75 : 1);
     const defF = 100 / (100 + defEff);
-    const typeK = typeMultiplier(m.element, t.types);
+    const typeK = this.typeK(m.element, t, f);
     const stab = f.types.includes(m.element) ? 1.2 : 1;
     const wx = this.weatherDef.elementMult[m.element] ?? 1;
     const gAff = 1 + 0.5 * (GROUNDS[f.body.groundId].affinity[m.element] ?? 0);
     const cond = m.element === "electric" ? this.conduction(t) : 1;
     const massRatio = f.body.mass / Math.max(0.5, t.body.mass);
-    const size = contact ? clamp(Math.pow(massRatio, m.tags.includes("massScaled") ? 0.22 : 0.1), 0.75, 1.4) : 1;
+    const size = contact ? this.sizeK(f, t, m) : 1;
     const prox = m.shape === "melee" ? 1.08 : 1;
     const emo = 1 + 0.15 * f.emotions.anger - (f.status.has("feared") ? 0.15 : 0);
     const team = this.teamMult(f, m.element);
@@ -1384,14 +1549,30 @@ export class Battle {
     const liquidK = t.status.has("liquid") ? (contact ? 0.5 : m.element === "electric" ? 1.25 : 1) : 1;
     const frozenK = t.status.has("frozen") ? 1.15 : 1;
     const wetFire = m.element === "fire" && t.status.has("wet") ? 0.8 : 1;
-    let critP = f.stats.crit * (m.tags.includes("highCrit") ? 2 : 1) * (f.status.has("focused") ? 1.6 : 1) * (1 + 0.3 * f.emotions.joy) + (blind ? BLIND_CRIT : 0);
+    let critP = f.stats.crit * (m.tags.includes("highCrit") ? 2 : 1) * (f.status.has("focused") ? 1.6 : 1) * (1 + 0.3 * f.emotions.joy) + (blind ? BLIND_CRIT : 0) + (TUNING.keenCrit > 0 ? TUNING.keenCrit * this.keen(f) : 0);
     critP = clamp(critP, 0, 0.5);
     const crit = f.rng.chance(critP);
     const spread = f.rng.range(0.88, 1.12);
     const body = bodyFactor(m, f.ph);
     // Double-edged senses [P5-G2]: the target's organ resonates with the move's channel (big ears take more from a roar); half weight, 0.85 .. 1.225.
     const senseK = senseDamageMult(fighterSenses(t), m);
-    const dmg = Math.max(1, PACE * m.power * senseK * body * atkF * defF * typeK * stab * wx * gAff * cond * size * prox * emo * team * rhythm * liquidK * frozenK * wetFire * reactK * scale * spread * (crit ? 1.6 : 1));
+    const focus = this.focusFire(f, t) * (blind ? this.flankK(t) : 1);
+    const dmg = Math.max(1, PACE * m.power * senseK * body * atkF * defF * typeK * stab * wx * gAff * cond * size * prox * emo * team * rhythm * liquidK * frozenK * wetFire * reactK * focus * scale * spread * (crit ? 1.6 : 1));
+    if (TUNING.recoil > 0 && contact && t.team !== f.team) {
+      const back = dmg * TUNING.recoil * clamp((t.ph.axes.hardness - TUNING.hardLo) / (TUNING.hardHi - TUNING.hardLo), 0, 1);
+      if (back > 0) {
+        f.hp = Math.max(0, f.hp - back);
+        f.tally.taken += back;
+        t.tally.dealt += back;
+        this.emit({ type: "hit", a: t.idx, b: f.idx, move: m.id, element: m.element, value: back, pos: { ...f.body.pos }, label: "recoil" });
+        if (f.hp <= 0) this.knockOut(f, t);
+      }
+    }
+    if (t.team !== f.team) {
+      let log = this.hitLog.get(t.idx);
+      if (!log) this.hitLog.set(t.idx, (log = new Map()));
+      log.set(f.idx, this.t);
+    }
     t.hp = Math.max(0, t.hp - dmg);
     f.tally.dealt += dmg;
     f.tally.hits++;
@@ -1567,7 +1748,7 @@ export class Battle {
       if (f.ko || f.benched) continue;
       this.tickStatuses(f, dt, W.wetness, W.id);
       if (f.ko) continue;
-      f.energy = Math.min(f.stats.energy, f.energy + RATE_K * (f.stats.regen * dt * (f.phase === "rest" ? 1.5 : 1) - (f.body.mode === "fly" ? 1.5 * dt : 0)));
+      f.energy = Math.min(f.stats.energy, f.energy + RATE_K * (f.stats.regen * this.regenK(f) * dt * (f.phase === "rest" ? 1.5 : 1) - (f.body.mode === "fly" ? 1.5 * dt : 0)));
       if (f.body.mode === "fly" && f.energy <= 1) {
         f.status.delete("airborne");
         f.body.mode = "ground";
@@ -1607,7 +1788,7 @@ export class Battle {
     if (wetness >= 0.45 && !f.types.includes("fire") && f.body.mode !== "burrow") f.status.set("wet", Math.max(f.status.get("wet") ?? 0, 1));
     if (this.inWater(f) && !f.types.includes("fire")) f.status.set("wet", Math.max(f.status.get("wet") ?? 0, 2));
     let dot = 0;
-    if (f.status.has("burn")) dot += 0.016;
+    if (f.status.has("burn")) dot += TUNING.burnDot;
     if (f.status.has("poisoned")) dot += 0.03;
     if (w === "sandstorm" && !f.types.some((e) => e === "earth" || e === "metal")) dot += 0.008;
     if (w === "acidRain" && f.types.some((e) => e === "metal" || e === "plant")) dot += 0.008;
@@ -1619,7 +1800,7 @@ export class Battle {
       const enemyZone = z.team === -1 || z.team !== f.team;
       if (z.kind === "field") {
         if (z.team !== f.team && z.move && (!z.move.tags.includes("ground") || f.body.mode !== "fly")) {
-          const dmgPs = PACE * RATE_K * z.dps * (100 / (100 + f.stats.def)) * typeMultiplier(z.element, f.types);
+          const dmgPs = PACE * RATE_K * z.dps * (100 / (100 + f.stats.def)) * this.typeK(z.element, f, z.owner >= 0 ? this.fighters[z.owner] : null) * (f.ph.sizeClass === "XXL" ? TUNING.colossusDot : 1);
           f.hp -= dmgPs * dt;
           f.tally.taken += dmgPs * dt;
           if (z.owner >= 0) this.fighters[z.owner].tally.dealt += dmgPs * dt;
@@ -1631,9 +1812,10 @@ export class Battle {
       if (z.regen < 0) heal = 0;
       // Reaction zones hurt everyone inside, scaled by the type chart (a fire body resists a
       // wildfire it started, x0.5, but is not immune; a plant body takes x2).
-      if (enemyZone && z.frac > 0) dot += z.frac * typeMultiplier(z.element, f.types);
+      if (enemyZone && z.frac > 0) dot += z.frac * this.typeK(z.element, f, null);
       if (enemyZone && z.status && this.tick % 10 === 0) this.addStatus(f, z.status, 1, null);
     }
+    if (f.ph.sizeClass === "XXL") dot *= TUNING.colossusDot;
     if (dot > 0 || heal > 0) {
       f.hp = clamp(f.hp + PACE * RATE_K * (heal - dot) * f.maxHp * dt, 0, f.maxHp);
       if (dot > 0) f.tally.taken += PACE * RATE_K * dot * f.maxHp * dt;

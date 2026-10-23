@@ -37,6 +37,14 @@
  * the same categorical lead-allele rolls and the same recessive gates. Elements shape the parts
  * (water curves, earth / metal / ice angular, fire flame tails, plant leaves) while the colour code is
  * untouched. `EyeGenes.count` mirrors `p5.eyes.count` (one number, 1..8).
+ *
+ * PASS 6 [P6-C1, P6-N1]: `helixOf` fills `p6 = { version: 6, complexity: complexityOf(g) }` and the p5 genes
+ * OBEY its body counts: eye count = counts.eyes, wings present <=> counts.wingPairs > 0, limb style
+ * "tentacles" <=> counts.tentacles > 0, serpent legs = counts.legPairs, digits = counts.fingers (a minimal
+ * globe: one eye, no wings, no limbs, no digits). Then life bends the expressed traits: `ph.nurture?.shift`
+ * (src/genome/structure.ts nurtureOf, optional) multiplies wing span (fin span for fin wings), tail length,
+ * fin tail tips, shoulder width, eye size, armour plates and fur - nature first, nurture bends (each factor
+ * is capped at +-NURTURE_CAP by its producer, and every bent value is clamped to its physical range).
  */
 import {
   ANIM_CHANNELS,
@@ -75,6 +83,8 @@ import { clamp, clamp01, u01 } from "../core/math.ts";
 import { hashSeed, Rng } from "../core/rng.ts";
 import type { Genome, PlanGene } from "./genome.ts";
 import type { Phenotype } from "./phenotype.ts";
+import type { BodyCounts, NurtureTrait } from "./p6Types.ts";
+import { complexityOf, describeComplexity } from "./complexity.ts";
 
 // ------------------------------------------------------------------ genes
 /** Pass-4 genes (the order is frozen: `deriveMorph` draws them first, so legacy derivations never move). */
@@ -348,24 +358,13 @@ const PUPIL: Record<EyeStyle, PupilFill> = {
 };
 
 /**
- * Eye count 1..8 [P5-V4]. RECESSIVE both ways: a cyclops needs BOTH eyeCount alleles low (hi < 0.245,
- * ~6 %), extra eyes need BOTH alleles high (lo > ~0.66, ~14 %; hexapods, wise and psychic / void
- * creatures lower the bar); how many extra eyes (3..8) is the categorical roll of the p5.eyeMany lead
- * allele. Two eyes stay the norm (~80 %). `EyeGenes.count` and `p5.eyes.count` are this same number.
+ * Eye count 1..8 [P5-V4, P6-C1]: `count` = complexityOf(g).counts.eyes. The pass-5 rule lives on in
+ * complexity.ts, evaluated on the genome: RECESSIVE both ways, a cyclops needs BOTH eyeCount alleles low
+ * (hi < 0.245), extra eyes need BOTH alleles high (lo > ~0.66; hexapods, wise and psychic / void genomes
+ * lower the bar), how many (3..8) is the p5.eyeMany lead allele; then the tier caps it (a minimal globe has
+ * ONE eye, a simple body at most 3) or raises it (a mythic chimera has 6-8).
  */
-function eyeCountOf(m: MorphAlleles, ph: Phenotype): number {
-  const a = ph.axes, prim = ph.elements.primary;
-  const pos = (v: number) => Math.max(0, v);
-  const c = genePair(m.eyeCount);
-  const manyT = 0.66 - (ph.kind === "hexapod" ? 0.12 : 0) - 0.05 * pos(a.wisdom) -
-    (prim === "psychic" || prim === "void" ? 0.05 : 0);
-  if (c.hi < 0.245) return 1;
-  if (c.lo <= manyT) return 2;
-  const hex = ph.kind === "hexapod";
-  return pickBy([3, 4, 5, 6, 7, 8], [3.0, 2.6, 1.0, 1.4, 0.4, hex ? 2.6 : 0.7], m["p5.eyeMany"][0]);
-}
-
-function eyesOf(m: MorphAlleles, ph: Phenotype): EyeGenes {
+function eyesOf(m: MorphAlleles, ph: Phenotype, count: number): EyeGenes {
   const a = ph.axes, prim = ph.elements.primary, sec = ph.elements.secondary;
   const pos = (v: number) => Math.max(0, v);
   const dark = DARK_ELS.includes(prim);
@@ -380,7 +379,6 @@ function eyesOf(m: MorphAlleles, ph: Phenotype): EyeGenes {
     ph.kind === "hexapod" ? 3.2 : 0.02, // compound
   ];
   const style = pickBy(EYE_STYLES, w, m.eyeStyle[0]);
-  const count = eyeCountOf(m, ph);
   const sizeDrive = 0.45 * ph.plan.eyes + 0.3 * (1 - u01(a.stature)) + 0.15 * u01(a.mood) +
     (style === "sparkle" || style === "compound" ? 0.15 : 0);
   const size = clamp(trait(m, "eyeSize", sizeDrive, 0.12, 0.45) * (count > 2 ? 0.8 : 1), 0.12, 0.45);
@@ -485,11 +483,13 @@ const FINGERS: Record<WingKind, [number, number]> = {
   fin: [1, 4],
 };
 
-function wingsOf(m: MorphAlleles, ph: Phenotype, fractalDepth: number): WingGenes {
+/** Wings [P4, P6-C1]: present iff the body counts carry a wing pair (avian, plan.wings >= 0.45, or a chimera). */
+function wingsOf(m: MorphAlleles, ph: Phenotype, fractalDepth: number, hasWings: boolean): WingGenes {
   const a = ph.axes, prim = ph.elements.primary, kind = ph.kind;
   let wk: WingKind = "none";
-  if (kind === "avian") wk = "feather";
-  else if (ph.plan.wings >= 0.45) {
+  if (!hasWings) wk = "none";
+  else if (kind === "avian") wk = "feather";
+  else {
     if (kind === "hexapod") wk = "insect";
     else if (kind === "serpent" && (prim === "water" || a.moisture > 0.25)) wk = "fin";
     else if ((["fire", "shadow", "void", "earth"] as ElementId[]).includes(prim)) wk = "membrane";
@@ -757,7 +757,7 @@ const OP_SIGN: Record<MorphOpKind, number> = {
   pinch: -1,
 };
 
-function bodyP5(m: MorphAlleles, ph: Phenotype, fractalDepth: number, chaos: number): BodyP5 {
+function bodyP5(m: MorphAlleles, ph: Phenotype, fractalDepth: number, chaos: number, counts: BodyCounts | null): BodyP5 {
   const a = ph.axes, prim = ph.elements.primary, sec = ph.elements.secondary, kind = ph.kind;
   const pos = (v: number) => Math.max(0, v);
   const has = (el: ElementId) => prim === el ? 1 : sec === el ? 0.5 * ph.elements.secondaryLevel : 0;
@@ -796,15 +796,24 @@ function bodyP5(m: MorphAlleles, ph: Phenotype, fractalDepth: number, chaos: num
     tipSize: r3(trait(m, "p5.tailTip", (BIG_TIP.has(shape) ? 0.5 : 0) + 0.3 * u01(a.might) + 0.2 * ph.plan.tail, 0.5, 2)),
   };
   // Limb style: tentacles are rare and mostly blobs / serpents (recessive); fins for water bodies.
+  // Pass 6: tentacles <=> counts.tentacles > 0 and serpent legs = counts.legPairs (the same recessive
+  // rules, evaluated on the genome in complexity.ts); fins stay a phenotype call (a wet life can fin a body).
   const ls = genePair(m["p5.limbStyle"]);
   const wet = prim === "water" || prim === "poison" || a.moisture > 0.4;
   let limbStyle: LimbStyle = kind === "blob" ? "stumps" : "legs";
-  if (kind === "blob" && ls.lo > (wet ? 0.45 : 0.55)) limbStyle = "tentacles";
-  else if (kind === "serpent" && ls.lo > (wet ? 0.72 : 0.8)) limbStyle = "tentacles";
-  else if (kind !== "blob" && kind !== "serpent" && ls.lo > 0.95) limbStyle = "tentacles";
-  else if ((prim === "water" || a.moisture > 0.55) && kind !== "avian" && kind !== "blob" && ls.hi < 0.5) limbStyle = "fins";
-  const sl = recessive(m, "p5.serpentLegs", 0.72);
-  const serpentLegs = kind === "serpent" && limbStyle === "legs" && sl >= 0 ? (genePair(m["p5.serpentLegs"]).hi > 0.95 ? 2 : 1) : 0;
+  let serpentLegs = 0;
+  if (counts) {
+    if (counts.tentacles > 0) limbStyle = "tentacles";
+    else if ((prim === "water" || a.moisture > 0.55) && kind !== "avian" && kind !== "blob" && ls.hi < 0.5) limbStyle = "fins";
+    serpentLegs = kind === "serpent" ? Math.min(2, counts.legPairs) : 0;
+  } else {
+    if (kind === "blob" && ls.lo > (wet ? 0.45 : 0.55)) limbStyle = "tentacles";
+    else if (kind === "serpent" && ls.lo > (wet ? 0.72 : 0.8)) limbStyle = "tentacles";
+    else if (kind !== "blob" && kind !== "serpent" && ls.lo > 0.95) limbStyle = "tentacles";
+    else if ((prim === "water" || a.moisture > 0.55) && kind !== "avian" && kind !== "blob" && ls.hi < 0.5) limbStyle = "fins";
+    const sl = recessive(m, "p5.serpentLegs", 0.72);
+    serpentLegs = kind === "serpent" && limbStyle === "legs" && sl >= 0 ? (genePair(m["p5.serpentLegs"]).hi > 0.95 ? 2 : 1) : 0;
+  }
   const lv = recessive(m, "p5.limbVariation", 0.78 - 0.15 * chaos);
   const limbVariation = lv >= 0 ? r3(0.03 + 0.22 * lv) : 0;
   // Fractal arms: branch / spiral are common once the creature develops detail; mandelbrot is recessive.
@@ -917,9 +926,9 @@ function skinP5(m: MorphAlleles, ph: Phenotype, s: SurfaceGenes): SkinP5 {
 export function p5Of(
   m: MorphAlleles,
   ph: Phenotype,
-  base: { eyes: EyeGenes; mouth: MouthGenes; surface: SurfaceGenes; fractalDepth: number; chaos: number },
+  base: { eyes: EyeGenes; mouth: MouthGenes; surface: SurfaceGenes; fractalDepth: number; chaos: number; counts?: BodyCounts },
 ): MorphP5 {
-  const body = bodyP5(m, ph, base.fractalDepth, base.chaos);
+  const body = bodyP5(m, ph, base.fractalDepth, base.chaos, base.counts ?? null);
   const skin = skinP5(m, ph, base.surface);
   return {
     version: 5,
@@ -937,26 +946,23 @@ export function helixOf(g: Genome, ph: Phenotype): MorphHelix {
   const m = ensureMorph(g);
   const a = ph.axes;
   const chaos = Math.max(0, -a.structure);
+  const complexity = complexityOf(g);
+  const counts = complexity.counts;
 
   // Fractal development: order, quality, growth and level (older / higher creatures grow more detail).
   const fracDrive = 0.25 * u01(a.structure) + 0.25 * ph.plan.quality + 0.25 * ph.growth +
     0.25 * clamp01((ph.level - 1) / 30);
   const fractalDepth = Math.round(3 * trait(m, "fractal", fracDrive));
-  const digitRange: [number, number] = ph.kind === "serpent" || ph.kind === "blob"
-    ? [0, 0]
-    : ph.kind === "avian"
-    ? [3, 4]
-    : [3, 5];
-  const digits = Math.round(
-    trait(m, "digits", 0.5 * fractalDepth / 3 + 0.5 * u01(a.might), digitRange[0], digitRange[1]),
-  );
+  // Digits [P6-C1] = counts.fingers (genome-level: the digits gene driven by quality and genetic might;
+  // 0 for serpents, blobs and globes, 3-4 avian toes, 3-5 hands / feet, 5-7 on a mythic chimera).
+  const digits = counts.fingers;
   const clawLength = digits === 0
     ? 0
     : trait(m, "claw", 0.4 * u01(a.temper) + 0.35 * u01(a.might) + 0.25 * u01(a.hardness));
 
-  const eyes = eyesOf(m, ph);
+  const eyes = eyesOf(m, ph, counts.eyes);
   const mouth = mouthOf(m, ph);
-  const wings = wingsOf(m, ph, fractalDepth);
+  const wings = wingsOf(m, ph, fractalDepth, counts.wingPairs > 0);
   const surface = surfaceOf(m, ph, fractalDepth);
 
   // Asymmetry is RECESSIVE and rare: both alleles above a threshold that chaos lowers.
@@ -992,6 +998,8 @@ export function helixOf(g: Genome, ph: Phenotype): MorphHelix {
     trait(m, "angularity", 0.5 * u01(a.hardness) + 0.4 * u01(a.structure) + 0.1 * (1 - u01(a.form))) *
     (ph.kind === "blob" ? 0.4 : 1);
 
+  const p5 = p5Of(m, ph, { eyes, mouth, surface, fractalDepth, chaos, counts });
+  bendByNurture(ph, eyes, wings, surface, p5);
   return {
     version: 1,
     asymmetry: r3(asymmetry),
@@ -1007,8 +1015,32 @@ export function helixOf(g: Genome, ph: Phenotype): MorphHelix {
     fusion: r3(fusion),
     angularity: r3(angularity),
     anim: animOf(m, ph, wings.kind),
-    p5: p5Of(m, ph, { eyes, mouth, surface, fractalDepth, chaos }),
+    p5,
+    p6: { version: 6, complexity },
   };
+}
+
+/**
+ * Nurture bends the expressed traits [P6-N1] (in place, after the genes): `ph.nurture?.shift` factors
+ * (each within 1 +- NURTURE_CAP) multiply the values the helix drives, clamped to their physical ranges.
+ * Absent nurture (pass-5 phenotypes, fixtures) = identity. neckLength / legLength / armSize / girth /
+ * hornSize have no helix field: renderers read `ph.nurture.shift` for those.
+ */
+function bendByNurture(ph: Phenotype, eyes: EyeGenes, wings: WingGenes, surface: SurfaceGenes, p5: MorphP5): void {
+  const sh = ph.nurture?.shift;
+  if (!sh) return;
+  const f = (t: NurtureTrait) => {
+    const v = sh[t];
+    return typeof v === "number" && Number.isFinite(v) ? clamp(v, 0.5, 1.5) : 1;
+  };
+  if (wings.kind !== "none") wings.span = r3(clamp(wings.span * (wings.kind === "fin" ? f("finSize") : f("wingSpan")), 1.0, 3.6));
+  eyes.size = r3(clamp(eyes.size * f("eyeSize"), 0.12, 0.45));
+  surface.plates = r3(clamp01(surface.plates * f("armor")));
+  surface.fur = r3(clamp01(surface.fur * f("furDensity")));
+  const b = p5.body;
+  b.tail.length = r3(clamp(b.tail.length * f("tailLength"), 0.3, 2.2));
+  if (b.tail.shape === "fin" || b.tail.shape === "fan") b.tail.tipSize = r3(clamp(b.tail.tipSize * f("finSize"), 0.5, 2.2));
+  b.shoulder.width = r3(clamp(b.shoulder.width * f("shoulderWidth"), 0.7, 1.45));
 }
 
 // ------------------------------------------------------------------ Lab text
@@ -1068,6 +1100,7 @@ export function describeHelix(h: MorphHelix): string[] {
     .map((c) => `${c} ${f2(h.anim[c].lo)}-${f2(h.anim[c].hi)}`);
   lines.push(`Motion: ${motion.join(", ")}`);
   if (h.p5) lines.push(...describeP5(h.p5));
+  if (h.p6) lines.push(describeComplexity(h.p6.complexity));
   return lines;
 }
 

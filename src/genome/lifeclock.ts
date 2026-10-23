@@ -16,6 +16,8 @@ import type { ElementId } from "../data/elements.ts";
 import { type FoodId, FOODS } from "../data/lifestyle.ts";
 import type { Genemon } from "./genemon.ts";
 import { emptyConditions, xpForLevel } from "./epigenetics.ts";
+import { evolutionPlanOf, levelCurve, REF_AGE_DAYS, REF_LEVEL, UNLOCK_WORDS, XP_CURVES } from "./evolution.ts";
+import type { MorphUnlock, PhaseForm } from "./p6Types.ts";
 import { helixOf } from "./helix.ts";
 import { P5_DEFAULTS } from "./morphTypes.ts";
 import { express, type Phenotype, type SizeClass } from "./phenotype.ts";
@@ -104,8 +106,9 @@ function lifeRef(g: Genemon): { ph: Phenotype; neoteny: number } {
   let r = refCache.get(g.genome.id);
   if (!r) {
     const c = emptyConditions();
-    c.ageDays = 60;
-    c.xp = xpForLevel(20);
+    c.ageDays = REF_AGE_DAYS;
+    // Level 20 on the lineage's own XP curve [P6-E2] (evolution.ts anchors sizeMult = 1 at this phase).
+    c.xp = levelCurve(evolutionPlanOf(g.genome)).xpForLevel(REF_LEVEL);
     c.hunger = 0;
     const ph = express(g.genome, c);
     r = { ph, neoteny: neotenyOf(g, ph) };
@@ -121,7 +124,7 @@ function earnedGrowth(g: Genemon): number {
     (s, [f, n]) => s + (FOODS[f as FoodId]?.nutrition ?? 0) * (n ?? 0),
     0,
   );
-  return 1 - Math.exp(-(c.ageDays / 18 + c.xp / 2500 + eaten / 120));
+  return 1 - Math.exp(-(c.ageDays / 18 + c.xp / (2500 * evolutionPlanOf(g.genome).xpMult) + eaten / 120));
 }
 function neotenyOf(g: Genemon, ph: Phenotype): number {
   const h = helixOf(g.genome, ph);
@@ -348,10 +351,23 @@ export function scarFromHit(
   };
 }
 
-/** Eggs and fetuses cannot fight; ancients and heavily scarred elders are past their prime for ranked. */
+/**
+ * Can it fight at all (any battle, practice included)? Eggs and fetuses are not born; a COCOON [P6-E4] is
+ * sealed in its case until the imago emerges. Battle setup and teams skip these members.
+ */
+export function canFight(g: Genemon): { ok: boolean; why: string } {
+  const phase = lifePhase(g);
+  if (phase === "egg" || phase === "fetus") return { ok: false, why: `${phase}: not born yet` };
+  const evo = phOf(g).evo;
+  if (evo?.form === "cocoon") return { ok: false, why: "cocoon: cannot fight until the imago emerges" };
+  return { ok: true, why: `${evo?.name ?? phase}: can fight` };
+}
+
+/** Eggs, fetuses and cocoons cannot fight; ancients and heavily scarred elders are past their prime for ranked. */
 export function canRank(g: Genemon): { ok: boolean; why: string } {
   const phase = lifePhase(g);
   if (phase === "egg" || phase === "fetus") return { ok: false, why: `${phase}: not born yet` };
+  if (phOf(g).evo?.form === "cocoon") return { ok: false, why: "cocoon: cannot fight, cannot rank" };
   if (phase === "ancient") return { ok: false, why: "ancient: past its prime, retired from ranked" };
   if (phase === "elder") {
     const scars = g.life?.scars ?? [];
@@ -370,8 +386,92 @@ function growthAt(ageDays: number, level: number): number {
   return 1 - Math.exp(-(ageDays / 18 + xpForLevel(level) / 2500));
 }
 
-/** Every phase with what it takes from the previous one and what changes, in plain words. */
-export function evolutionPath(g: Genemon): EvolutionStep[] {
+/**
+ * One step of the lineage's EVOLUTION PLAN [P6-E1..E5]: the pass-5 EvolutionStep (`phase` = the LIFE phase the
+ * creature is in at that age, `stage` = the plan phase index, 1-based) plus the plan's own fields.
+ */
+export interface EvoPathStep extends EvolutionStep {
+  index: number;
+  form: PhaseForm;
+  atLevel: number;
+  atAgeDays: number;
+  sizeMult: number;
+  /** This phase's own unlocks (cumulative ones: Phenotype.evo.unlocks). */
+  unlocks: MorphUnlock[];
+  fertile: boolean;
+  current: boolean;
+}
+
+const FORM_WORDS: Partial<Record<PhaseForm, string>> = {
+  larva: "larva: soft-bodied, crawls and eats a lot",
+  cocoon: "cocoon: cannot fight, cannot rank, cannot breed",
+  imago: "emerges as an imago: a whole new form",
+  molting: "molting: soft and quick while the new shell hardens",
+  elder: "ascended: the last form of its line",
+};
+
+/**
+ * The evolution path built from the lineage's plan: every phase with what it takes from the previous one
+ * (days, xp on the lineage's own curve, food, credits; phases gate on level + age only, so bond is 0) and
+ * what changes, in plain words (unlocks, height, fight / rank / breed rules). The life stages (egg ..
+ * ancient) are lifePath().
+ */
+export function evolutionPath(g: Genemon): EvoPathStep[] {
+  const ph = phOf(g);
+  const plan = evolutionPlanOf(g.genome);
+  const curve = levelCurve(plan);
+  const days = phaseDays(g);
+  const cur = ph.evo?.phase ?? 1;
+  const perDay = capacityOf(ph) * 0.8; // about one stomach a day
+  const lifeAt = (d: number): LifePhase => {
+    let out: LifePhase = "egg";
+    for (const p of LIFE_PHASES) if (d >= days[p]) out = p;
+    return out;
+  };
+  return plan.phases.map((p, i) => {
+    const prev = i > 0 ? plan.phases[i - 1] : null;
+    const d = prev ? Math.max(0, p.atAgeDays - prev.atAgeDays) : 0;
+    // A cocoon does not eat: the phase that FOLLOWS it costs no food.
+    const food = prev && prev.form !== "cocoon" ? Math.round(d * perDay) : 0;
+    const props: string[] = [];
+    if (i === 0) {
+      props.push(plan.kind === "static" ? "never changes form" : `starts as a ${p.name.toLowerCase()}`);
+      props.push(`levels up on ${XP_CURVES[plan.curve].label} (xp ×${plan.xpMult}, max level ${plan.maxLevel})`);
+    } else {
+      props.push(`from level ${p.atLevel} and day ${r3(p.atAgeDays)}`);
+      const dh = Math.round((p.sizeMult / Math.max(1e-9, prev!.sizeMult) - 1) * 100);
+      if (Math.abs(dh) >= 1) props.push(`${dh > 0 ? "+" : ""}${dh} % height${dh < 0 ? " (shrinks)" : ""}`);
+    }
+    if (FORM_WORDS[p.form]) props.push(FORM_WORDS[p.form]!);
+    for (const u of p.unlocks) props.push(UNLOCK_WORDS[u]);
+    if (p.form !== "cocoon") props.push(p.fertile ? "fertile in its cycle windows" : "cannot breed yet");
+    return {
+      phase: lifeAt(p.atAgeDays),
+      stage: p.index,
+      name: p.name,
+      cost: {
+        days: r3(d),
+        xp: prev ? Math.max(0, curve.xpForLevel(p.atLevel) - curve.xpForLevel(prev.atLevel)) : 0,
+        food,
+        credits: food * 6,
+        bond: 0,
+      },
+      properties: props,
+      reached: p.index <= cur,
+      index: p.index,
+      form: p.form,
+      atLevel: p.atLevel,
+      atAgeDays: p.atAgeDays,
+      sizeMult: p.sizeMult,
+      unlocks: [...p.unlocks],
+      fertile: p.fertile,
+      current: p.index === cur,
+    };
+  });
+}
+
+/** The LIFE stages (egg -> ancient, by age) with what it takes from the previous one and what changes [P5-V1]. */
+export function lifePath(g: Genemon): EvolutionStep[] {
   const ph = phOf(g);
   const days = phaseDays(g);
   const neo = lifeRef(g).neoteny;

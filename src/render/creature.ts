@@ -98,6 +98,7 @@ export class CreatureView {
     // Fused anatomy for every joint except the head and the jaw (the face builder owns those).
     const body = buildBody(ph, sk, o.helix, m, o.quality);
     this.bodyTris = body.triangles;
+    this.extraMats.push(...(body.materials ?? []));
     body.perJoint.forEach((objs, i) => {
       for (const x of objs) {
         x.traverse((y) => {
@@ -109,12 +110,15 @@ export class CreatureView {
     });
     this.wingSurfaces = body.wings;
     // Pass 5 [P5-V7]: coat cards / shards / fur shells (high), frills, fire flames.
-    this.coat = buildCoat(sk, ph, o.helix, m, o.quality, body.perJoint, { seed });
-    this.coat.perJoint.forEach((objs, i) => {
-      for (const x of objs) this.joints[i].add(x);
-    });
+    // A minimal globe stays a globe [P6-C1]: no shards, leaves, feathers or frills on it.
+    if (o.helix.p6?.complexity.tier !== "minimal") {
+      this.coat = buildCoat(sk, ph, o.helix, m, o.quality, body.perJoint, { seed });
+      this.coat.perJoint.forEach((objs, i) => {
+        for (const x of objs) this.joints[i].add(x);
+      });
+    }
     // Head and jaw volumes (face.ts places eyes and teeth on exactly these ellipsoids), glowing tail tip.
-    const lastTail = `tail${sk.joints.filter((x) => x.role === "tail").length - 1}`;
+    const tailEnds = new Set(sk.joints.filter((x, i) => x.role === "tail" && !sk.joints.some((c) => c.parent === i && c.role === "tail")).map((x) => x.id));
     sk.joints.forEach((j, i) => {
       const obj = this.joints[i];
       const dir = new THREE.Vector3(j.dir[0], j.dir[1], j.dir[2]);
@@ -128,7 +132,7 @@ export class CreatureView {
           });
           obj.add(x);
         }
-      } else if (j.id === lastTail && ph.glow > 0.35) {
+      } else if (tailEnds.has(j.id) && ph.glow > 0.35) {
         const mat = new THREE.MeshBasicMaterial({ color: ph.palette.glow });
         this.extraMats.push(mat);
         const tip = add(obj, new THREE.SphereGeometry(j.r1 * 2.2, seg, seg), mat);
@@ -149,6 +153,17 @@ export class CreatureView {
         this.aura = new EyeAura(o.helix.eyes.aura, face.auraEmitters, o.helix.eyes.size * sk.joints[hi].r0, ph.palette.glow, o.quality);
       }
     }
+    // Pass 6: second heads carry their own face (pupils, lids, eye materials) so they blink and look too.
+    for (const obj of this.joints) {
+      for (const x of obj.children) {
+        const f = x.userData.face as { pupils: THREE.Object3D[]; lids: THREE.Object3D[]; eyeMaterials: THREE.Material[] } | undefined;
+        if (f) {
+          this.pupils.push(...f.pupils);
+          this.lids.push(...f.lids);
+          this.eyeMats.push(...f.eyeMaterials);
+        }
+      }
+    }
     // Pass 5 [P5-V8]: scars on their own body part, elder tint; then the ink outline (budgeted).
     const jointSet = new Set<THREE.Object3D>(this.joints);
     if (o.life && o.life.scars.length > 0) {
@@ -158,7 +173,8 @@ export class CreatureView {
     if (o.life) ageTint(m, o.life.phase);
     this.ink = makeOutlineMaterial(ph, (o.helix.p5 ?? P5_DEFAULTS).skin, sk.height);
     if (this.ink) {
-      const cap = o.quality === "high" ? 38000 : 14000;
+      const colossus = sk.plan6?.tier === "mythic" || sk.joints.length > 64;
+      const cap = o.quality === "high" ? (colossus ? 58000 : 38000) : (colossus ? 19000 : 14000);
       const budget = Math.max(0, Math.min(o.quality === "high" ? 12000 : 3000, cap - this.triangles()));
       addOutlines([this.root], this.ink, budget, [this.keratin]);
     }
@@ -175,7 +191,8 @@ export class CreatureView {
   /** Charge glow / element aura on the skin, eyes and rim, 0..1. */
   setCharge(k: number, color?: number): void {
     const map = this.skin.emissiveMap;
-    this.skin.emissiveIntensity = (map ? 0.9 : this.baseEmissive) + k * 0.9;
+    const rest = typeof this.skin.userData.emissiveRest === "number" ? this.skin.userData.emissiveRest : map ? 0.9 : this.baseEmissive;
+    this.skin.emissiveIntensity = rest + k * 0.9;
     this.accent.emissiveIntensity = this.baseEmissive * 0.6 + k * 1.2;
     if (color !== undefined) {
       this.accent.emissive.setHex(k > 0.05 ? color : this.ph.palette.glow);
@@ -216,8 +233,9 @@ export class CreatureView {
 
   setTint(frozen: boolean, ko: number): void {
     this.skin.color.setHex(frozen ? 0x9fdcff : 0xffffff);
+    if (this.mats.limbs !== this.skin) this.mats.limbs.color.setHex(frozen ? 0x9fdcff : 0xffffff);
     const op = 1 - this.ph.translucency * 0.55;
-    for (const m of [this.skin, this.accent, this.belly]) {
+    for (const m of [this.skin, this.accent, this.belly, this.mats.limbs]) {
       m.transparent = m.transparent || ko > 0;
       m.opacity = op * (1 - ko * 0.75);
     }
@@ -271,7 +289,7 @@ export class CreatureView {
       const m = o as THREE.Mesh;
       if (m.isMesh) m.geometry.dispose();
     });
-    for (const m of [this.skin, this.accent, this.belly, this.keratin, this.membrane, ...this.eyeMats, ...this.extraMats]) m.dispose();
+    for (const m of new Set<THREE.Material>([this.skin, this.accent, this.belly, this.keratin, this.membrane, this.mats.limbs, this.mats.detail, ...this.eyeMats, ...this.extraMats])) m.dispose();
     this.coat?.dispose();
     this.scars?.dispose();
     this.ink?.dispose();

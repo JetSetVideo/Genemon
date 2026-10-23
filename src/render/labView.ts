@@ -9,7 +9,7 @@
  * mouth, happy wiggle) and hitTest() is the drag-to-feed drop target (raycast against the creature).
  */
 import * as THREE from "../lib/three.ts";
-import { balanceOf, buildSkeleton, forwardKinematics, type Pose, type Skeleton } from "../body/skeleton.ts";
+import { balanceOf, buildSkeleton, skeletonGenes, forwardKinematics, type Pose, type Skeleton } from "../body/skeleton.ts";
 import { P5_DEFAULTS } from "../genome/morphTypes.ts";
 import { buildEgg, eggFitObject, fetusPose } from "./anatomy/egg.ts";
 import { lifePhase } from "../genome/lifeclock.ts";
@@ -108,7 +108,7 @@ export class LabView implements View {
     this.creature?.dispose();
     const ph = phenotypeOf(g);
     const helix = helixOf(g.genome, ph);
-    this.sk = buildSkeleton(ph, helix.p5 ?? P5_DEFAULTS);
+    this.sk = buildSkeleton(ph, skeletonGenes(helix));
     const phase = lifePhase(g);
     this.creature = new CreatureView(ph, this.sk, hashSeed(g.genome.id, "skin"), { quality: "high", shadows: true, helix, life: { scars: g.life?.scars ?? [], phase } });
     // Egg / fetus [P5-V2]: the embryo curls in its fetal spiral inside a (translucent for a fetus) egg.

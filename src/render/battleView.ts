@@ -11,11 +11,10 @@
  * (gaze + pupils + lids when CreatureView exposes setGaze / setLids), life state (hunger, bloat,
  * fatigue, age tempo) shapes the motion.
  */
-import { P5_DEFAULTS } from "../genome/morphTypes.ts";
 import { lifePhase } from "../genome/lifeclock.ts";
 import * as THREE from "../lib/three.ts";
 import { type Battle, type BattleEvent } from "../combat/battle.ts";
-import { buildSkeleton } from "../body/skeleton.ts";
+import { buildSkeleton, skeletonGenes } from "../body/skeleton.ts";
 import { ELEMENTS } from "../data/elements.ts";
 import { GROUNDS } from "../data/grounds.ts";
 import { hashSeed } from "../core/rng.ts";
@@ -122,7 +121,7 @@ export class BattleView implements View {
     stage.controls.enabled = o.camera === "orbit";
     for (const f of battle.fighters) {
       const helix = helixOf(f.genemon.genome, f.ph);
-      const sk = buildSkeleton(f.ph, helix.p5 ?? P5_DEFAULTS);
+      const sk = buildSkeleton(f.ph, skeletonGenes(helix));
       const cv = new CreatureView(f.ph, sk, hashSeed(f.genemon.genome.id, "skin"), { quality: o.quality, shadows: o.shadows, helix, life: { scars: f.genemon.life?.scars ?? [], phase: lifePhase(f.genemon) } });
       const ds = displayScale(f.ph.heightM);
       cv.root.scale.setScalar(ds);

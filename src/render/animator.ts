@@ -721,6 +721,7 @@ export class Animator {
     const jawT = this.smooth("jaw", clamp(jawOpen, 0, 0.65), i.phase === "active" ? 20 : 9, dt);
     const jaw = clamp(jawT + jawBreath + jawOsc, 0, 0.65);
     if (this.roles.has("jaw")) pose.jaw = [jaw, 0, 0];
+    if (this.roles.has("jaw_2")) pose["jaw_2"] = [jaw, 0, 0];
 
     // ---- head-aware look: the gaze (saccades + head follow) over chest / neck / head
     // A target right behind fades the look back to forward (no head sweep across the +-pi wrap).

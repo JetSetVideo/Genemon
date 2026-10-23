@@ -122,18 +122,30 @@ export function epigeneticShift(c: Conditions): AxisVector {
   return out;
 }
 
-/** Continuous growth (legacy growthT) from age, xp and nutrition. */
-export function growthOf(c: Conditions): number {
+/**
+ * Continuous growth (legacy growthT) from age, xp and nutrition. `xpMult` = the lineage's XP curve
+ * (src/genome/evolution.ts): xp is counted in lineage units so two lineages at the same LEVEL and age have
+ * the same growth (a long-curve creature does not outgrow a short-curve one just by needing more xp).
+ */
+export function growthOf(c: Conditions, xpMult = 1): number {
   const eaten = Object.entries(c.diet).reduce((s, [f, n]) => s + FOODS[f as FoodId].nutrition * (n ?? 0), 0);
-  const drive = c.ageDays / 18 + c.xp / 2500 + eaten / 120;
+  const drive = c.ageDays / 18 + c.xp / (2500 * (xpMult > 0 ? xpMult : 1)) + eaten / 120;
   return Math.min(1, 1 - Math.exp(-drive * (1 - 0.4 * c.hunger)));
 }
 
-/** Level from xp (smooth cube-root curve, 1..100). */
-export function levelOf(xp: number): number {
-  return Math.max(1, Math.min(100, Math.floor(1 + Math.cbrt(Math.max(0, xp) / 8))));
+/**
+ * Level from xp (smooth cube-root curve, 1..maxLevel). Pass 6 [P6-E2]: `xpMult` stretches every level of a
+ * lineage's curve (long > 1 > short) and `maxLevel` caps it; the defaults are the pass-5 global curve.
+ * The 1e-9 guard keeps levelOf(xpForLevel(n)) === n despite floating cube roots.
+ */
+export function levelOf(xp: number, xpMult = 1, maxLevel = 100): number {
+  const m = xpMult > 0 ? xpMult : 1;
+  return Math.max(1, Math.min(maxLevel, Math.floor(1 + Math.cbrt(Math.max(0, xp) / (8 * m)) + 1e-9)));
 }
 
-export function xpForLevel(level: number): number {
-  return Math.pow(Math.max(0, level - 1), 3) * 8;
+/** XP at which `level` starts on a curve stretched by `xpMult` (integers for non-unit curves: ceil). */
+export function xpForLevel(level: number, xpMult = 1): number {
+  const m = xpMult > 0 ? xpMult : 1;
+  const v = Math.pow(Math.max(0, level - 1), 3) * 8 * m;
+  return m === 1 ? v : Math.max(0, Math.ceil(v - 1e-9));
 }

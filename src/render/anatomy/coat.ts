@@ -15,6 +15,11 @@
  *  - flames (fire creatures): animated additive flame cards at the tail tip and wing tips, driven by the
  *    creature's shared time uniform (tickSkin).
  *
+ * Pass 6 colours [P6-K1] (Palette3 attribution via the skin materials' `roles`, textures.ts rolesOf):
+ * frills = the membrane (WINGS role) fading into a TERTIARY edge (a gradient map along the card height),
+ * feather ruff / tufts = WINGS role blended with the body, tail fan = TAIL role, leaves = MARKINGS role
+ * pulled toward plant green, crystal shards = TERTIARY lit by the GLOW role.
+ *
  * Every mesh is in its JOINT's local frame (types.ts), flagged `userData.coat = true` (no outline, no
  * shadow). Budget: < ~8k triangles at "high", a couple of hundred at "low" (tests/skin_p5_test.ts).
  * Deterministic: placement jitter comes from `Rng(seed)`.
@@ -26,8 +31,8 @@ import type { Phenotype } from "../../genome/phenotype.ts";
 import type { CoatKind, MorphHelix } from "../../genome/morphTypes.ts";
 import { P5_DEFAULTS } from "../../genome/morphTypes.ts";
 import type { JointMeshes, SkinMaterials } from "./types.ts";
-import { dataTexture, paintFeather, paintFurAlpha, paintLeaf } from "../textures.ts";
-import { fireAmount, installSkinShader, matUniforms, newSkinShared, shareSkinShader, skinShared, type SkinShared } from "./skin.ts";
+import { type ColourRoles, dataTexture, paintFeather, paintFurAlpha, paintLeaf, Raster, rgbOf, rolesOf } from "../textures.ts";
+import { fireAmount, installSkinShader, matUniforms, newSkinShared, shareSkinShader, skinShared, type SkinMaterialsP5, type SkinShared } from "./skin.ts";
 
 type V = THREE.Vector3;
 type Quality = "low" | "high";
@@ -211,6 +216,20 @@ function flameCards(b: Batch, P: V, up: V, h: number): void {
   }
 }
 
+// ------------------------------------------------------------------ frill edge (pass 6)
+
+/** Pure: a 4 x 32 gradient (row 0 = v 0 = the frill base) from `base` to the `edge` colour over the top ~30 %. */
+export function frillEdgeRaster(base: number, edge: number, h = 32): Raster {
+  const r = new Raster(4, h, rgbOf(base));
+  const e = rgbOf(edge);
+  for (let y = 0; y < h; y++) {
+    const v = (y + 0.5) / h;
+    const t = Math.min(1, Math.max(0, (v - 0.62) / 0.26));
+    for (let x = 0; x < 4; x++) r.blend(x, y, e, t * t * (3 - 2 * t));
+  }
+  return r;
+}
+
 // ------------------------------------------------------------------ the builder
 
 const TORSO = new Set(["root", "spine", "chest", "segment"]);
@@ -267,7 +286,8 @@ export function buildCoat(
     materials.push(m);
     return m;
   };
-  const accentC = new THREE.Color(ph.palette.accent), baseC = new THREE.Color(ph.palette.base), glowC = new THREE.Color(ph.palette.glow);
+  const roles: ColourRoles = (mats as Partial<SkinMaterialsP5>).roles ?? rolesOf(ph);
+  const baseC = new THREE.Color(roles.part.body), glowC = new THREE.Color(roles.glow), detailC = new THREE.Color(roles.detail);
 
   // ---------------------------------------------------------------- flames (fire) — first: they are the identity
   const fire = fireAmount(ph, helix);
@@ -293,13 +313,23 @@ export function buildCoat(
   // ---------------------------------------------------------------- frills: dorsal crest + collar
   const frills = clamp01(p5.skin.frills);
   if (frills > 0.15) {
+    // Frill = the membrane colour with a TERTIARY edge (gradient map along the card height v) [P6-K1].
+    const frillMat = mats.membrane.clone();
+    const edgeTex = dataTexture(frillEdgeRaster(mats.membrane.color.getHex(), roles.detail), true);
+    edgeTex.wrapT = THREE.ClampToEdgeWrapping;
+    frillMat.map = edgeTex;
+    frillMat.color.setHex(0xffffff);
+    shareSkinShader(mats.membrane, frillMat);
+    frillMat.userData.role = "frill";
+    materials.push(frillMat);
+    textures.push(edgeTex);
     const crestJoints = [...torso, ...neck, ...tail.slice(0, Math.max(1, Math.ceil(tail.length * 0.75)))];
     const segs = hi ? 6 : 3;
     for (const ji of crestJoints) {
       if (!room(segs * 2)) break;
       const j = J[ji];
       const f = jointFrame(j);
-      const b = batch(ji, mats.membrane, "frills");
+      const b = batch(ji, frillMat, "frills");
       const H = radiusAt(j, 0.5) * (0.35 + 0.9 * frills);
       const scallops = 1 + Math.round(2 * frills);
       let prevB = -1, prevT = -1;
@@ -325,7 +355,7 @@ export function buildCoat(
     if (frills > 0.55 && collarJ >= 0 && room(K * 2)) {
       const j = J[collarJ];
       const f = jointFrame(j);
-      const b = batch(collarJ, mats.membrane, "frills");
+      const b = batch(collarJ, frillMat, "frills");
       const c = f.dir.clone().multiplyScalar(j.length * 0.9);
       const r0 = j.r1 * 0.85, r1 = j.r1 * (1.9 + 1.4 * frills);
       let pi = -1, po = -1;
@@ -352,7 +382,9 @@ export function buildCoat(
   if (kind === "feathers") {
     const tex = dataTexture(paintFeather(opts.seed ?? 1), true);
     textures.push(tex);
-    const fm = cardMaterial(tex, accentC.clone().lerp(baseC, 0.45));
+    const fm = cardMaterial(tex, new THREE.Color(roles.part.wings).lerp(baseC, 0.45));
+    const tailC = new THREE.Color(roles.part.tail);
+    const fanM = roles.part.tail === roles.part.wings ? fm : cardMaterial(tex, tailC.lerp(baseC, 0.2));
     const ruffJ = neck.length ? neck[neck.length - 1] : torso.length ? torso[torso.length - 1] : -1;
     const perCluster = hi ? 9 : 4;
     if (ruffJ >= 0) {
@@ -389,7 +421,7 @@ export function buildCoat(
     if (lastTail >= 0) {
       const j = J[lastTail];
       const f = jointFrame(j);
-      const b = batch(lastTail, fm, "feathers");
+      const b = batch(lastTail, fanM, "feathers");
       const n = hi ? 7 : 3;
       for (let i = 0; i < n && room(4); i++) {
         const a = (i / Math.max(1, n - 1) - 0.5) * 1.6;
@@ -403,7 +435,7 @@ export function buildCoat(
   } else if (kind === "leaves") {
     const tex = dataTexture(paintLeaf(opts.seed ?? 1), true);
     textures.push(tex);
-    const leafC = accentC.clone().lerp(new THREE.Color(0x3fbf4a), 0.55);
+    const leafC = new THREE.Color(roles.part.markings).lerp(new THREE.Color(0x3fbf4a), 0.55);
     const lm = cardMaterial(tex, leafC);
     const along = [...torso, ...neck, ...tail];
     const per = hi ? 2 : 1;
@@ -438,7 +470,7 @@ export function buildCoat(
     }
   } else if (kind === "crystal") {
     const cm = new THREE.MeshStandardMaterial({
-      color: accentC.clone().lerp(glowC, 0.35).lerp(new THREE.Color(0xffffff), 0.25),
+      color: detailC.clone().lerp(glowC, 0.35).lerp(new THREE.Color(0xffffff), 0.25),
       emissive: glowC,
       emissiveIntensity: 0.55,
       roughness: 0.12,

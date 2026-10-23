@@ -182,9 +182,9 @@ export const CONTENT_EVENTS: Record<string, EventSpec> = {
     GENEMON,
     "emitted",
     LIFE,
-    { fromStage: "number", growth: "number", level: "number" },
-    { toStage: "number", height: "number", sizeClass: "sizeClass" },
-    "stages 1 Hatchling, 2 Juvenile, 3 Adult, 4 Ascended (STAGE_NAMES)",
+    { fromStage: "number", growth: "number", level: "number", ageDays: "number" },
+    { toStage: "number", height: "number", sizeClass: "sizeClass", form: "text", name: "text", kind: "text", phases: "number", unlocks: "text", allUnlocks: "text", sizeMult: "number", mature: "boolean", final: "boolean" },
+    "pass 6: stage = the evolution-plan phase 1..6 (src/genome/evolution.ts); form / name / unlocks of the new phase; mature = grown-up form; final = last phase",
   ),
   "genemon.specialize": ev(
     GENEMON,
@@ -738,8 +738,8 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   a("two-become-one", "Two Become One", "breeding", 2, "Fuse two Genemon.", t("genemon.fuse", 1), 300),
   a("chimera-smith", "Chimera Smith", "breeding", 3, "Fuse 10 times.", t("genemon.fuse", 10), 1500),
   a("kaiju", "Kaiju", "breeding", 3, "Create an XL Genemon by fusion.", t("genemon.fuse", 1, { sizeClass: "XL" }), 1200),
-  a("coming-of-age", "Coming of Age", "breeding", 1, "Raise a Genemon to its Adult stage.", t("genemon.evolve", 1, { "exits.toStage": 3 }), 100),
-  a("ascension", "Ascension", "breeding", 4, "Raise a Genemon to its Ascended stage (level 40, bond 0.6, 25 wins).", t("genemon.evolve", 1, { "exits.toStage": 4 }), 4000, { title: "Ascendant", itemId: "cosmetic.crown" }),
+  a("coming-of-age", "Coming of Age", "breeding", 1, "Raise a Genemon to a grown-up form (adult, imago...) of its evolution plan.", t("genemon.evolve", 1, { "exits.mature": true }), 100),
+  a("ascension", "Ascension", "breeding", 4, "Raise a Genemon through every phase of an evolution plan with 4 or more phases.", t("genemon.evolve", 1, { "exits.final": true, "exits.phases>=": 4 }), 4000, { title: "Ascendant", itemId: "cosmetic.crown" }),
   // ---------------------------------------------------------------- exploration
   a("first-steps", "First Steps", "exploration", 1, "Walk 10 km with your Genemon.", t("genemon.experience", 10, exp("travelKm")), 80),
   a("trailblazer", "Trailblazer", "exploration", 2, "Walk 250 km.", t("genemon.experience", 250, exp("travelKm")), 500, { itemId: "map.fragment" }),

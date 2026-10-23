@@ -17,6 +17,7 @@
 import { hashSeed, Rng } from "../core/rng.ts";
 import type { WeatherId } from "../data/weather.ts";
 import { ARENA_INFO, ARENA_KINDS, type ArenaKind } from "../world/arena.ts";
+import type { LeagueId } from "./leagues.ts";
 
 export interface RankedDraw {
   arena: ArenaKind;
@@ -25,14 +26,19 @@ export interface RankedDraw {
   seed: number;
 }
 
-/** Draw the conditions of ranked match number `matchNo` of `profileId` on local day `day`. */
-export function rankedConditions(profileId: string, matchNo: number, day: number, realHour: number, realWeather: WeatherId): RankedDraw {
-  const rng = new Rng(hashSeed("ranked", profileId, matchNo, day));
+/**
+ * Draw the conditions of ranked match number `matchNo` of `profileId` on local day `day` in `league`
+ * [P6-R1]. Each league has its OWN draw: Prime keeps the pre-pass-6 stream (same inputs, same arena and
+ * seed as before), Eternal hashes the league in, so the two ladders never share a seed or an arena order.
+ */
+export function rankedConditions(profileId: string, matchNo: number, day: number, realHour: number, realWeather: WeatherId, league: LeagueId = "prime"): RankedDraw {
+  const salt = league === "prime" ? [] : [league];
+  const rng = new Rng(hashSeed("ranked", profileId, matchNo, day, ...salt));
   const arena = rng.pick(ARENA_KINDS);
   const fits = ARENA_INFO[arena].weathers;
   const weather = fits.includes(realWeather) ? realWeather : rng.pick(fits);
   const hour = ((realHour % 24) + 24) % 24;
-  return { arena, weather, hour, seed: hashSeed("ranked-seed", profileId, matchNo, day) % 2147483647 };
+  return { arena, weather, hour, seed: hashSeed("ranked-seed", profileId, matchNo, day, ...salt) % 2147483647 };
 }
 
 /** A finished battle moves rating only when it was ranked, against a real opponent, on a seed not yet rewarded. */

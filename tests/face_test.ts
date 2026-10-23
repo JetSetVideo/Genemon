@@ -472,7 +472,8 @@ Deno.test("p5 face: real helices from 300 genomes build finite heads and faces",
   let built = 0;
   for (let s = 1; s <= 300; s++) {
     const g = createGenemon({ seed: s * 104729, level: 10 });
-    const ph = phenotypeOf(g);
+    // Pass 6: eyes+ unlocks (ph.evo) add eyes on purpose (tests/complex_p6_test.ts); this pins the pass-5 genes.
+    const { evo: _evo, ...ph } = phenotypeOf(g);
     const sk = buildSkeleton(ph);
     const head = sk.joints.find((j) => j.role === "head");
     if (!head) continue;

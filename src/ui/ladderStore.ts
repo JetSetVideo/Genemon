@@ -4,6 +4,11 @@
  * is saved to localStorage under "genemon.ladder", and a compact "why did my rating move" summary
  * of the last match is kept under "genemon.ladder.last" for the Ladder screen.
  *
+ * Two ranked leagues [P6-R1] (src/ladder/leagues.ts), one ladder each: PRIME keeps the legacy keys
+ * above (the pre-pass-6 ladder and the player's MMR are the Prime ladder, no copy needed), ETERNAL
+ * lives under "genemon.ladder.eternal" / "genemon.ladder.eternal.last". Every function takes the
+ * league as its LAST parameter, defaulting to "prime", so pre-pass-6 callers keep working.
+ *
  * Every id is rated like any player, local profile or not ("rival", "wild", "mirror"). Storage
  * goes through a Storage-like object so the whole path is testable in plain Deno; only
  * recordBattle() reads the clock (UI code passes `Date.now()` down as the match's `when`).
@@ -13,11 +18,13 @@ import type { Team } from "../combat/team.ts";
 import type { Ledger } from "../core/ledger.ts";
 import { r3 } from "../core/math.ts";
 import { matchContext, matchResultFrom } from "../ladder/context.ts";
+import { LEAGUES, lastMatchKey, type LeagueId } from "../ladder/leagues.ts";
 import { type Contribution, Ladder, type LadderJSON, type MatchResult, type RecordOutcome } from "../ladder/mmr.ts";
 import type { ArenaSpec } from "../world/arena.ts";
 
-export const LADDER_KEY = "genemon.ladder";
-export const LAST_MATCH_KEY = "genemon.ladder.last";
+/** Prime's keys (= the pre-pass-6 keys). */
+export const LADDER_KEY = LEAGUES.prime.ladderKey;
+export const LAST_MATCH_KEY = lastMatchKey("prime");
 /** Contributions kept for the "why did my rating move" panel (largest |logit| first). */
 export const TOP_CONTRIBUTIONS = 4;
 
@@ -123,24 +130,24 @@ function isLastMatch(x: unknown): x is LastMatch {
 
 // ------------------------------------------------------------------------------- persistence
 
-/** The stored ladder, or a fresh one when the key is missing, unreadable or not a ladder. */
-export function loadLadder(storage: StorageLike, ledger?: Ledger): Ladder {
+/** The stored ladder of a league, or a fresh one when the key is missing, unreadable or not a ladder. */
+export function loadLadder(storage: StorageLike, ledger?: Ledger, league: LeagueId = "prime"): Ladder {
   try {
-    const raw = storage.getItem(LADDER_KEY);
+    const raw = storage.getItem(LEAGUES[league].ladderKey);
     if (raw) {
       const j: unknown = JSON.parse(raw);
-      if (isLadderJSON(j)) return Ladder.fromJSON(j, ledger);
+      if (isLadderJSON(j)) return Ladder.fromJSON(j, ledger, league);
     }
   } catch {
     // Corrupt JSON or a storage that throws: start a fresh ladder rather than break the app.
   }
-  return new Ladder({ ledger });
+  return new Ladder({ ledger, league });
 }
 
-/** Persist the ladder; false when the storage refused it (quota, private mode). */
-export function saveLadder(storage: StorageLike, ladder: Ladder): boolean {
+/** Persist a league's ladder; false when the storage refused it (quota, private mode). */
+export function saveLadder(storage: StorageLike, ladder: Ladder, league: LeagueId = "prime"): boolean {
   try {
-    storage.setItem(LADDER_KEY, JSON.stringify(ladder.toJSON()));
+    storage.setItem(LEAGUES[league].ladderKey, JSON.stringify(ladder.toJSON()));
     return true;
   } catch (e) {
     console.warn("ladder save failed (storage full?)", e);
@@ -148,9 +155,9 @@ export function saveLadder(storage: StorageLike, ladder: Ladder): boolean {
   }
 }
 
-export function loadLastMatch(storage: StorageLike): LastMatch | null {
+export function loadLastMatch(storage: StorageLike, league: LeagueId = "prime"): LastMatch | null {
   try {
-    const raw = storage.getItem(LAST_MATCH_KEY);
+    const raw = storage.getItem(lastMatchKey(league));
     if (!raw) return null;
     const j: unknown = JSON.parse(raw);
     return isLastMatch(j) ? j : null;
@@ -159,9 +166,9 @@ export function loadLastMatch(storage: StorageLike): LastMatch | null {
   }
 }
 
-export function saveLastMatch(storage: StorageLike, last: LastMatch): boolean {
+export function saveLastMatch(storage: StorageLike, last: LastMatch, league: LeagueId = "prime"): boolean {
   try {
-    storage.setItem(LAST_MATCH_KEY, JSON.stringify(last));
+    storage.setItem(lastMatchKey(league), JSON.stringify(last));
     return true;
   } catch (e) {
     console.warn("ladder last-match save failed", e);
@@ -219,17 +226,23 @@ export function recordMatch(
   };
 }
 
-let current: { ladder: Ladder; storage: StorageLike } | null = null;
+const current = new Map<LeagueId, { ladder: Ladder; storage: StorageLike }>();
 
-/** The app's ladder, loaded lazily from storage on first use (one instance per storage). */
-export function getLadder(app: LadderHost, storage: StorageLike = globalThis.localStorage): Ladder {
-  if (current === null || current.storage !== storage) current = { ladder: loadLadder(storage, app.ledger), storage };
-  return current.ladder;
+/** A league's ladder, loaded lazily from storage on first use (one instance per league and storage). */
+export function getLadder(app: LadderHost, storage: StorageLike = globalThis.localStorage, league: LeagueId = "prime"): Ladder {
+  let c = current.get(league);
+  if (c === undefined || c.storage !== storage) current.set(league, c = { ladder: loadLadder(storage, app.ledger, league), storage });
+  return c.ladder;
 }
 
-/** Forget the cached ladder (tests; or after the stored ladder was replaced). */
+/** `getLadder` with the league first (the app's call sites). */
+export function leagueLadder(app: LadderHost, league: LeagueId, storage: StorageLike = globalThis.localStorage): Ladder {
+  return getLadder(app, storage, league);
+}
+
+/** Forget the cached ladders (tests; or after a stored ladder was replaced). */
 export function resetLadder(): void {
-  current = null;
+  current.clear();
 }
 
 /**
@@ -244,16 +257,60 @@ export function recordBattle(
   teams: readonly [Team, Team],
   arena: ArenaSpec,
   storage: StorageLike = globalThis.localStorage,
+  league: LeagueId = "prime",
 ): BattleRating {
   if (teams[0].owner === teams[1].owner) return { expected: 0.5, deltaA: 0, deltaB: 0, rated: false };
-  const ladder = getLadder(app, storage);
+  const ladder = getLadder(app, storage, league);
   try {
     const rec = recordMatch(ladder, result, teams, arena, Date.now());
-    saveLadder(storage, ladder);
-    saveLastMatch(storage, rec.last);
+    saveLadder(storage, ladder, league);
+    saveLastMatch(storage, rec.last, league);
     return { expected: rec.expected, deltaA: rec.deltaA, deltaB: rec.deltaB, rated: true };
   } catch (e) {
     console.error("ladder: battle not rated", e);
     return { expected: 0.5, deltaA: 0, deltaB: 0, rated: false };
   }
+}
+
+/** `recordBattle` with the league first (the app's call site in finishBattle). */
+export function recordLeagueBattle(
+  app: LadderHost,
+  league: LeagueId,
+  result: BattleResult,
+  teams: readonly [Team, Team],
+  arena: ArenaSpec,
+  storage: StorageLike = globalThis.localStorage,
+): BattleRating {
+  return recordBattle(app, result, teams, arena, storage, league);
+}
+
+/** A player's standing in one league (rating, games, W/L/D; base rating and zeros before any game). */
+export interface Standing {
+  league: LeagueId;
+  rating: number;
+  games: number;
+  wins: number;
+  losses: number;
+  draws: number;
+  provisional: boolean;
+  /** 1-based place among the league's rated players (null before any game). */
+  place: number | null;
+  players: number;
+}
+
+export function standingOf(ladder: Ladder, id: string, league: LeagueId): Standing {
+  const rows = ladder.table();
+  const i = rows.findIndex((r) => r.id === id);
+  const r = i >= 0 ? rows[i] : null;
+  return {
+    league,
+    rating: r?.rating ?? ladder.base,
+    games: r?.games ?? 0,
+    wins: r?.wins ?? 0,
+    losses: r?.losses ?? 0,
+    draws: r?.draws ?? 0,
+    provisional: (r?.games ?? 0) < ladder.provisionalGames,
+    place: i >= 0 ? i + 1 : null,
+    players: rows.length,
+  };
 }

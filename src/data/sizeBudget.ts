@@ -7,9 +7,12 @@ export const SIZE_CLASSES = ["XS", "S", "M", "L", "XL", "XXL"] as const;
 export type SizeClass = typeof SIZE_CLASSES[number];
 export const SLOT_COST: Record<SizeClass, number> = { XS: 1, S: 1, M: 2, L: 3, XL: 4, XXL: 6 };
 /**
- * Relative combat-power budget per class. Per-slot parity is the target ([SPEC B3]: big vs swarm at equal
- * slots within 35-65 %, measured by tools/balance.ts); big bodies get slightly less than 1.0 per slot because
- * they also hit harder in contact, cleave in melee and shrug off knockback. Pass 6 goal: six well-raised,
- * well-combined small Genemon beat a lone XXL; a badly composed team loses to it (tools/batch.ts).
+ * Relative combat-power budget per class. Per-slot OUTCOME parity is the target ([SPEC B3]: big vs swarm at equal
+ * slots, measured by tools/balance.ts), not per-slot power: pass 6 gave many small bodies real answers (focus fire,
+ * flanking, Pack, sensory overload of keen bodies), so M / L / XL now get 1.05 / 1.12 / 1.2 per slot (the content
+ * test caps any class at +-20 %) and measured 46-52 % vs an equal-slot swarm. XXL (a lone colossus, 6 slots) gets
+ * 0.98 per slot and its own battle traits (TUNING.colossus* in src/combat/battle.ts): a median random six of S
+ * bodies meets it at ~50 %, a well-composed six beats it, a mono-element six weak to it loses (tools/batch.ts).
+ * Pass 5 values: M 2, L 2.9, XL 3.9, XXL 5.6.
  */
-export const POWER_BUDGET: Record<SizeClass, number> = { XS: 0.85, S: 1, M: 2, L: 2.9, XL: 3.9, XXL: 5.6 };
+export const POWER_BUDGET: Record<SizeClass, number> = { XS: 0.85, S: 1, M: 2.1, L: 3.35, XL: 4.8, XXL: 5.9 };

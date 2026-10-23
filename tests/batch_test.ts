@@ -4,7 +4,7 @@ import { assert, assertEquals } from "./_assert.ts";
 import { u01 } from "../src/core/math.ts";
 import { hashSeed } from "../src/core/rng.ts";
 import { createGenemon, type Genemon, phenotypeOf } from "../src/genome/genemon.ts";
-import { SLOT_COST } from "../src/genome/phenotype.ts";
+import { POWER_BUDGET, SLOT_COST } from "../src/genome/phenotype.ts";
 import {
   ARCHETYPE_BY_ID,
   type ArchetypeId,
@@ -43,7 +43,11 @@ Deno.test("batch: buildSide fields the slot budget at the right class, the reque
         assertEquals(side.reduce((s, g) => s + SLOT_COST[phenotypeOf(g).sizeClass], 0), slots, `${a.id} slots ${slots}`);
         if (a.swarm) assertEquals(side.length, slots, "swarm = one S body per slot");
         else assertEquals(side.length, 1);
-        for (const g of side) (sum += phenotypeOf(g).power / phenotypeOf(g).slots), n++;
+        // Per budget unit: a class's budget per slot is a tuning knob (src/data/sizeBudget.ts), the archetype is a shape of it.
+        for (const g of side) {
+          const ph = phenotypeOf(g);
+          (sum += ph.power / ph.slots / (POWER_BUDGET[ph.sizeClass] / SLOT_COST[ph.sizeClass])), n++;
+        }
       }
     }
     perSlot[a.id] = sum / n;
@@ -51,7 +55,7 @@ Deno.test("batch: buildSide fields the slot budget at the right class, the reque
   assertEquals(stats.missed, 0, "every body reached its size class");
   assert(stats.elementHits / stats.built >= 0.85, `element emerged in ${stats.elementHits}/${stats.built}`);
   const vals = Object.values(perSlot), lo = Math.min(...vals), hi = Math.max(...vals);
-  assert(hi / lo < 1.12, `power per slot spread ${JSON.stringify(perSlot)} (budget [SPEC B1])`);
+  assert(hi / lo < 1.12, `power per budget unit spread ${JSON.stringify(perSlot)} (budget [SPEC B1])`);
 });
 
 Deno.test("batch: archetypes differ in SHAPE (fast is faster and dodgier, tank harder, powerful hits harder)", () => {
@@ -105,8 +109,9 @@ Deno.test("batch: sliced MatrixJob equals the one-shot matrix", () => {
   assertEquals(JSON.stringify(job.result().cells), JSON.stringify(matchupMatrix(arch, 4, 3).cells));
 });
 
-Deno.test("batch: the dominance flag CAN fail (a +30 level archetype is flagged)", () => {
-  const boosted: BatchArchetype = { ...A.fast, id: "boosted" as ArchetypeId, label: "Boosted", levelBonus: 30 };
+Deno.test("batch: the dominance flag CAN fail (a +45 level archetype is flagged)", () => {
+  // Pass 6: +30 levels (+56 % power) measured 63-69 % at n=24 once agility, keen senses and armour trade wins; +45 (+83 %) is unambiguous.
+  const boosted: BatchArchetype = { ...A.fast, id: "boosted" as ArchetypeId, label: "Boosted", levelBonus: 45 };
   const m = matchupMatrix([boosted, A.powerful, A.tank], 6, 21);
   const row = m.rows[0];
   assert(row.overall.p > DOMINANT_ROW, `boosted overall ${row.overall.p}`);

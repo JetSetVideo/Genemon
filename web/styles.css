@@ -619,3 +619,49 @@ button.hd5-state { cursor: pointer; padding: 4px 10px; }
 .section:not(.ui5-sec):nth-of-type(6n + 5) { --fam: #f15bb5; }
 .section:not(.ui5-sec):nth-of-type(6n) { --fam: #ff6b35; }
 .section:not(.ui5-sec) > .section-head h2 { margin: 0; font-size: 14px; letter-spacing: 0.4px; text-transform: uppercase; }
+
+/* ---------- pass 6 · ranked leagues [P6-R2]: src/ui/rankedPanel.ts, src/ui/screens/ladder.ts ---------- */
+.p6r-panel { display: grid; gap: 8px; margin: 8px 0; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius); background: color-mix(in srgb, var(--accent) 7%, var(--card)); }
+.p6r-panel.compact { padding: 8px; }
+.p6r-split { display: flex; align-items: stretch; min-width: 0; }
+.p6r-seg { display: inline-flex; flex: none; border: 1px solid var(--line); border-right: 0; border-radius: 10px 0 0 10px; overflow: hidden; }
+.p6r-opt { padding: 8px 14px; border: 0; background: var(--bg-3); color: var(--text-2); font: inherit; font-weight: 600; cursor: pointer; }
+.p6r-opt + .p6r-opt { border-left: 1px solid var(--line); }
+.p6r-opt.on { background: var(--accent); color: #0b0f15; }
+.p6r-go { flex: 1; min-width: 0; margin: 0; border-radius: 0 10px 10px 0; font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.p6r-go[disabled] { opacity: 0.45; cursor: not-allowed; }
+.p6r-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 13px; }
+.p6r-rating { font-size: 18px; font-weight: 800; }
+.p6r-count { margin-left: auto; font-weight: 600; }
+.p6r-tier { display: inline-block; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--tier); background: color-mix(in srgb, var(--tier) 24%, transparent); color: var(--text); font-size: 12px; font-weight: 700; letter-spacing: 0.3px; }
+.p6r-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.p6r-chip { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 2px 5px; max-width: 100%; padding: 3px 9px; border-radius: 12px; border: 1px solid var(--line); font-size: 12px; line-height: 1.35; }
+.p6r-chip.ok { border-color: color-mix(in srgb, var(--good) 55%, transparent); background: color-mix(in srgb, var(--good) 14%, transparent); }
+.p6r-chip.out { border-color: color-mix(in srgb, var(--bad) 55%, transparent); background: color-mix(in srgb, var(--bad) 10%, transparent); }
+.p6r-chip.out b { text-decoration: line-through; }
+.p6r-mark { font-weight: 800; }
+.p6r-chip.ok .p6r-mark { color: var(--good); }
+.p6r-chip.out .p6r-mark { color: var(--bad); }
+.p6r-lv { opacity: 0.75; }
+.p6r-why { color: var(--text-2); }
+.p6r-none { margin: 0; color: var(--warn); }
+.p6r-blurb { margin: 0; }
+.p6r-duo { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.p6r-card { display: grid; gap: 4px; align-content: start; min-width: 0; padding: 10px 12px; border: 1px solid var(--line); border-top: 4px solid var(--tier); border-radius: var(--radius); background: var(--card); color: var(--text); cursor: pointer; }
+.p6r-card.on { box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 65%, transparent); }
+.p6r-card:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.p6r-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 15px; }
+.p6r-big { font-size: 26px; font-weight: 800; line-height: 1.1; }
+.p6r-recent { display: grid; gap: 3px; margin: 4px 0 0; padding: 0; list-style: none; font-size: 12px; }
+.p6r-recent li { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 2px 6px; align-items: center; }
+.p6r-recent li > .muted { grid-column: 2 / 4; grid-row: 2; }
+.p6r-recent li > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.p6r-res { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 4px; color: #0b0f15; font-size: 11px; font-weight: 800; }
+.p6r-res.win { background: var(--good); }
+.p6r-res.loss { background: var(--bad); }
+.p6r-res.draw { background: var(--warn); }
+.p6r-up { color: var(--good); }
+.p6r-down { color: var(--bad); }
+.p6r-tabs { display: flex; gap: 6px; margin: 14px 0 8px; border-bottom: 1px solid var(--line); }
+.p6r-tab { margin-bottom: -1px; padding: 8px 14px; border: 1px solid var(--line); border-bottom-color: transparent; border-radius: 10px 10px 0 0; background: transparent; color: var(--text-2); font: inherit; font-weight: 600; cursor: pointer; }
+.p6r-tab.on { border-bottom-color: var(--card); background: color-mix(in srgb, var(--accent) 18%, var(--card)); color: var(--text); }

@@ -69,7 +69,9 @@ function randomP5(seed: number): MorphP5 {
 
 function creature(kind: BodyKind, seed: number, growth: number, plan: Record<string, number> = {}): { ph: Phenotype; g: ReturnType<typeof randomGenome> } {
   const g = randomGenome(seed, undefined, { kind, plan });
-  const ph = express(g, emptyConditions());
+  // Pass 6: these are PASS-5 invariants; the evolution phase (ph.evo: larva / cocoon forms, unlocks) changes
+  // the build on purpose and is covered by tests/complex_p6_test.ts.
+  const { evo: _evo, ...ph } = express(g, emptyConditions());
   return { ph: { ...ph, growth }, g };
 }
 

@@ -5,7 +5,7 @@
  *
  * - connectivity: every mesh must touch or overlap a mesh of its own joint, its parent, its grandparent or a
  *   child (vertex distance <= tol, or a vertex inside the other's closed volume); a union-find over those
- *   anatomical links must reach the ROOT's component. Joints without body meshes (the head and the jaw: the
+ *   anatomical links must reach the component of the ROOT joint's main mesh (pass 6: not of any root mesh). Joints without body meshes (the head and the jaw: the
  *   face lane builds them) are stood in for by the head / jaw ellipsoid volumes creature.ts places, so horns
  *   and ears connect to something real.
  * - buried: a closed mesh whose sampled vertices ALL lie inside the union of the closed meshes of its own
@@ -196,8 +196,11 @@ export function checkViability(sk: Skeleton, parts: BodyParts, opts: { tol?: num
       }
     }
   });
+  // Anchor = the root joint's MAIN mesh (the most vertices: the trunk loft). Pass 6: anchoring on every mesh of
+  // the root joint let a floating piece parented to the root (a shed shell piece, a maw) pass unseen.
   const rootItems = byJoint.get(0) ?? [];
-  const rootSet = new Set(rootItems.map(find));
+  const anchor = rootItems.reduce((best, i) => (best < 0 || items[i].pos.length > items[best].pos.length ? i : best), -1);
+  const rootSet = new Set(anchor >= 0 ? [find(anchor)] : []);
   const floating: ViabilityIssue[] = [];
   items.forEach((it, i) => {
     if (it.proxy || rootSet.has(find(i))) return;

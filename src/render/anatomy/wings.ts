@@ -17,7 +17,7 @@
  * Fire [P5-V6]: a fire-primary creature (or one whose tail gene is "flame") grows flame tongues (accent
  * material) off the trailing edge of membrane panels and off the primary-feather tips.
  *
- * Built for the side +1 canon and mirrored, then scaled by the rare asymmetry ("wing" part).
+ * Built for the side +1 canon and mirrored; the rare asymmetry ("wing" part) scales the tip (hand) meshes.
  * perJoint keys are POSITIONS in the given joints array (0 root, 1 mid, 2 tip): the caller maps them.
  */
 import type * as THREE from "../../lib/three.ts";
@@ -69,7 +69,7 @@ function sample(f: (u: number) => V3, n: number, u0 = 0, u1 = 1): V3[] {
 
 /** A closed, flattened feather: rachis ridge, rounded vane, slight droop (also the tail fan, body.ts). */
 export function feather(base: V3, dir: V3, len: number, width: number, res: Res): THREE.BufferGeometry {
-  const n = res.limbStations > 5 ? 6 : 4;
+  const n = res.limbStations > 5 ? 6 : res.dense ? 3 : 4;
   const pts = sample((u) => add3(add3(base, mul3(dir, len * u)), [0, -0.06 * len * u * u, 0]), n);
   const sec = (u: number): Section => {
     const w = width * 0.5 * (0.3 + 0.7 * Math.sin(Math.PI * (0.12 + 0.85 * u)));
@@ -96,13 +96,14 @@ export function buildWing(
   helix: MorphHelix,
   mats: SkinMaterials,
   quality: Quality,
+  resOverride?: Res,
 ): { perJoint: JointMeshes; surfaces: THREE.Mesh[] } {
   const perJoint: JointMeshes = new Map();
   const surfaces: THREE.Mesh[] = [];
   if (joints.length < 3) return { perJoint, surfaces };
   const side = joints[0].side < 0 ? -1 : 1;
   const [c0, c1, c2] = joints.map(canonJoint);
-  const res = resolution(quality);
+  const res = resOverride ?? resolution(quality);
   const H = Math.max(0.05, ph.heightM);
   const kind = helix.wings.kind === "none" ? "membrane" : helix.wings.kind;
   const span = helix.wings.span > 0 ? helix.wings.span : 1.4;
@@ -121,6 +122,8 @@ export function buildWing(
   const [nu, nv] = res.grid;
   const rv = Math.max(0.003 * H, 0.006 * Rs);
   const fire = ph.elements.primary === "fire" || helix.p5?.body.tail.shape === "flame";
+  // Pass 6: a dense colossus on the low tier (smallRadial 4) drops the vein strips (budget).
+  const veins = detail > 0.5 && res.smallRadial > 4;
 
   if (kind === "membrane") {
     const F = Math.max(2, Math.min(5, Math.round(helix.wings.fingers)));
@@ -155,7 +158,7 @@ export function buildWing(
         return sagged(mul3(e, v), u, v, len3(e) * 0.5);
       };
       surf[2].push({ geo: gridSurface(P, Math.max(3, Math.round(nu * 0.6)), nv), slots: ["membrane"] });
-      if (detail > 0.5) bones[2].push({ geo: strip(sample((v) => add3(P(0.5, v), [0, rv * 0.6, 0]), 5, 0.12, 0.95), rv, rv * 0.5, res), slots: ["skin"] });
+      if (veins) bones[2].push({ geo: strip(sample((v) => add3(P(0.5, v), [0, rv * 0.6, 0]), 5, 0.12, 0.95), rv, rv * 0.5, res), slots: ["skin"] });
     }
     if (fire) {
       for (let k = 0; k + 1 < F; k++) {
@@ -165,7 +168,7 @@ export function buildWing(
       const m = midP(0.55, 1);
       bones[1].push({ geo: flameTongue(m, [0.3, 0, -1], len3(sub3(W, E)) * 0.4, len3(sub3(W, E)) * 0.07, res, 2), slots: ["accent"] });
     }
-    if (detail > 0.5) {
+    if (veins) {
       for (const u of [1 / 3, 2 / 3]) {
         bones[0].push({ geo: strip(sample((v) => add3(rootP(u, v), [0, rv * 0.6, 0]), 5, 0.05, 0.95), rv, rv * 0.5, res), slots: ["skin"] });
         bones[1].push({ geo: strip(sample((v) => add3(midP(u, v), [0, rv * 0.6, 0]), 5, 0.05, 0.95), rv, rv * 0.5, res), slots: ["skin"] });
@@ -197,21 +200,23 @@ export function buildWing(
       return s < c0.length ? { j: 0, base: mul3(d0, s) } : { j: 1, base: mul3(norm3(c1.dir), s - c0.length) };
     };
     const back = (a: number) => norm3(rotate3([0, 0, -1], UP, -a));
-    const nS = Math.round(5 + 7 * detail);
+    // Pass 6: a dense colossus (several wing pairs) gets about half the feathers per row, each a bit wider.
+    const thin = res.dense ? 0.45 : 1;
+    const nS = Math.max(3, Math.round((5 + 7 * detail) * thin));
     for (let i = 0; i < nS; i++) {
       const g = (i + 0.5) / nS;
       const { j, base } = onArm(g);
       const r = j === 0 ? c0.r0 : c1.r0;
       surf[j].push({ geo: feather(add3(base, [0, -0.15 * r - 0.002 * i * H, 0]), back(0.08 + 0.35 * g), chord(g), (LE / nS) * 1.7, res), slots: ["accent"] });
     }
-    const nC = Math.round(4 + 8 * detail);
+    const nC = Math.max(2, Math.round((4 + 8 * detail) * thin));
     for (let i = 0; i < nC; i++) {
       const g = (i + 0.5) / nC;
       const { j, base } = onArm(g);
       const r = j === 0 ? c0.r0 : c1.r0;
       surf[j].push({ geo: feather(add3(base, [0, 0.5 * r + 0.001 * i * H, -0.3 * r]), back(0.1 + 0.3 * g), chord(g) * 0.45, (LE / nC) * 1.6, res), slots: ["skin"] });
     }
-    const nP = Math.round(5 + 5 * detail);
+    const nP = Math.max(3, Math.round((5 + 5 * detail) * thin));
     const lenOuter = Math.max(Rs * 0.42, leadLen - c2.length * 0.95 + Rs * 0.05);
     for (let k = 0; k < nP; k++) {
       const f = nP > 1 ? k / (nP - 1) : 0;
@@ -239,7 +244,7 @@ export function buildWing(
     for (const P of panes) {
       surf[0].push({ geo: gridSurface(P, nu, nv), slots: ["membrane"] });
       for (const v of [0, 0.3, 0.6]) bones[0].push({ geo: strip(sample((u) => add3(P(u, v), [0, rv * 0.5, 0]), 6, 0.02, 0.95), rv * (v === 0 ? 1.4 : 1), rv * 0.5, res), slots: ["accent"] });
-      if (detail > 0.5) for (const u of [0.35, 0.65]) bones[0].push({ geo: strip(sample((v) => add3(P(u, v), [0, rv * 0.5, 0]), 4, 0, 0.6), rv * 0.7, rv * 0.7, res), slots: ["accent"] });
+      if (veins) for (const u of [0.35, 0.65]) bones[0].push({ geo: strip(sample((v) => add3(P(u, v), [0, rv * 0.5, 0]), 4, 0, 0.6), rv * 0.7, rv * 0.7, res), slots: ["accent"] });
     }
     bones[0].push(...limbPieces(c0, undefined, "wing", ph, helix, res, c0.length * 0.25));
   } else {
@@ -257,9 +262,12 @@ export function buildWing(
     bones[0].push(...limbPieces(c0, undefined, "wing", ph, helix, res, c0.length * 0.25));
   }
 
-  const scale = asymScale(helix, "wing", side);
+  // Rare asymmetry scales the HAND (tip joint) only: scaling the root / mid meshes about their own pivots
+  // opened a gap at the elbow on the smaller side (pass-6 viability stress found floating wing tips).
+  const asym = asymScale(helix, "wing", side);
   for (let i = 0; i < 3; i++) {
     const list: THREE.Object3D[] = [];
+    const scale = i === 2 ? asym : 1;
     const b = meshOf(bones[i], mats, `${joints[i].id}:wing-bone`, side < 0, scale);
     if (b) list.push(b);
     const s = meshOf(surf[i], mats, `${joints[i].id}:wing-surface`, side < 0, scale);

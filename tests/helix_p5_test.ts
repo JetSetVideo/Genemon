@@ -137,12 +137,17 @@ Deno.test("p5: a pass-4 save keeps its alleles and gains DETERMINISTIC pass-5 ge
   assertEquals(f2["p5.coat"], d["p5.coat"]);
 });
 
-Deno.test("p5 distribution: eye counts 1..8 - two ~80 %, cyclops ~6 %, 3-8 rare", () => {
+Deno.test("p5 distribution: eye counts 1..8 - two ~75 %, one ~12 % (cyclops + globes), 3-8 rare", () => {
   const counts = new Map<number, number>();
   for (const { p } of sample) counts.set(p.eyes.count, (counts.get(p.eyes.count) ?? 0) + 1);
   const f = (n: number) => (counts.get(n) ?? 0) / N;
-  assert(f(2) >= 0.74 && f(2) <= 0.86, `two eyes ${f(2)}`);
-  assert(f(1) >= 0.03 && f(1) <= 0.09, `cyclops ${f(1)}`);
+  // Pass 6 [P6-C1]: minimal globes (~6.5 % of wild genomes) are one-eyed by definition, on top of the
+  // ~6 % recessive cyclopes: one eye ~12 %, two eyes ~74 %.
+  assert(f(2) >= 0.68 && f(2) <= 0.86, `two eyes ${f(2)}`);
+  assert(f(1) >= 0.06 && f(1) <= 0.17, `one eye ${f(1)}`);
+  const cyc = sample.filter((s) => s.h.p6!.complexity.tier !== "minimal");
+  const cf = cyc.filter((s) => s.p.eyes.count === 1).length / cyc.length;
+  assert(cf >= 0.03 && cf <= 0.09, `recessive cyclops (non-globes) ${cf}`);
   const many = [3, 4, 5, 6, 7, 8].reduce((s, n) => s + f(n), 0);
   assert(many >= 0.08 && many <= 0.2, `3-8 eyes ${many}`);
   for (const n of [3, 4, 5, 6, 7, 8]) assert((counts.get(n) ?? 0) > 0, `${n} eyes never appear`);
@@ -244,7 +249,9 @@ Deno.test("p5 distribution: beaks mostly avian with round beaks of several sizes
 });
 
 Deno.test("p5 heritability: recessive eye counts breed true; Mendelian alleles carry the traits", () => {
-  const base = sample.map((s) => s.g).filter((g) => g.kind !== "hexapod").slice(0, 120);
+  // Pass 6: globes (always one eye) and mythic chimeras (always 6-8) have their eye count fixed by the tier.
+  const base = sample.filter((s) => s.ph.kind !== "hexapod" && s.h.p6!.complexity.tier !== "minimal" && s.h.p6!.complexity.tier !== "mythic")
+    .map((s) => s.g).slice(0, 120);
   const set = (g: Genome, over: Partial<Record<string, [number, number]>>) => withMorph(g, { ...ensureMorph(g), ...over } as MorphAlleles);
   const rng = new Rng(9);
   let cyc = 0, many = 0, hetero = 0;

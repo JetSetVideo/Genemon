@@ -103,6 +103,8 @@ Deno.test("[P4-M2] a breath cone hits every enemy inside its arc and none behind
   const before = foes.map((o) => o.hp);
   for (const o of b.fighters) (o.stats as any).evasion = 0;
   (f.stats as any).accuracy = 1;
+  // Isolate the arc: no perception modifiers (keen senses read / overload, [P6-B1]) on this roll.
+  (b as any).keen = () => 0;
   (b as any).strike(f);
   assert(foes[0].hp < before[0], "front target hit");
   assert(foes[1].hp < before[1], "second target inside the arc hit");
@@ -119,6 +121,10 @@ Deno.test("[P4-M7] a dash carries the body toward its target and strikes on arri
   f.body.pos = { x: -4, y: f.body.pos.y, z: 0 };
   t.body.pos = { x: 3, y: t.body.pos.y, z: 0 };
   const x0 = f.body.pos.x;
+  // Isolate the dash: no perception modifiers (a keen target reads the wind-up, [P6-B1]) and no dodge.
+  (b as any).keen = () => 0;
+  for (const o of b.fighters) (o.stats as any).evasion = 0;
+  (f.stats as any).accuracy = 1;
   (b as any).startMove(f, dash, t.idx);
   let hit = false;
   const hp0 = t.hp;

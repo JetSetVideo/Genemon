@@ -16,6 +16,8 @@ import { renderQuestPanel } from "./quests.ts";
 import { fmtM, HomeView, POLE_STEP, poleTicks } from "../../render/homeView.ts";
 import { lifeHooks, renderDevPanel } from "../devPanel.ts";
 import { openDex } from "./dex.ts";
+import { leagueStanding, renderRankedPanel } from "../rankedPanel.ts";
+import { LEAGUE_IDS, LEAGUES, leagueOfRecord, rankTier } from "../../ladder/leagues.ts";
 
 /**
  * Select a Genemon from Home without leaving the platform. `app.select` swaps the 3D view to the Lab
@@ -99,8 +101,8 @@ export function renderHome(app: App): HTMLElement {
   const sleeping = onStage.filter((g) => lifeHooks()?.asleep(g)).length;
   return h("div", { class: "hd5-menu" },
     h("h1", {}, `Hello ${p.name}`),
-    h("p", { class: "muted" }, `${fmt(p.credits)} credits · MMR ${Math.round(p.mmr)} · ${p.collection.length} Genemon. Your Genemon evolve with your real life: the time you play, the places you go, the food you buy, the battles you fight.`),
-    h("button", { class: "btn primary big", "data-action": "instant-battle", title: "A ranked battle right now: the ladder draws the arena; your real hour and weather apply", onclick: () => app.startRanked() }, "⚔ Instant battle"),
+    h("p", { class: "muted" }, `${fmt(p.credits)} credits · ${p.collection.length} Genemon. Your Genemon evolve with your real life: the time you play, the places you go, the food you buy, the battles you fight.`),
+    renderRankedPanel(app, { compact: true }),
     h("div", { class: "hd5-actions" }, ...ACTIONS.map((a) =>
       h("button", { class: "hd5-act", "data-go": a.go, title: a.hint, onclick: () => (a.go === "dex:dex" ? openDex(app) : app.go(a.go)) },
         h("span", { class: "ico" }, a.icon), h("span", {}, a.label)))),
@@ -131,8 +133,18 @@ export function renderHome(app: App): HTMLElement {
       sum.synergies.length ? h("p", {}, h("b", {}, "Synergies: "), sum.synergies.map((s) => s.name).join(", ")) : h("p", { class: "muted" }, "No synergy yet - pair water with electric, fire with air..."),
       h("div", { class: "row" }, h("button", { class: "btn", onclick: () => app.go("team") }, "Edit team"), h("button", { class: "btn", onclick: () => app.go("dex") }, "All Genemon & teams"), h("button", { class: "btn", onclick: () => app.go("lab") }, "Open the Lab"))),
     section("Ladder",
-      h("p", {}, `MMR ${Math.round(p.mmr)} · ${p.stats.wins}W ${p.stats.losses}L ${p.stats.draws}D · ${p.collection.length} Genemon · ${p.pokedex.length} species seen`),
-      p.history[0] ? h("p", { class: "muted" }, `Last: ${p.history[0].won === 0 ? "won" : p.history[0].won === 1 ? "lost" : "draw"} vs ${p.history[0].opponent} in ${p.history[0].arena} (${p.history[0].mmrDelta >= 0 ? "+" : ""}${p.history[0].mmrDelta})`) : null),
+      h("dl", { class: "kv" }, ...LEAGUE_IDS.flatMap((l) => {
+        const st = leagueStanding(app, l);
+        const last = p.history.find((r) => leagueOfRecord(r) === l);
+        return [
+          h("dt", {}, LEAGUES[l].name),
+          h("dd", { "data-home-league": l },
+            `${rankTier(st.rating, st.games).name} · ${Math.round(st.rating)} · ${st.wins}W ${st.losses}L ${st.draws}D`,
+            last ? h("span", { class: "muted" }, ` · last: ${last.won === 0 ? "won" : last.won === 1 ? "lost" : "draw"} vs ${last.opponent} (${last.mmrDelta >= 0 ? "+" : ""}${last.mmrDelta})`) : null),
+        ];
+      })),
+      h("p", { class: "muted" }, `All battles: ${p.stats.wins}W ${p.stats.losses}L ${p.stats.draws}D · ${p.pokedex.length} species seen`),
+      h("button", { class: "btn small", onclick: () => app.go("ladder") }, "Both ladders")),
     section("Collection by element",
       h("div", { class: "row" }, ...Object.entries(p.collection.reduce<Record<string, number>>((acc, g) => {
         const e = phenotypeOf(g).elements.primary;

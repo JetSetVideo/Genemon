@@ -449,6 +449,8 @@ Deno.test("[CONTENT] real rows from battle.ts and market.ts match the emitted co
   const plants = [makeArchetype(ARCHETYPES.smallPlant, 2), makeArchetype(ARCHETYPES.smallPlant, 3)];
   new Battle({ seed: 7, arena: arenaSpec("meadow", 7), teams: [team("alice", [makeArchetype(ARCHETYPES.bigFireBrawler, 1)]), team("bob", plants)], ledger }).run();
   new Battle({ seed: 8, arena: arenaSpec("lake", 8), teams: [team("alice", [makeArchetype(ARCHETYPES.electricBolt, 1)]), team("bob", [makeArchetype(ARCHETYPES.waterSniper, 1)])], ledger }).run();
+  // Pass 6: the colossus / focus-fire mechanics changed the fixed-seed fights above; this duel reliably reacts (7 rows).
+  new Battle({ seed: 9, arena: arenaSpec("lake", 9), teams: [team("alice", [makeArchetype(ARCHETYPES.fireSniper, 1)]), team("bob", [makeArchetype(ARCHETYPES.waterSniper, 2)])], ledger }).run();
   const ah = new AuctionHouse({ seed: 3, ledger });
   ah.deposit("p2", 5000, 0);
   ah.give("p1", "lure.fire", 3, 0);

@@ -369,10 +369,10 @@ A team holds 6 slots. *Parity budget* is the power budget a lone body needs to t
 |---|---|---|---|---|---|---|
 | `XS` | 1 | 0.85 | 0.850 | 6 | 1 | 0.850 |
 | `S` | 1 | 1 | 1 | 45 | 1 | 1 |
-| `M` | 2 | 2 | 1 | 260 | 1.732 | 1.155 |
-| `L` | 3 | 2.9 | 0.967 | 1100 | 2.449 | 1.184 |
-| `XL` | 4 | 3.9 | 0.975 | 6000 | 3.162 | 1.233 |
-| `XXL` | 6 | 5.6 | 0.933 | inf | 4.583 | 1.222 |
+| `M` | 2 | 2.1 | 1.050 | 260 | 1.732 | 1.212 |
+| `L` | 3 | 3.35 | 1.117 | 1100 | 2.449 | 1.368 |
+| `XL` | 4 | 4.8 | 1.200 | 6000 | 3.162 | 1.518 |
+| `XXL` | 6 | 5.9 | 0.983 | inf | 4.583 | 1.287 |
 <!-- /GEN:sizes -->
 
 **Expand.** `SIZE_CLASSES`, `SLOT_COST`, `POWER_BUDGET`, `MASS_THRESHOLDS` in `phenotype.ts`; then re-run SC-11 and SC-14.
@@ -388,27 +388,27 @@ Census: 20000 wild genomes (randomGenome(1..20000), level 5, age 13.5 d, no life
 |---|---|---|---|---|---|---|---|---|
 | `neutral` | 3.6% | 0.0% | 10.9% | 12.2% | 19.5% | 18.7% | 0.0% | 0.0% |
 | `fire` | 3.2% | 1.8% | 15.0% | 2.5% | 22.9% | 24.8% | 9.1% | 5.8% |
-| `water` | 6.9% | 3.2% | 14.5% | 83.2% | 20.2% | 63.3% | 14.1% | 0.7% |
+| `water` | 6.9% | 3.2% | 14.5% | 83.1% | 20.2% | 63.3% | 14.1% | 0.7% |
 | `plant` | 3.8% | 1.7% | 16.6% | 43.0% | 18.5% | 19.2% | 1.7% | 6.4% |
 | `earth` | 5.7% | 1.8% | 3.5% | 16.0% | 65.3% | 21.3% | 7.1% | 4.1% |
-| `air` | 7.9% | 3.3% | 43.5% | 18.1% | 0.0% | 21.1% | 10.3% | 0.0% |
+| `air` | 7.8% | 3.3% | 43.4% | 18.2% | 0.0% | 21.0% | 10.3% | 0.0% |
 | `electric` | 3.1% | 1.8% | 16.3% | 17.6% | 23.2% | 22.1% | 8.7% | 0.0% |
 | `ice` | 2.7% | 1.3% | 14.9% | 34.5% | 27.8% | 14.4% | 6.9% | 4.1% |
 | `metal` | 1.5% | 0.9% | 11.3% | 21.7% | 15.7% | 17.7% | 1.7% | 0.0% |
 | `poison` | 5.3% | 2.5% | 15.1% | 35.1% | 22.3% | 17.8% | 11.8% | 0.0% |
 | `light` | 24.7% | 3.7% | 15.8% | 22.9% | 22.5% | 22.9% | 17.6% | 0.5% |
-| `shadow` | 12.5% | 3.4% | 16.0% | 22.5% | 21.5% | 23.1% | 14.2% | 0.0% |
+| `shadow` | 12.5% | 3.4% | 15.9% | 22.5% | 21.5% | 23.1% | 14.2% | 0.0% |
 | `psychic` | 6.2% | 2.7% | 15.4% | 20.3% | 20.4% | 23.9% | 5.7% | 0.1% |
-| `void` | 13.0% | 3.9% | 15.4% | 21.8% | 21.6% | 22.8% | 2.2% | 0.0% |
+| `void` | 13.0% | 3.9% | 15.4% | 21.8% | 21.6% | 22.7% | 2.2% | 0.0% |
 
 | size | wild share | mean power | power / slot |
 |---|---|---|---|
-| `XS` | 12.6% | 77.6 | 77.6 |
-| `S` | 46.9% | 91.3 | 91.3 |
-| `M` | 33.4% | 182.6 | 91.3 |
-| `L` | 6.6% | 265.0 | 88.3 |
-| `XL` | 0.5% | 355.8 | 88.9 |
-| `XXL` | 0.0% | 503.0 | 83.8 |
+| `XS` | 17.6% | 77.3 | 77.3 |
+| `S` | 49.1% | 90.8 | 90.8 |
+| `M` | 28.5% | 190.4 | 95.2 |
+| `L` | 4.5% | 303.7 | 101.2 |
+| `XL` | 0.3% | 433.9 | 108.5 |
+| `XXL` | 0.0% | 543.3 | 90.5 |
 
 Abilities overall: fly 16.9%, phaseShift 24.7%, swim 26.4%, dig 22.5%, weatherShaper 10.4%, terraformer 1.0%.
 <!-- /GEN:census -->
@@ -664,7 +664,7 @@ Achievements, quest steps and quest-giver arcs are all `Trigger { what, count, w
 |---|---|---|---|---|---|---|---|
 | `genemon.xp` | **emitted** | src/genome/genemon.ts | physical/virtual/lab | xp:number | total:number, level:number | 0 (0) | grantXp() |
 | `genemon.levelUp` | **emitted** | src/genome/genemon.ts | physical/virtual/lab | from:number | to:number, moves:text | 3 (3) | settle() after any xp change; filter exits.to |
-| `genemon.evolve` | **emitted** | src/genome/genemon.ts | physical/virtual/lab | fromStage:number, growth:number, level:number | toStage:number, height:number, sizeClass:sizeClass | 3 (3) | stages 1 Hatchling, 2 Juvenile, 3 Adult, 4 Ascended (STAGE_NAMES) |
+| `genemon.evolve` | **emitted** | src/genome/genemon.ts | physical/virtual/lab | fromStage:number, growth:number, level:number, ageDays:number | toStage:number, height:number, sizeClass:sizeClass, form:text, name:text, kind:text, phases:number, unlocks:text, allUnlocks:text, sizeMult:number, mature:boolean, final:boolean | 3 (3) | pass 6: stage = the evolution-plan phase 1..6 (src/genome/evolution.ts); form / name / unlocks of the new phase; mature = grown-up form; final = last phase |
 | `genemon.specialize` | **emitted** | src/genome/genemon.ts | physical/virtual/lab | primary:element, secondary:elementOrNone | primary:element, secondary:elementOrNone | 1 (1) | entries = types before, exits = types after: always filter with an explicit exits. scope |
 | `genemon.feed` | **emitted** | src/genome/genemon.ts | physical/virtual/lab | food:food, units:number | hunger:number, bond:number | 8 (8) | feed(); units = portions |
 | `genemon.feed.refused` | **emitted** | src/genome/genemon.ts | physical/virtual/lab | food:food, units:number | fullness:number, capacity:number | 0 (0) | feedLife(); the stomach was full (pass-5 digestion) |
@@ -826,8 +826,8 @@ Vocabularies introduced by content (proposals for the world, battle, ladder and 
 | `two-become-one` | Two Become One | breeding | 2 | genemon.fuse x1 | 300 cr | - |
 | `chimera-smith` | Chimera Smith | breeding | 3 | genemon.fuse x10 | 1500 cr | - |
 | `kaiju` | Kaiju | breeding | 3 | genemon.fuse x1 {sizeClass=XL} | 1200 cr | - |
-| `coming-of-age` | Coming of Age | breeding | 1 | genemon.evolve x1 {exits.toStage=3} | 100 cr | yes |
-| `ascension` | Ascension | breeding | 4 | genemon.evolve x1 {exits.toStage=4} | 4000 cr, item cosmetic.crown, title "Ascendant" | yes |
+| `coming-of-age` | Coming of Age | breeding | 1 | genemon.evolve x1 {exits.mature=true} | 100 cr | yes |
+| `ascension` | Ascension | breeding | 4 | genemon.evolve x1 {exits.final=true, exits.phases>=4} | 4000 cr, item cosmetic.crown, title "Ascendant" | yes |
 | `first-steps` | First Steps | exploration | 1 | genemon.experience x10 {experience=travelKm} | 80 cr | yes |
 | `trailblazer` | Trailblazer | exploration | 2 | genemon.experience x250 {experience=travelKm} | 500 cr, item map.fragment | yes |
 | `pilgrim` | Pilgrim | exploration | 4 | genemon.experience x2500 {experience=travelKm} | 5000 cr, title "Pilgrim" | yes |
@@ -997,7 +997,7 @@ Rules (all tested): a physical quest contains only physical steps (a `world.*` r
 | `story-noctua-2` | Lanterns | story | 8 | sofa | Noctua | battle.status x5 {status=blinded}; battle.reaction x1 {reaction=eclipse} | after story-noctua-1, giver stage 2 | 300 cr, 450 xp, cosmetic.lantern |
 | `story-noctua-3` | Eclipse Night | story | 20 | sofa | Noctua | battle.weather x1 {to=eclipse}; battle.win x1 {weather=eclipse} | after story-noctua-2, giver stage 3 | 800 cr, 1000 xp, egg.shadow |
 | `story-helix-1` | The Double Helix | story | 10 | sofa | Professor Helix | genemon.experience x2 {experience=puzzle}; genemon.breed x1 | giver stage 1 | 150 cr, 250 xp |
-| `story-helix-2` | Generations | story | 12 | sofa | Professor Helix | genemon.breed x1 {generation>=3}; genemon.evolve x1 {exits.toStage=3} | after story-helix-1, giver stage 2 | 400 cr, 600 xp |
+| `story-helix-2` | Generations | story | 12 | sofa | Professor Helix | genemon.breed x1 {generation>=3}; genemon.evolve x1 {exits.mature=true} | after story-helix-1, giver stage 2 | 400 cr, 600 xp |
 | `story-helix-3` | The Fusion Paradox | story | 25 | sofa | Professor Helix | genemon.fuse x1; battle.win x5 | after story-helix-2, giver stage 3 | 900 cr, 1200 xp, scanner.dna |
 | `story-rill-1` | Low Tide | story | 1 | sofa | Captain Rill | genemon.feed x3 {food=fish}; genemon.experience x3 {experience=swimming} | giver stage 1 | 120 cr, 180 xp |
 | `story-rill-2` | The Drowned Spark | story | 10 | sofa | Captain Rill | battle.reaction x5 {reaction=conduction, ground=water}; battle.reaction x3 {reaction=smoke} | after story-rill-1, giver stage 2 | 350 cr, 500 xp, badge.harbour |

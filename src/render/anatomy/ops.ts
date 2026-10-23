@@ -101,8 +101,8 @@ export function applyOps(sec: Section, u: number, ops: readonly MorphOp[]): Sect
 
 /** Region of a body chain name (skeleton chain ids). */
 export function regionOfChain(chain: string): MorphRegion {
-  if (chain === "neck") return "neck";
-  if (chain === "tail") return "tail";
+  if (chain.startsWith("neck")) return "neck";
+  if (chain.startsWith("tail")) return "tail";
   if (chain === "head") return "head";
   if (chain.startsWith("leg") || chain.startsWith("arm") || chain.startsWith("pod") || chain.startsWith("tent")) return "limb";
   return "torso";

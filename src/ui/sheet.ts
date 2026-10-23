@@ -3,13 +3,16 @@
  * contents (every part is at most 2 clicks from the Lab: open Lab -> click a TOC chip): identity (name,
  * elements, size, age + life phase, parents), story (a narrative generated from the creature's own
  * record), character, statistics, attacks (the Q/W/E/R kit as move cards), associated objects (gear,
- * cosmetics, imprints), senses + resonance, digestion, scars and the evolution path with its costs.
+ * cosmetics, imprints), senses + resonance, digestion, scars and the evolution plan [P6-E1..E5]: kind, the
+ * phases as a timeline (forms, unlocks, costs), the XP bar on the lineage's curve and the fertility window.
  * Section titles sit on shaded bands, one shade per family (widgets.sec, CSS .ui5-f-*) [P5-U4].
  */
 import type { App } from "./app.ts";
 import { ELEMENTS, type ElementId } from "../data/elements.ts";
 import { EXPERIENCES, type ExperienceId, FOODS, type FoodId } from "../data/lifestyle.ts";
-import { type Genemon, phenotypeOf, STAGE_NAMES } from "../genome/genemon.ts";
+import { fertilityOf, type Genemon, phenotypeOf, STAGE_NAMES, stageName } from "../genome/genemon.ts";
+import { evolutionPlanOf, KIND_WORDS, levelCurve, planSummary, XP_CURVES } from "../genome/evolution.ts";
+import { evolutionPath, lifePath } from "../genome/lifeclock.ts";
 import { type LifePhase, SENSE_IDS } from "../genome/lifeTypes.ts";
 import type { Phenotype } from "../genome/phenotype.ts";
 import { foodItemId, ITEMS } from "../economy/items.ts";
@@ -18,9 +21,19 @@ import { barRow, elChip, sec, statBars, statsBlock } from "./widgets.ts";
 import { kitMoves, kitStrip } from "./moveCard.ts";
 import { iconChip, itemIcon } from "./icons.ts";
 import { cosmeticsOf, gearOf, takeOff, unequip } from "./bagStore.ts";
-import { canRankOf, digestionFor, dietClassOf, evolutionFor, fullnessOf, imprintsFor, lifePhaseOf, scarsFor, sensesFor } from "./lifeAdapter.ts";
+import { canRankOf, digestionFor, dietClassOf, fullnessOf, imprintsFor, lifePhaseOf, scarsFor, sensesFor } from "./lifeAdapter.ts";
 
 const NA = (what: string) => h("p", { class: "muted ui5-na" }, `${what}: not available yet.`);
+
+/** Guarded producer call (same contract as lifeAdapter.safe): a throwing module shows "not available". */
+function safe<T>(f: () => T): T | null {
+  try {
+    return f();
+  } catch (e) {
+    console.warn("sheet:", e);
+    return null;
+  }
+}
 
 const TOC: readonly { id: string; label: string }[] = [
   { id: "sh-story", label: "Story" },
@@ -89,7 +102,7 @@ export function storyOf(app: App, g: Genemon, ph: Phenotype = phenotypeOf(g)): s
   for (const r of rows) {
     const when = new Date(r.when).toLocaleDateString([], { month: "short", day: "numeric" });
     out.push(r.what === "genemon.evolve"
-      ? `On ${when} it evolved to stage ${r.exits.toStage} (${STAGE_NAMES[Number(r.exits.toStage)] ?? ""}).`
+      ? `On ${when} it evolved into its ${r.exits.name || STAGE_NAMES[Number(r.exits.toStage)] || `phase ${r.exits.toStage}`} form${r.exits.unlocks ? ` (${String(r.exits.unlocks).split(",").join(", ")})` : ""}.`
       : `On ${when} its element drifted from ${elName(String(r.entries.primary))} to ${elName(String(r.exits.primary))}.`);
   }
   return out;
@@ -107,10 +120,11 @@ function header(app: App, g: Genemon, ph: Phenotype): HTMLElement {
   return sec("id", "Identity", { id: "sh-id", extra: h("span", { class: "size", title: `${ph.slots} team slot(s)` }, `${ph.sizeClass}·${ph.slots}`) },
     h("div", { class: "row" }, h("span", { class: "ui5-swatch", vars: { sw: hex(ph.palette.base) } }), elChip(ph.elements.primary), ph.elements.secondary ? elChip(ph.elements.secondary) : null,
       h("span", { class: "chip" }, ph.kind), h("span", { class: "chip" }, `Lv ${ph.level}`), lp ? h("span", { class: "chip ui5-phase" }, lp.phase) : null,
+      ph.evo ? h("span", { class: "chip", title: `evolution phase ${ph.evo.phase}/${ph.evo.phases} (${ph.evo.kind})` }, `${ph.evo.name} ${ph.evo.phase}/${ph.evo.phases}`) : null,
       rank ? h("span", { class: `chip ${rank.ok ? "" : "ui5-bad"}`, title: rank.why }, rank.ok ? "can rank" : /not born/.test(rank.why) ? "too young to rank" : "retired from ranked") : null),
     h("dl", { class: "kv" },
       h("dt", {}, "Age"), h("dd", {}, `${fmt(g.conditions.ageDays, 1)} days${lp ? ` · ${lp.phase}` : ""}${nextPhase ? ` (${nextPhase[0]} at day ${fmt(nextPhase[1], 1)})` : ""}`),
-      h("dt", {}, "Stage"), h("dd", {}, `${STAGE_NAMES[g.stage] ?? g.stage} · growth ${Math.round(ph.growth * 100)}%`),
+      h("dt", {}, "Stage"), h("dd", {}, `${stageName(g, ph)}${ph.evo ? ` · phase ${ph.evo.phase}/${ph.evo.phases} (${ph.evo.form})` : ""} · growth ${Math.round(ph.growth * 100)}%`),
       h("dt", {}, "Body"), h("dd", {}, `${fmt(ph.heightM, 2)} m · ${fmt(ph.massKg, 1)} kg · ${ph.pattern}`),
       h("dt", {}, "Genome"), h("dd", { class: "mono" }, `${g.genome.id} · gen ${g.genome.generation}`),
       h("dt", {}, "Parents"), h("dd", { class: "row" }, ...(parents.length
@@ -226,15 +240,62 @@ function scars(g: Genemon): HTMLElement {
       : h("p", { class: "muted" }, "No scars yet. Hard fights leave marks that show on the body."));
 }
 
-function evolution(g: Genemon): HTMLElement {
-  const steps = evolutionFor(g);
-  if (!steps) return sec("evolution", "Evolution path", { id: "sh-evolution" }, NA("Evolution path"));
+const CURVE_COLOR: Record<string, string> = { short: "#00bbf9", normal: "#9b5de5", long: "#f9844a" };
+
+/** The pass-5 life stages (egg .. ancient by age), kept under the evolution plan. */
+function lifeStages(g: Genemon): HTMLElement {
+  const steps = safe(() => lifePath(g));
+  if (!steps) return NA("Life stages");
   const cur = steps.filter((s) => s.reached).length - 1;
-  return sec("evolution", "Evolution path", { id: "sh-evolution" },
-    h("ol", { class: "ui5-evo" }, ...steps.map((s, i) => h("li", { class: i < cur ? "done" : i === cur ? "now" : "todo" },
-      h("div", { class: "ui5-evo-head" }, h("b", {}, s.name), h("span", { class: "muted" }, i === cur ? "◀ now" : s.reached ? "✓" : "")),
-      i > 0 ? h("div", { class: "ui5-cost mono" }, `${fmt(s.cost.days, 1)} d · ${fmt(s.cost.xp)} xp · ${fmt(s.cost.food)} food · ${fmt(s.cost.credits)} c · bond ${fmt(s.cost.bond, 2)}`) : null,
-      h("div", { class: "muted" }, s.properties.join(" · "))))));
+  return h("ol", { class: "ui5-evo" }, ...steps.map((s, i) => h("li", { class: i < cur ? "done" : i === cur ? "now" : "todo" },
+    h("div", { class: "ui5-evo-head" }, h("b", {}, s.name), h("span", { class: "muted" }, i === cur ? "◀ now" : s.reached ? "✓" : "")),
+    i > 0 ? h("div", { class: "ui5-cost mono" }, `${fmt(s.cost.days, 1)} d · ${fmt(s.cost.xp)} xp · ${fmt(s.cost.food)} food · ${fmt(s.cost.credits)} c · bond ${fmt(s.cost.bond, 2)}`) : null,
+    h("div", { class: "muted" }, s.properties.join(" · ")))));
+}
+
+/**
+ * The evolution plan [P6-E1..E5]: kind + summary, the XP bar on the lineage's curve ("long levels" / "short
+ * levels"), progress to the next phase, the phases as a timeline (form, thresholds, costs, unlocks in words)
+ * and the fertility window now / next. The life stages (egg .. ancient) sit in a fold below.
+ */
+function evolution(g: Genemon, ph: Phenotype): HTMLElement {
+  const plan = safe(() => evolutionPlanOf(g.genome));
+  const steps = safe(() => evolutionPath(g));
+  if (!plan || !steps) return sec("evolution", "Evolution", { id: "sh-evolution" }, NA("Evolution plan"));
+  const evo = ph.evo;
+  const curve = levelCurve(plan);
+  const c = XP_CURVES[plan.curve];
+  const lvl = ph.level, xp = g.conditions.xp;
+  const atMax = lvl >= plan.maxLevel;
+  const x0 = curve.xpForLevel(lvl), x1 = curve.xpForLevel(lvl + 1);
+  const frac = atMax ? 1 : (xp - x0) / Math.max(1, x1 - x0);
+  const fert = safe(() => fertilityOf(g));
+  const f = plan.fertility;
+  const next = evo && evo.phase < evo.phases ? plan.phases[evo.phase] : null;
+  return sec("evolution", "Evolution", { id: "sh-evolution", extra: h("span", { class: "chip", title: "evolution kind · phases · XP curve" }, planSummary(plan)) },
+    h("p", { class: "muted" }, `${KIND_WORDS[plan.kind]}${plan.kind === "gradual" ? ` through ${plan.phases.length} phases, bigger at each one` : ""}. Phases need BOTH the level and the age shown; levels follow this lineage's own XP curve.`),
+    h("div", { class: "row" },
+      h("span", { class: "chip", title: `xp per level ×${c.xpMult} vs the global curve` }, c.label),
+      h("span", { class: "chip" }, `xp ×${c.xpMult}`),
+      h("span", { class: "chip" }, `max Lv ${plan.maxLevel}`)),
+    barRow(`Lv ${lvl}`, frac, atMax ? "max level" : `${fmt(xp - x0)} / ${fmt(x1 - x0)} xp → Lv ${lvl + 1}`, CURVE_COLOR[plan.curve] ?? "#9b5de5",
+      plan.curve === "long" ? "Long levels: few levels, each with a long XP bar" : plan.curve === "short" ? "Short levels: many quick levels" : "Normal levels"),
+    next && evo
+      ? barRow("Next phase", evo.progress, `${Math.round(evo.progress * 100)}% → ${next.name} (Lv ${next.atLevel}, day ${fmt(next.atAgeDays, 1)})`, "#3ddc84")
+      : h("p", { class: "muted" }, plan.phases.length === 1 ? "One form for life: it never changes shape." : "Final phase reached."),
+    h("h3", {}, "Phases"),
+    h("ol", { class: "ui5-evo" }, ...steps.map((s) => h("li", { class: s.current ? "now" : s.reached ? "done" : "todo" },
+      h("div", { class: "ui5-evo-head" }, h("b", {}, `${s.index}. ${s.name}`), h("span", { class: "chip" }, s.form),
+        s.sizeMult !== 1 ? h("span", { class: "muted mono", title: "height vs the reference adult" }, `×${fmt(s.sizeMult, 2)} size`) : null,
+        h("span", { class: "muted" }, s.current ? "◀ now" : s.reached ? "✓" : "")),
+      s.index > 1 ? h("div", { class: "ui5-cost mono" }, `Lv ${s.atLevel} · day ${fmt(s.atAgeDays, 1)} · +${fmt(s.cost.days, 1)} d · ${fmt(s.cost.xp)} xp · ${fmt(s.cost.food)} food · ${fmt(s.cost.credits)} c`) : null,
+      h("div", { class: "muted" }, s.properties.join(" · "))))),
+    h("h3", {}, "Fertility"),
+    h("dl", { class: "kv" },
+      h("dt", {}, "Now"), h("dd", { class: fert?.fertile ? "" : "muted" }, fert ? `${fert.fertile ? "fertile: " : "not fertile: "}${fert.why}` : "not available"),
+      h("dt", {}, "Next window"), h("dd", {}, fert?.nextWindowDay != null ? `day ${fmt(fert.nextWindowDay, 1)} (in ${fmt(Math.max(0, fert.nextWindowDay - g.conditions.ageDays), 1)} d)` : "none ahead"),
+      h("dt", {}, "Cycle"), h("dd", {}, `fertile ${fmt(f.fertileDays, 1)} d every ${fmt(f.cycleDays, 1)} d, first window on day ${fmt(f.offsetDays, 1)}, in fertile phases only`)),
+    h("details", { class: "ui5-more" }, h("summary", {}, "Life stages (egg → ancient)"), lifeStages(g)));
 }
 
 /** The full profile page of one Genemon. */
@@ -250,5 +311,5 @@ export function renderGenemonSheet(app: App, g: Genemon): HTMLElement {
     senses(g),
     digestion(g),
     scars(g),
-    evolution(g));
+    evolution(g, ph));
 }

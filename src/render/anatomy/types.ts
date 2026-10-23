@@ -32,6 +32,8 @@ export interface BodyParts {
   wings: THREE.Mesh[];
   /** Triangle count of everything built (measured, for the QA snapshot). */
   triangles: number;
+  /** Pass 6: extra materials the builder created (the maw's throat), to dispose with the creature. */
+  materials?: THREE.Material[];
 }
 
 export interface FaceParts {
