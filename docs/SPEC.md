@@ -13,6 +13,25 @@ evidence (a test name, a harness number, a capture file). Numbers come from the 
 Last updated: 2026-10-22 (pass 4; section P4 below). Measurements: `artifacts/balance/REPORT.md`, `artifacts/scenarios/`,
 `artifacts/qa/round-2/REPORT.md` (when written), `docs/EVIDENCE.md`.
 
+## P6 - Pass 6 (founder's request of 2026-10-23, decoded in `docs/team/PASS6-BRIEF.md`)
+
+Browser evidence: `tools/p6shots.ts` (showcase from REAL seeds via `tools/p6showcase.ts`, `artifacts/qa/p6-show3/`),
+`tools/p5probe.ts` 19/19 + `tools/p5life.ts` 7/7 on the pass-6 build (`artifacts/qa/p6-r2/`), `tools/p5gaps.ts` 0 floating.
+
+| id | requirement | bound | owner | status |
+|---|---|---|---|---|
+| P6-C1 | Complexity spectrum: minimal globe -> mythic colossus | globe = blob, 1 eye, 2 colours, no limbs/tail/coat, capped at S (1 slot), no part unlocks; colossus = XXL (6 slots) with 2-3 wing pairs, 2-3 arm pairs, 4-12 tentacles, 2 mouths, 6-8 eyes | `src/genome/complexity.ts`, `skeleton.ts`, `anatomy/*`, `phenotype.ts` caps | TESTED; LIVE: globe seen (one sphere, one eye, two colours), quadruped colossus seen (4 arms with hands, tentacles, 2 mouths) |
+| P6-C2 | Rarity follows complexity | minimal 6.5 %, common = median, mythic 1/1516, colossal 1/4695 (wild); XXL only for colossi (0 non-colossal XXL in 20000 adults; 120/120 colossus x age checks XXL) | `complexity.ts`, `phenotype.ts` | TESTED + MEASURED |
+| P6-B1 | A good six beats a lone colossus; a poor six loses | pooled six win rate poor 32 % / median 48 % / good 69 % (held-out 35 / 52 / 69 %) at XXL budget 5.0 | `battle.ts` colossus traits + focus fire, `sizeBudget.ts` | MEASURED `deno task batch 48`; 4 of 9 level x quality cells outside their band (L10 poor 21 %, L25 good 77 %, L50 poor 46 %, L50 good 71 %) |
+| P6-B2 | Batches with brackets; archetype balance (P5-1) | levels 10/25/50 x poor/median/good, Wilson CIs; archetypes 38-60 % overall, no flag | `src/sim/batch.ts`, `tools/batch.ts`, Batch screen | MEASURED; Sensory and Swarm have no SIGNIFICANT counter yet |
+| P6-E1/E2 | Evolution plans and XP curves per lineage | static 12 %, gradual 70 %, metamorphosis 9 %, molt 9 %; phases median 3 (1: 12 %, 6: 2.6 %); curves short / normal / long 25 / 50 / 25 % | `src/genome/evolution.ts`, `epigenetics.ts` | TESTED |
+| P6-E3/E4 | Phase unlocks; larva -> cocoon -> imago; molts | cumulative unlocks; cocoon cannot fight / rank / breed | `evolution.ts`, `skeleton.ts`, `body.ts`, `lifeclock.canFight` | TESTED; LIVE: cocoon seen standing closed; imago with wings |
+| P6-E5 | Fertility windows | breed refused outside a window, with the reason | `evolution.fertileNow`, `genemon.canBreed`, Lab breed button | TESTED |
+| P6-R1 | Old Genemon never die: Prime vs Eternal | Prime: level cap 50, no unborn / cocoon / past-prime; Eternal: everyone born; separate ratings | `src/ladder/leagues.ts`, `ladderStore.ts`, `app.startRanked` | TESTED; browser (lane copy): ancient benched in Prime, fought in Eternal, ratings moved separately |
+| P6-R2 | Cleaner ranked UI | one Ranked control (league toggle + start + tier + eligibility chips) on Home and Arena; two ladders side by side | `src/ui/rankedPanel.ts`, `screens/{home,arena,ladder}.ts` | LIVE (Home capture, vision: clean, no overlap) |
+| P6-K1 | Primary / secondary / tertiary colours | element hue locked (+-8 deg); schemes analogous 31 % .. tetrad 4 %; harmony floor 0.65 (min 0.650, median 0.85); body lightness <= 0.78 | `src/genome/palette.ts`, `skin.ts`, `textures.ts`, `coat.ts` | TESTED; light-element bodies still glow strongly under bloom |
+| P6-N1 | Nature and nurture | 10 attractors; activities shift traits within 1 +- 0.35 with reasons ("Swimming x40 -> fins +21 %") | `src/genome/structure.ts`, `phenotype.nurture`, `helix.ts` | TESTED; the sheet does not list nurture reasons yet |
+
 ## P5 - Pass 5 (founder's second request of 2026-10-22, decoded in `docs/team/PASS5-BRIEF.md`)
 
 Browser evidence: `tools/p5probe.ts` (19/19, `artifacts/qa/p5-r2/`), `tools/p5life.ts` (7/7), `tools/p5gaps.ts`

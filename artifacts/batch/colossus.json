@@ -18,14 +18,14 @@
     {
      "level": 10,
      "bracket": "poor",
-     "wins": 3,
-     "losses": 45,
+     "wins": 10,
+     "losses": 38,
      "draws": 0,
      "n": 48,
-     "p": 0.0625,
-     "lo": 0.0215,
-     "hi": 0.1684,
-     "medianDuration": 34.183333333333955,
+     "p": 0.2083,
+     "lo": 0.1173,
+     "hi": 0.3426,
+     "medianDuration": 38.200000000000394,
      "timeouts": 0,
      "quality": {
       "score": 0.22006911764705883,
@@ -35,21 +35,21 @@
       "diversity": 0.16666666666666677,
       "kit": 0.37279874727668844
      },
-     "synergies": 0.041666666666666664,
-     "sixSurvivors": 3.3333333333333335,
+     "synergies": 0.22916666666666666,
+     "sixSurvivors": 3.8,
      "inBand": false
     },
     {
      "level": 10,
      "bracket": "median",
-     "wins": 9,
-     "losses": 39,
+     "wins": 21,
+     "losses": 27,
      "draws": 0,
      "n": 48,
-     "p": 0.1875,
-     "lo": 0.1019,
-     "hi": 0.3194,
-     "medianDuration": 39.76666666666697,
+     "p": 0.4375,
+     "lo": 0.307,
+     "hi": 0.5773,
+     "medianDuration": 37.25000000000045,
      "timeouts": 0,
      "quality": {
       "score": 0.5619611928104574,
@@ -59,21 +59,21 @@
       "diversity": 0.9062500000000003,
       "kit": 0.3737227668845316
      },
-     "synergies": 0.08333333333333333,
-     "sixSurvivors": 3.111111111111111,
+     "synergies": 0.6666666666666666,
+     "sixSurvivors": 4.095238095238095,
      "inBand": false
     },
     {
      "level": 10,
      "bracket": "good",
-     "wins": 14,
-     "losses": 34,
+     "wins": 28,
+     "losses": 20,
      "draws": 0,
      "n": 48,
-     "p": 0.2917,
-     "lo": 0.1824,
-     "hi": 0.4318,
-     "medianDuration": 36.9333333333338,
+     "p": 0.5833,
+     "lo": 0.4428,
+     "hi": 0.7115,
+     "medianDuration": 31.716666666667393,
      "timeouts": 0,
      "quality": {
       "score": 0.7297958537581697,
@@ -83,24 +83,24 @@
       "diversity": 0.84375,
       "kit": 0.38093069172113286
      },
-     "synergies": 0.8958333333333334,
-     "sixSurvivors": 4.428571428571429,
-     "inBand": false
+     "synergies": 1.5625,
+     "sixSurvivors": 4.178571428571429,
+     "inBand": true
     }
    ],
    [
     {
      "level": 25,
      "bracket": "poor",
-     "wins": 6,
-     "losses": 41,
-     "draws": 1,
-     "n": 47,
-     "p": 0.1277,
-     "lo": 0.0598,
-     "hi": 0.2517,
-     "medianDuration": 41.31666666666688,
-     "timeouts": 1,
+     "wins": 14,
+     "losses": 34,
+     "draws": 0,
+     "n": 48,
+     "p": 0.2917,
+     "lo": 0.1824,
+     "hi": 0.4318,
+     "medianDuration": 41.91666666666685,
+     "timeouts": 0,
      "quality": {
       "score": 0.1480289011437909,
       "synergy": 0.052083333333333336,
@@ -109,21 +109,21 @@
       "diversity": 0.16666666666666677,
       "kit": 0.4035260076252724
      },
-     "synergies": 0.1875,
-     "sixSurvivors": 4.5,
-     "inBand": false
+     "synergies": 0.3541666666666667,
+     "sixSurvivors": 4.214285714285714,
+     "inBand": true
     },
     {
      "level": 25,
      "bracket": "median",
-     "wins": 12,
-     "losses": 36,
+     "wins": 23,
+     "losses": 25,
      "draws": 0,
      "n": 48,
-     "p": 0.25,
-     "lo": 0.1492,
-     "hi": 0.3878,
-     "medianDuration": 46.799999999999905,
+     "p": 0.4792,
+     "lo": 0.3447,
+     "hi": 0.6167,
+     "medianDuration": 43.63333333333342,
      "timeouts": 0,
      "quality": {
       "score": 0.556983190359477,
@@ -133,21 +133,21 @@
       "diversity": 0.8854166666666666,
       "kit": 0.414031454248366
      },
-     "synergies": 0.25,
-     "sixSurvivors": 3.4166666666666665,
-     "inBand": false
+     "synergies": 0.8958333333333334,
+     "sixSurvivors": 4.260869565217392,
+     "inBand": true
     },
     {
      "level": 25,
      "bracket": "good",
-     "wins": 25,
-     "losses": 23,
+     "wins": 37,
+     "losses": 11,
      "draws": 0,
      "n": 48,
-     "p": 0.5208,
-     "lo": 0.3833,
-     "hi": 0.6553,
-     "medianDuration": 44.06666666666673,
+     "p": 0.7708,
+     "lo": 0.6346,
+     "hi": 0.8669,
+     "medianDuration": 35.1833333333339,
      "timeouts": 0,
      "quality": {
       "score": 0.7499853553921567,
@@ -157,8 +157,8 @@
       "diversity": 0.8194444444444443,
       "kit": 0.42756440631808273
      },
-     "synergies": 1.3125,
-     "sixSurvivors": 4.16,
+     "synergies": 2.2916666666666665,
+     "sixSurvivors": 4.594594594594595,
      "inBand": false
     }
    ],
@@ -166,15 +166,15 @@
     {
      "level": 50,
      "bracket": "poor",
-     "wins": 15,
-     "losses": 33,
+     "wins": 22,
+     "losses": 26,
      "draws": 0,
      "n": 48,
-     "p": 0.3125,
-     "lo": 0.1995,
-     "hi": 0.4533,
-     "medianDuration": 46.133333333333276,
-     "timeouts": 1,
+     "p": 0.4583,
+     "lo": 0.3258,
+     "hi": 0.5971,
+     "medianDuration": 43.916666666666735,
+     "timeouts": 0,
      "quality": {
       "score": 0.19506376633986924,
       "synergy": 0.08854166666666667,
@@ -183,21 +183,21 @@
       "diversity": 0.16666666666666677,
       "kit": 0.6424389978213508
      },
-     "synergies": 0.375,
-     "sixSurvivors": 3.933333333333333,
-     "inBand": true
+     "synergies": 0.6041666666666666,
+     "sixSurvivors": 4.5,
+     "inBand": false
     },
     {
      "level": 50,
      "bracket": "median",
-     "wins": 14,
-     "losses": 34,
+     "wins": 25,
+     "losses": 23,
      "draws": 0,
      "n": 48,
-     "p": 0.2917,
-     "lo": 0.1824,
-     "hi": 0.4318,
-     "medianDuration": 50.63333333333302,
+     "p": 0.5208,
+     "lo": 0.3833,
+     "hi": 0.6553,
+     "medianDuration": 47.98333333333317,
      "timeouts": 0,
      "quality": {
       "score": 0.6047435049019606,
@@ -207,21 +207,21 @@
       "diversity": 0.875,
       "kit": 0.6548872549019609
      },
-     "synergies": 0.375,
-     "sixSurvivors": 3.357142857142857,
-     "inBand": false
+     "synergies": 0.8958333333333334,
+     "sixSurvivors": 3.84,
+     "inBand": true
     },
     {
      "level": 50,
      "bracket": "good",
-     "wins": 20,
-     "losses": 28,
+     "wins": 34,
+     "losses": 14,
      "draws": 0,
      "n": 48,
-     "p": 0.4167,
-     "lo": 0.2885,
-     "hi": 0.5572,
-     "medianDuration": 52.26666666666626,
+     "p": 0.7083,
+     "lo": 0.5682,
+     "hi": 0.8176,
+     "medianDuration": 43.800000000000075,
      "timeouts": 0,
      "quality": {
       "score": 0.7912383578431376,
@@ -231,8 +231,8 @@
       "diversity": 0.8298611111111113,
       "kit": 0.6771214596949892
      },
-     "synergies": 1.1041666666666667,
-     "sixSurvivors": 4.2,
+     "synergies": 1.9583333333333333,
+     "sixSurvivors": 4.205882352941177,
      "inBand": false
     }
    ]
@@ -241,15 +241,15 @@
    {
     "level": 0,
     "bracket": "poor",
-    "wins": 24,
-    "losses": 119,
-    "draws": 1,
-    "n": 143,
-    "p": 0.1678,
-    "lo": 0.1155,
-    "hi": 0.2376,
-    "medianDuration": 39.76666666666697,
-    "timeouts": 2,
+    "wins": 46,
+    "losses": 98,
+    "draws": 0,
+    "n": 144,
+    "p": 0.3194,
+    "lo": 0.2488,
+    "hi": 0.3994,
+    "medianDuration": 41.33333333333355,
+    "timeouts": 0,
     "quality": {
      "score": 0.187720595043573,
      "synergy": 0.06944444444444445,
@@ -258,21 +258,21 @@
      "diversity": 0.16666666666666677,
      "kit": 0.4729212509077706
     },
-    "synergies": 0.2013888888888889,
-    "sixSurvivors": 4,
-    "inBand": false
+    "synergies": 0.3958333333333333,
+    "sixSurvivors": 4.260869565217392,
+    "inBand": true
    },
    {
     "level": 0,
     "bracket": "median",
-    "wins": 35,
-    "losses": 109,
+    "wins": 69,
+    "losses": 75,
     "draws": 0,
     "n": 144,
-    "p": 0.2431,
-    "lo": 0.1803,
-    "hi": 0.3192,
-    "medianDuration": 44.5166666666667,
+    "p": 0.4792,
+    "lo": 0.3992,
+    "hi": 0.5602,
+    "medianDuration": 41.466666666666875,
     "timeouts": 0,
     "quality": {
      "score": 0.5745626293572984,
@@ -282,21 +282,21 @@
      "diversity": 0.8888888888888888,
      "kit": 0.4808804920116195
     },
-    "synergies": 0.2361111111111111,
-    "sixSurvivors": 3.3142857142857145,
-    "inBand": false
+    "synergies": 0.8194444444444444,
+    "sixSurvivors": 4.057971014492754,
+    "inBand": true
    },
    {
     "level": 0,
     "bracket": "good",
-    "wins": 59,
-    "losses": 85,
+    "wins": 99,
+    "losses": 45,
     "draws": 0,
     "n": 144,
-    "p": 0.4097,
-    "lo": 0.3328,
-    "hi": 0.4914,
-    "medianDuration": 41.80000000000019,
+    "p": 0.6875,
+    "lo": 0.6078,
+    "hi": 0.7575,
+    "medianDuration": 36.66666666666715,
     "timeouts": 0,
     "quality": {
      "score": 0.7570065223311546,
@@ -306,13 +306,13 @@
      "diversity": 0.8310185185185186,
      "kit": 0.4952055192447349
     },
-    "synergies": 1.1041666666666667,
-    "sixSurvivors": 4.237288135593221,
-    "inBand": false
+    "synergies": 1.9375,
+    "sixSurvivors": 4.343434343434343,
+    "inBand": true
    }
   ],
   "battles": 432,
-  "draws": 1,
+  "draws": 0,
   "colossusBuild": {
    "built": 144,
    "missedClass": 0,
@@ -325,20 +325,17 @@
    "strengthSum": 8352
   },
   "verdict": {
-   "goodBeatsColossus": false,
+   "goodBeatsColossus": true,
    "poorLosesToColossus": true,
-   "medianBalanced": false,
+   "medianBalanced": true,
    "allInBand": false
   },
   "flags": [
-   "L10 poor: six win 6% outside 25%-40% (n=48)",
-   "L10 median: six win 19% outside 45%-55% (n=48)",
-   "L10 good: six win 29% outside 55%-70% (n=48)",
-   "L25 poor: six win 13% outside 25%-40% (n=47)",
-   "L25 median: six win 25% outside 45%-55% (n=48)",
-   "L25 good: six win 52% outside 55%-70% (n=48)",
-   "L50 median: six win 29% outside 45%-55% (n=48)",
-   "L50 good: six win 42% outside 55%-70% (n=48)"
+   "L10 poor: six win 21% outside 25%-40% (n=48)",
+   "L10 median: six win 44% outside 45%-55% (n=48)",
+   "L25 good: six win 77% outside 55%-70% (n=48)",
+   "L50 poor: six win 46% outside 25%-40% (n=48)",
+   "L50 good: six win 71% outside 55%-70% (n=48)"
   ]
  },
  "heldOut": {
@@ -359,14 +356,14 @@
     {
      "level": 10,
      "bracket": "poor",
-     "wins": 2,
-     "losses": 46,
+     "wins": 10,
+     "losses": 38,
      "draws": 0,
      "n": 48,
-     "p": 0.0417,
-     "lo": 0.0115,
-     "hi": 0.1398,
-     "medianDuration": 35.50000000000055,
+     "p": 0.2083,
+     "lo": 0.1173,
+     "hi": 0.3426,
+     "medianDuration": 38.06666666666707,
      "timeouts": 0,
      "quality": {
       "score": 0.2289764705882353,
@@ -376,21 +373,21 @@
       "diversity": 0.16666666666666677,
       "kit": 0.37488943355119814
      },
-     "synergies": 0.0625,
-     "sixSurvivors": 4,
+     "synergies": 0.22916666666666666,
+     "sixSurvivors": 3,
      "inBand": false
     },
     {
      "level": 10,
      "bracket": "median",
-     "wins": 5,
-     "losses": 43,
+     "wins": 19,
+     "losses": 29,
      "draws": 0,
      "n": 48,
-     "p": 0.1042,
-     "lo": 0.0453,
-     "hi": 0.2217,
-     "medianDuration": 34.66666666666726,
+     "p": 0.3958,
+     "lo": 0.2702,
+     "hi": 0.5369,
+     "medianDuration": 41.30000000000022,
      "timeouts": 0,
      "quality": {
       "score": 0.5394709967320261,
@@ -400,21 +397,21 @@
       "diversity": 0.8784722222222222,
       "kit": 0.37425108932461876
      },
-     "synergies": 0.08333333333333333,
-     "sixSurvivors": 3.4,
+     "synergies": 0.625,
+     "sixSurvivors": 3.8947368421052633,
      "inBand": false
     },
     {
      "level": 10,
      "bracket": "good",
-     "wins": 17,
-     "losses": 31,
+     "wins": 26,
+     "losses": 22,
      "draws": 0,
      "n": 48,
-     "p": 0.3542,
-     "lo": 0.2343,
-     "hi": 0.4956,
-     "medianDuration": 35.96666666666719,
+     "p": 0.5417,
+     "lo": 0.4029,
+     "hi": 0.6742,
+     "medianDuration": 33.66666666666732,
      "timeouts": 0,
      "quality": {
       "score": 0.7321233660130719,
@@ -424,8 +421,8 @@
       "diversity": 0.8333333333333331,
       "kit": 0.3808224400871459
      },
-     "synergies": 0.8333333333333334,
-     "sixSurvivors": 3.4705882352941178,
+     "synergies": 1.4583333333333333,
+     "sixSurvivors": 4.076923076923077,
      "inBand": false
     }
    ],
@@ -433,15 +430,15 @@
     {
      "level": 25,
      "bracket": "poor",
-     "wins": 9,
-     "losses": 39,
+     "wins": 19,
+     "losses": 29,
      "draws": 0,
      "n": 48,
-     "p": 0.1875,
-     "lo": 0.1019,
-     "hi": 0.3194,
-     "medianDuration": 37.70000000000042,
-     "timeouts": 1,
+     "p": 0.3958,
+     "lo": 0.2702,
+     "hi": 0.5369,
+     "medianDuration": 40.90000000000024,
+     "timeouts": 0,
      "quality": {
       "score": 0.17430316584967318,
       "synergy": 0.06770833333333333,
@@ -450,21 +447,21 @@
       "diversity": 0.16666666666666677,
       "kit": 0.4125998093681917
      },
-     "synergies": 0.22916666666666666,
-     "sixSurvivors": 4,
-     "inBand": false
+     "synergies": 0.4375,
+     "sixSurvivors": 4.052631578947368,
+     "inBand": true
     },
     {
      "level": 25,
      "bracket": "median",
-     "wins": 14,
-     "losses": 34,
+     "wins": 30,
+     "losses": 18,
      "draws": 0,
      "n": 48,
-     "p": 0.2917,
-     "lo": 0.1824,
-     "hi": 0.4318,
-     "medianDuration": 47.51666666666653,
+     "p": 0.625,
+     "lo": 0.4836,
+     "hi": 0.7478,
+     "medianDuration": 43.36666666666677,
      "timeouts": 0,
      "quality": {
       "score": 0.5507559232026144,
@@ -474,22 +471,22 @@
       "diversity": 0.8958333333333336,
       "kit": 0.4170765250544663
      },
-     "synergies": 0.5833333333333334,
-     "sixSurvivors": 4.142857142857143,
+     "synergies": 1.0833333333333333,
+     "sixSurvivors": 3.933333333333333,
      "inBand": false
     },
     {
      "level": 25,
      "bracket": "good",
-     "wins": 26,
-     "losses": 22,
+     "wins": 37,
+     "losses": 11,
      "draws": 0,
      "n": 48,
-     "p": 0.5417,
-     "lo": 0.4029,
-     "hi": 0.6742,
-     "medianDuration": 43.38333333333343,
-     "timeouts": 0,
+     "p": 0.7708,
+     "lo": 0.6346,
+     "hi": 0.8669,
+     "medianDuration": 33.85000000000064,
+     "timeouts": 1,
      "quality": {
       "score": 0.7491576388888889,
       "synergy": 0.9791666666666666,
@@ -498,8 +495,8 @@
       "diversity": 0.815972222222222,
       "kit": 0.4272546296296298
      },
-     "synergies": 1.5625,
-     "sixSurvivors": 4.1923076923076925,
+     "synergies": 2.2708333333333335,
+     "sixSurvivors": 4.324324324324325,
      "inBand": false
     }
    ],
@@ -507,14 +504,14 @@
     {
      "level": 50,
      "bracket": "poor",
-     "wins": 15,
-     "losses": 33,
+     "wins": 22,
+     "losses": 26,
      "draws": 0,
      "n": 48,
-     "p": 0.3125,
-     "lo": 0.1995,
-     "hi": 0.4533,
-     "medianDuration": 49.2333333333331,
+     "p": 0.4583,
+     "lo": 0.3258,
+     "hi": 0.5971,
+     "medianDuration": 45.91666666666662,
      "timeouts": 0,
      "quality": {
       "score": 0.18784236111111105,
@@ -524,22 +521,22 @@
       "diversity": 0.16666666666666677,
       "kit": 0.6469583333333333
      },
-     "synergies": 0.3541666666666667,
-     "sixSurvivors": 4.133333333333334,
-     "inBand": true
+     "synergies": 0.5416666666666666,
+     "sixSurvivors": 4.045454545454546,
+     "inBand": false
     },
     {
      "level": 50,
      "bracket": "median",
-     "wins": 13,
-     "losses": 35,
+     "wins": 26,
+     "losses": 22,
      "draws": 0,
      "n": 48,
-     "p": 0.2708,
-     "lo": 0.1657,
-     "hi": 0.41,
-     "medianDuration": 55.983333333332716,
-     "timeouts": 1,
+     "p": 0.5417,
+     "lo": 0.4029,
+     "hi": 0.6742,
+     "medianDuration": 50.266666666666374,
+     "timeouts": 0,
      "quality": {
       "score": 0.6087346405228758,
       "synergy": 0.6510416666666666,
@@ -548,21 +545,21 @@
       "diversity": 0.934027777777778,
       "kit": 0.6490874183006538
      },
-     "synergies": 0.2916666666666667,
-     "sixSurvivors": 3.230769230769231,
-     "inBand": false
+     "synergies": 0.625,
+     "sixSurvivors": 3.6538461538461537,
+     "inBand": true
     },
     {
      "level": 50,
      "bracket": "good",
-     "wins": 26,
-     "losses": 22,
-     "draws": 0,
-     "n": 48,
-     "p": 0.5417,
-     "lo": 0.4029,
-     "hi": 0.6742,
-     "medianDuration": 51.76666666666629,
+     "wins": 36,
+     "losses": 11,
+     "draws": 1,
+     "n": 47,
+     "p": 0.766,
+     "lo": 0.6278,
+     "hi": 0.864,
+     "medianDuration": 40.03333333333362,
      "timeouts": 1,
      "quality": {
       "score": 0.7958822916666666,
@@ -572,8 +569,8 @@
       "diversity": 0.8159722222222224,
       "kit": 0.6779884259259258
      },
-     "synergies": 1.1666666666666667,
-     "sixSurvivors": 3.6538461538461537,
+     "synergies": 2.375,
+     "sixSurvivors": 4.5,
      "inBand": false
     }
    ]
@@ -582,15 +579,15 @@
    {
     "level": 0,
     "bracket": "poor",
-    "wins": 26,
-    "losses": 118,
+    "wins": 51,
+    "losses": 93,
     "draws": 0,
     "n": 144,
-    "p": 0.1806,
-    "lo": 0.1263,
-    "hi": 0.2514,
-    "medianDuration": 38.91666666666702,
-    "timeouts": 1,
+    "p": 0.3542,
+    "lo": 0.2808,
+    "hi": 0.4351,
+    "medianDuration": 40.90000000000024,
+    "timeouts": 0,
     "quality": {
      "score": 0.19704066584967317,
      "synergy": 0.07118055555555555,
@@ -599,22 +596,22 @@
      "diversity": 0.16666666666666677,
      "kit": 0.478149192084241
     },
-    "synergies": 0.2152777777777778,
-    "sixSurvivors": 4.076923076923077,
-    "inBand": false
+    "synergies": 0.4027777777777778,
+    "sixSurvivors": 3.843137254901961,
+    "inBand": true
    },
    {
     "level": 0,
     "bracket": "median",
-    "wins": 32,
-    "losses": 112,
+    "wins": 75,
+    "losses": 69,
     "draws": 0,
     "n": 144,
-    "p": 0.2222,
-    "lo": 0.162,
-    "hi": 0.2968,
-    "medianDuration": 47.94999999999984,
-    "timeouts": 1,
+    "p": 0.5208,
+    "lo": 0.4398,
+    "hi": 0.6008,
+    "medianDuration": 44.28333333333338,
+    "timeouts": 0,
     "quality": {
      "score": 0.5663205201525054,
      "synergy": 0.6197916666666666,
@@ -623,22 +620,22 @@
      "diversity": 0.902777777777778,
      "kit": 0.4801383442265796
     },
-    "synergies": 0.3194444444444444,
-    "sixSurvivors": 3.65625,
-    "inBand": false
+    "synergies": 0.7777777777777778,
+    "sixSurvivors": 3.8266666666666667,
+    "inBand": true
    },
    {
     "level": 0,
     "bracket": "good",
-    "wins": 69,
-    "losses": 75,
-    "draws": 0,
-    "n": 144,
-    "p": 0.4792,
-    "lo": 0.3992,
-    "hi": 0.5602,
-    "medianDuration": 44.41666666666671,
-    "timeouts": 1,
+    "wins": 99,
+    "losses": 44,
+    "draws": 1,
+    "n": 143,
+    "p": 0.6923,
+    "lo": 0.6125,
+    "hi": 0.7621,
+    "medianDuration": 35.56666666666721,
+    "timeouts": 2,
     "quality": {
      "score": 0.7590544321895424,
      "synergy": 0.984375,
@@ -647,13 +644,13 @@
      "diversity": 0.8217592592592593,
      "kit": 0.4953551652142338
     },
-    "synergies": 1.1875,
-    "sixSurvivors": 3.8115942028985508,
-    "inBand": false
+    "synergies": 2.0347222222222223,
+    "sixSurvivors": 4.3232323232323235,
+    "inBand": true
    }
   ],
   "battles": 432,
-  "draws": 0,
+  "draws": 1,
   "colossusBuild": {
    "built": 144,
    "missedClass": 0,
@@ -666,20 +663,19 @@
    "strengthSum": 8352
   },
   "verdict": {
-   "goodBeatsColossus": false,
+   "goodBeatsColossus": true,
    "poorLosesToColossus": true,
-   "medianBalanced": false,
+   "medianBalanced": true,
    "allInBand": false
   },
   "flags": [
-   "L10 poor: six win 4% outside 25%-40% (n=48)",
-   "L10 median: six win 10% outside 45%-55% (n=48)",
-   "L10 good: six win 35% outside 55%-70% (n=48)",
-   "L25 poor: six win 19% outside 25%-40% (n=48)",
-   "L25 median: six win 29% outside 45%-55% (n=48)",
-   "L25 good: six win 54% outside 55%-70% (n=48)",
-   "L50 median: six win 27% outside 45%-55% (n=48)",
-   "L50 good: six win 54% outside 55%-70% (n=48)"
+   "L10 poor: six win 21% outside 25%-40% (n=48)",
+   "L10 median: six win 40% outside 45%-55% (n=48)",
+   "L10 good: six win 54% outside 55%-70% (n=48)",
+   "L25 median: six win 63% outside 45%-55% (n=48)",
+   "L25 good: six win 77% outside 55%-70% (n=48)",
+   "L50 poor: six win 46% outside 25%-40% (n=48)",
+   "L50 good: six win 77% outside 55%-70% (n=47)"
   ]
  }
 }

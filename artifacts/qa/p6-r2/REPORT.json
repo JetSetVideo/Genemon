@@ -1,0 +1,400 @@
+{
+  "checks": [
+    {
+      "name": "home view has several creatures",
+      "ok": true,
+      "detail": {
+        "n": 4,
+        "keys": [
+          "view",
+          "radius",
+          "ringStep",
+          "poleTop",
+          "quality",
+          "triangles",
+          "selected",
+          "actors"
+        ]
+      }
+    },
+    {
+      "name": "home panel no overflow",
+      "ok": true,
+      "detail": 0
+    },
+    {
+      "name": "home section titles on coloured bands",
+      "ok": true,
+      "detail": [
+        {
+          "t": "On the platform · 4 Gene",
+          "bg": "linear-gradient(90deg, color(srgb 0.607843 0.364706 0.898039",
+          "fam": "#9b5de5"
+        },
+        {
+          "t": "Quests · 3 active",
+          "bg": "linear-gradient(90deg, color(srgb 0.239216 0.862745 0.517647",
+          "fam": "#3ddc84"
+        },
+        {
+          "t": "Right now (real world)",
+          "bg": "linear-gradient(90deg, color(srgb 0.945098 0.356863 0.709804",
+          "fam": "#f15bb5"
+        },
+        {
+          "t": "Your team · 6/6 slots · ",
+          "bg": "linear-gradient(90deg, color(srgb 1 0.419608 0.207843 / 0.28",
+          "fam": "#ff6b35"
+        },
+        {
+          "t": "Ladder",
+          "bg": "linear-gradient(90deg, color(srgb 0.298039 0.788235 0.941176",
+          "fam": "#4cc9f0"
+        },
+        {
+          "t": "Collection by element",
+          "bg": "linear-gradient(90deg, color(srgb 1 0.819608 0.4 / 0.28), co",
+          "fam": "#ffd166"
+        }
+      ]
+    },
+    {
+      "name": "profile sheet sections",
+      "ok": true,
+      "detail": [
+        "Identity",
+        "Story",
+        "Character",
+        "Statistics",
+        "Attacks",
+        "Associated objects",
+        "Senses & resonance",
+        "Digestion",
+        "Scars · 0",
+        "Evolution"
+      ]
+    },
+    {
+      "name": "lab panel no overflow",
+      "ok": true,
+      "detail": 0
+    },
+    {
+      "name": "bag dock has a usable tile",
+      "ok": true,
+      "detail": {
+        "x": 1057.578125,
+        "y": 296.171875,
+        "title": "Wild berries (free) — drag onto the 3D view"
+      }
+    },
+    {
+      "name": "drop feeds (ledger genemon.feed +1)",
+      "ok": true,
+      "detail": {
+        "before": {
+          "stomach": 0,
+          "rows": 0
+        },
+        "rows": 1
+      }
+    },
+    {
+      "name": "food in the stomach",
+      "ok": true,
+      "detail": 1
+    },
+    {
+      "name": "effects popup shown",
+      "ok": true,
+      "detail": "Wild berries · common · PlantRimtusk ate Wild berriesBond +0.005mood +0.002 → joyfulStomach 1.0 / 4.9 · diet carnivore ×0.50digesting → hunger -0.075digesting → growth +0.004digesting → mood +0.049digesting → vitality +0.002digesting → mood +0.002"
+    },
+    {
+      "name": "egg view snapshot",
+      "ok": true,
+      "detail": [
+        "genemon",
+        "kind",
+        "phase",
+        "stability",
+        "strain",
+        "joints",
+        "triangles",
+        "feeding",
+        "feeds",
+        "life",
+        "gaze"
+      ]
+    },
+    {
+      "name": "fetus view snapshot",
+      "ok": true,
+      "detail": [
+        "genemon",
+        "kind",
+        "phase",
+        "stability",
+        "strain",
+        "joints",
+        "triangles",
+        "feeding",
+        "feeds",
+        "life",
+        "gaze"
+      ]
+    },
+    {
+      "name": "battle fighters carry a brain intent",
+      "ok": true,
+      "detail": [
+        {
+          "intent": "aggress",
+          "sees": 4,
+          "phase": "active",
+          "onScreen": {
+            "x0": 572,
+            "y0": 420,
+            "x1": 652,
+            "y1": 547,
+            "hPx": 127,
+            "inFront": true
+          }
+        },
+        {
+          "intent": "flank",
+          "sees": 5,
+          "phase": "active",
+          "onScreen": {
+            "x0": 1065,
+            "y0": 671,
+            "x1": 1241,
+            "y1": 1074,
+            "hPx": 403,
+            "inFront": true
+          }
+        },
+        {
+          "intent": "aggress",
+          "sees": 1,
+          "phase": "charge",
+          "onScreen": {
+            "x0": 307,
+            "y0": 494,
+            "x1": 398,
+            "y1": 604,
+            "hPx": 109,
+            "inFront": true
+          }
+        },
+        {
+          "intent": "aggress",
+          "sees": 2,
+          "phase": "rest",
+          "onScreen": {
+            "x0": 534,
+            "y0": 503,
+            "x1": 611,
+            "y1": 613,
+            "hPx": 110,
+            "inFront": true
+          }
+        }
+      ]
+    },
+    {
+      "name": "battle finishes",
+      "ok": true,
+      "detail": {
+        "t": 54.96666666666611,
+        "winner": 0,
+        "scars": 5
+      }
+    },
+    {
+      "name": "dex panel no overflow",
+      "ok": true,
+      "detail": 0
+    },
+    {
+      "name": "market panel no overflow",
+      "ok": true,
+      "detail": 0
+    },
+    {
+      "name": "batch panel no overflow",
+      "ok": true,
+      "detail": 0
+    },
+    {
+      "name": "settings panel no overflow",
+      "ok": true,
+      "detail": 0
+    },
+    {
+      "name": "world panel no overflow",
+      "ok": true,
+      "detail": 0
+    },
+    {
+      "name": "no console errors",
+      "ok": true,
+      "detail": []
+    }
+  ],
+  "errors": [],
+  "home": {
+    "view": "home",
+    "radius": 3.5,
+    "ringStep": 0.5,
+    "poleTop": 2.25,
+    "quality": "low",
+    "triangles": 33706,
+    "selected": null,
+    "actors": [
+      {
+        "id": "g-942b97a9-n17t",
+        "name": "Rimtusk",
+        "heightM": 0.865,
+        "standM": 0.911,
+        "radius": 0.926,
+        "state": "play",
+        "step": "hop",
+        "partner": "Shadplop",
+        "x": -1,
+        "z": -0.47,
+        "inPoleLane": false,
+        "tris": 6108
+      },
+      {
+        "id": "g-a377234e-9ym1",
+        "name": "Shadplop",
+        "heightM": 1.191,
+        "standM": 1.87,
+        "radius": 0.993,
+        "state": "play",
+        "step": "hop",
+        "partner": "Rimtusk",
+        "x": 0.36,
+        "z": 1.04,
+        "inPoleLane": false,
+        "tris": 6240
+      },
+      {
+        "id": "g-fa96ae46-bkd0",
+        "name": "Voltpede",
+        "heightM": 0.42,
+        "standM": 0.298,
+        "radius": 0.509,
+        "state": "walk",
+        "step": null,
+        "partner": null,
+        "x": 0.91,
+        "z": -0.66,
+        "inPoleLane": false,
+        "tris": 7834
+      },
+      {
+        "id": "g-649c1423-bmx8",
+        "name": "Fernmon",
+        "heightM": 0.428,
+        "standM": 0.558,
+        "radius": 0.142,
+        "state": "idle",
+        "step": null,
+        "partner": null,
+        "x": 0.19,
+        "z": -1.09,
+        "inPoleLane": false,
+        "tris": 13524
+      }
+    ]
+  },
+  "bsnap": {
+    "t": 5.333333333333324,
+    "fighters": [
+      {
+        "intent": "aggress",
+        "sees": 4,
+        "phase": "active",
+        "onScreen": {
+          "x0": 572,
+          "y0": 420,
+          "x1": 652,
+          "y1": 547,
+          "hPx": 127,
+          "inFront": true
+        }
+      },
+      {
+        "intent": "flank",
+        "sees": 5,
+        "phase": "active",
+        "onScreen": {
+          "x0": 1065,
+          "y0": 671,
+          "x1": 1241,
+          "y1": 1074,
+          "hPx": 403,
+          "inFront": true
+        }
+      },
+      {
+        "intent": "aggress",
+        "sees": 1,
+        "phase": "charge",
+        "onScreen": {
+          "x0": 307,
+          "y0": 494,
+          "x1": 398,
+          "y1": 604,
+          "hPx": 109,
+          "inFront": true
+        }
+      },
+      {
+        "intent": "aggress",
+        "sees": 2,
+        "phase": "rest",
+        "onScreen": {
+          "x0": 534,
+          "y0": 503,
+          "x1": 611,
+          "y1": 613,
+          "hPx": 110,
+          "inFront": true
+        }
+      },
+      {
+        "intent": "aggress",
+        "sees": 1,
+        "phase": "active",
+        "onScreen": {
+          "x0": 109,
+          "y0": 294,
+          "x1": 325,
+          "y1": 661,
+          "hPx": 367,
+          "inFront": true
+        }
+      },
+      {
+        "intent": "aggress",
+        "sees": 5,
+        "phase": "rest",
+        "onScreen": {
+          "x0": 1131,
+          "y0": 351,
+          "x1": 1180,
+          "y1": 470,
+          "hPx": 119,
+          "inFront": true
+        }
+      }
+    ]
+  },
+  "res": {
+    "t": 54.96666666666611,
+    "winner": 0,
+    "scars": 5
+  }
+}

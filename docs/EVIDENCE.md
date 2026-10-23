@@ -163,3 +163,36 @@ was re-run in the parent after integration, not copied from a lane report.
 - Integration choices: drag/Lab feeding goes through the stomach (`feedLife`), so food effects arrive as the life
   loop digests (shown as "digesting ->" lines); hatching starts at age 0 (egg); scars are applied after the fight
   from heavy hits (>= 25 % max HP, max 2 per Genemon), never inside the simulation.
+
+## Pass 6 (2026-10-23): six lanes integrated, measured by the orchestrator
+
+Lanes: genome-nature, evolution, colour, render-complex, balance, leagues (`docs/team/PASS6-BRIEF.md`). Every number
+re-run in the parent after integration.
+
+- Gates: `deno task check` clean; `deno lint` clean; `deno test`: **517 passed, 0 failed**.
+- Scenarios SC-01..06 PASS (SC-06 56.7 % [48-65] n=120; median 42.1 s).
+- Balance 72: 13/13 elements in band (Shadow 60 % .. Fire ~41 %); big vs swarm 53 / 50 / 47 %; draws 0/1440; median 38.3 s.
+- Complexity (genome-nature lane, re-checked here): minimal 6.5 %, mythic 1/1516, colossal 1/4695 wild.
+- **Integration defects found and fixed by measurement (real seeds, `tools/p6showcase.ts`):**
+  - a minimal globe evolved "tentacles+" and reached 1.52 m (L, 3 slots); 300/400 globes gained part unlocks and globe
+    sizes spread XS..XXL. Now: globes never gain parts, never molt / metamorphose, are capped at S, carry no coat
+    decorations -> 400/400 globes XS/S with 0 part unlocks; the globe's floating crystal shard is gone (worst mesh gap
+    7.3 % -> 0.8 % of height).
+  - 25 of 20000 NON-colossal adults were XXL (1 in 800, six times the colossus rate). XXL is now reserved for colossi:
+    0 non-colossal XXL in 20000; 120/120 colossus checks (40 colossi x 3 ages) are XXL.
+  - the balance lane had tuned on stand-in recipe colossi; with real colossi (bred-to-the-top complexity genomes,
+    `batch.ts colossalize`) the six won poor 10 / median 19 / good 49 % at budget 5.9. A sweep (5.9 / 5.2 / 4.8 / 4.4)
+    set XXL = 5.0: pooled poor 32 / median 48 / good 69 % (seed 5), 35 / 52 / 69 % (held-out 1005). Good beats the
+    colossus at every level and poor loses at every level; 4 of 9 level x quality cells remain outside their band.
+  - a light-element colossus rendered as a white silhouette: body lightness capped at 0.78 and self-glow damped on pale
+    bodies; it now reads pale yellow with shading, still very bright (quest P6-3).
+- Archetype matrix n=48: Fast 50, Powerful 60, Clever 49, Tank 57, Sensory 46, Swarm 38 % (pass 5: Powerful 68 %
+  dominant, Swarm 30 %); no flags; significant counters: Fast > Clever, Swarm; Powerful > Fast, Swarm; Clever > Tank;
+  Tank > Swarm, Powerful; Sensory and Swarm none (quest P6-2).
+- Browser: `tools/p5probe.ts` 19/19, `tools/p5life.ts` 7/7, `tools/p5gaps.ts` 0 floating meshes, 0 console errors;
+  showcase (`artifacts/qa/p6-show3/`): globe = one sphere, one eye, two colours; quadruped colossus = 4 arms with hands,
+  4 tentacles, 2 mouths, hooves + insect legs, nothing detached; cocoon = closed segmented pod standing on its base.
+  Skeleton check: hexapod colossus 3 wing pairs, 2 arm pairs, 9 tentacle segments, 6 eyes (vision undercounted them
+  in a crowded, bright frame). Home Ranked control: league toggle + start + tier + eligibility chips, no overlap.
+- Evolution distribution (lane, 20000 genomes): static 12.0 %, gradual 70.1 %, metamorphosis 9.0 %, molt 8.9 %;
+  phases 1..6 = 12.0 / 18.9 / 36.9 / 21.5 / 8.1 / 2.6 %.

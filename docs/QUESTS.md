@@ -18,6 +18,7 @@ Status: `DONE` · `NEXT` (ready) · `LATER` (blocked by a dependency) · `IDEA`.
 | Q5 | Render: creatures from skeletons, animator through constraints, arena view (ground recolouring, sky by hour/weather, particles), FX, broadcast camera, lab + genospace views | pass 1 |
 | Q6 | UI: screens tree, HUD, dark/light themes, profiles (Max + Claude), settings saved per profile, Data screen (ledger feed/export, charts, genospace, hardware, session) | pass 1 |
 | Q8 | Tools: scenarios, capture (multi-angle, devices, offline proof), balance harness | pass 1 |
+| P6 | Pass 6: complexity spectrum (globe -> XXL colossus) with rarity, nature/nurture attractors, evolution plans (1-6 phases, metamorphosis, molts, XP curves, fertility), 3-colour palettes, complex bodies (wing/arm pairs, tentacles, two mouths, many eyes, cocoon), colossus balance + brackets, Prime/Eternal leagues + one Ranked control | EVIDENCE pass 6; SPEC section P6 |
 | P5 | Pass 5: icons, drag-to-feed with effects, profile sheet, shaded panels, auction outcomes; egg + fetal spiral + growth bands + operators + viability; faces with sockets and 1-8 eyes, beaks, tongues; coats, countershading, cel, scars; slower fights, neural-shaped brain, perception; senses + resonance, digestion, circadian, aging, retirement, imprints; home platform with graduations; species Dex; test-demo controls; symmetric ranked maps + start slots; batch lab | EVIDENCE pass 5; SPEC section P5 |
 | P4 | Pass 4: Q/W/E/R kits (physical/special, body-part power, phase law, counters), bench formats + switching, gauntlet, Collection screen (team presets, Dex, Hatch), arena preview + dossier, morph helix, fused anatomy + manga faces + skin shaders, depth of field + camera menu, hybrids + strong foods + loot bag | EVIDENCE pass 4; SPEC section P4 |
 
@@ -47,6 +48,12 @@ Status: `DONE` · `NEXT` (ready) · `LATER` (blocked by a dependency) · `IDEA`.
 | P5-3 | Imprints from use: dragging gear / cosmetics (and repeated foods) calls `imprintItem`; the sheet lists them | imprint row in the ledger; inherited by a bred child | P5-G6 |
 | P5-4 | Cel shading judged by two reviewers on close-ups (`tools/p5close.ts`); eggs on the Home platform and in battle (eggs currently render as the creature there) | reviewers agree on toon bands + outline on 12/16 creatures | P5-V7, P5-V2 |
 | P5-5 | Battle camera still clips fighters at the frame edge (probe: one fighter at x0 = -193 px at 12 s) | quest C2 acceptance | C2 |
+
+| P6-1 | Colossus-vs-six per level: L10 poor 21 % (giant favoured when kits are melee-only), L25 good 77 %, L50 poor 46 % / good 71 % | every level x quality cell of `deno task batch 48` in its band on two seeds | P6-B1 |
+| P6-2 | Sensory and Swarm need a SIGNIFICANT counter (archetype rows are in band, but no 95 % win) | each archetype beats one other with a Wilson interval above 50 % | P6-B2 |
+| P6-3 | Light-element (pale, glowing) bodies lose their small parts under bloom at colossus scale | a light colossus close-up shows its arms, tentacles and eyes (vision + a luminance metric) | P6-K1 |
+| P6-4 | Show nurture reasons and the complexity tier / rarity on the Genemon sheet and in the Dex | sheet lists "Swimming x40 -> fins +21 %" and "mythic · 1 in 1500" | P6-N1, P6-C2 |
+| P6-5 | Colossi lean hexapod (~38 %); colossus tests use bred-to-the-top genomes (`batch.ts colossalize`) | kind spread of wild colossi within 10-30 % per kind | P6-C2 |
 
 ## Later
 
