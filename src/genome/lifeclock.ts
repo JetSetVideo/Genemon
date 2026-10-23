@@ -45,7 +45,7 @@ export const PHASE_DAYS: Record<LifePhase, number> = {
   ancient: 300,
 };
 /** Big creatures live longer (and develop slower). */
-export const SIZE_LIFESPAN: Record<SizeClass, number> = { XS: 0.7, S: 0.85, M: 1, L: 1.25, XL: 1.5 };
+export const SIZE_LIFESPAN: Record<SizeClass, number> = { XS: 0.7, S: 0.85, M: 1, L: 1.25, XL: 1.5, XXL: 1.8 };
 /** Level the evolution path expects at the start of each phase (xp cost). */
 export const PHASE_LEVEL: Record<LifePhase, number> = {
   egg: 1,

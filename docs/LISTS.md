@@ -371,7 +371,8 @@ A team holds 6 slots. *Parity budget* is the power budget a lone body needs to t
 | `S` | 1 | 1 | 1 | 45 | 1 | 1 |
 | `M` | 2 | 2 | 1 | 260 | 1.732 | 1.155 |
 | `L` | 3 | 2.9 | 0.967 | 1100 | 2.449 | 1.184 |
-| `XL` | 4 | 3.9 | 0.975 | inf | 3.162 | 1.233 |
+| `XL` | 4 | 3.9 | 0.975 | 6000 | 3.162 | 1.233 |
+| `XXL` | 6 | 5.6 | 0.933 | inf | 4.583 | 1.222 |
 <!-- /GEN:sizes -->
 
 **Expand.** `SIZE_CLASSES`, `SLOT_COST`, `POWER_BUDGET`, `MASS_THRESHOLDS` in `phenotype.ts`; then re-run SC-11 and SC-14.
@@ -406,7 +407,8 @@ Census: 20000 wild genomes (randomGenome(1..20000), level 5, age 13.5 d, no life
 | `S` | 46.9% | 91.3 | 91.3 |
 | `M` | 33.4% | 182.6 | 91.3 |
 | `L` | 6.6% | 265.0 | 88.3 |
-| `XL` | 0.5% | 355.7 | 88.9 |
+| `XL` | 0.5% | 355.8 | 88.9 |
+| `XXL` | 0.0% | 503.0 | 83.8 |
 
 Abilities overall: fly 16.9%, phaseShift 24.7%, swim 26.4%, dig 22.5%, weatherShaper 10.4%, terraformer 1.0%.
 <!-- /GEN:census -->

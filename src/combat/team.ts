@@ -1,5 +1,5 @@
 /**
- * Teams: 6 slots; a Genemon costs slots by size class (XS/S 1, M 2, L 3, XL 4) so the strongest,
+ * Teams: 6 slots; a Genemon costs slots by size class (XS/S 1, M 2, L 3, XL 4, XXL 6 = a lone colossus) so the strongest,
  * biggest monsters crowd out the roster. Member ORDER is the attack/initiative order. Synergies are
  * computed from element pairs, psyche and body mixes and become battle modifiers.
  */

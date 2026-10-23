@@ -131,6 +131,8 @@ export interface MorphHelix {
   /** Min/max envelopes of every animation channel. */
   anim: Record<AnimChannel, BoundTrait>;  /** Pass-5 genes (eyes 1..8 and shapes, beaks, growth envelope, operators, coat). Absent = P5_DEFAULTS. */
   p5?: MorphP5;
+  /** Pass-6: complexity profile and body counts (src/genome/complexity.ts). Absent = derive / pass-5 look. */
+  p6?: import("./p6Types.ts").MorphP6;
 }
 
 // ====================================================================== PASS 5 CONTRACT (types only)

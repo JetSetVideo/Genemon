@@ -16,17 +16,11 @@ import { type Conditions, epigeneticShift, growthOf, levelOf } from "./epigeneti
 import { type BodyKind, geneticAxes, type Genome, type PatternKind, PLAN_GENES, type PlanGene, planValue } from "./genome.ts";
 import { hashSeed, Rng } from "../core/rng.ts";
 import { identityOfPhenotype } from "../data/hybrids.ts";
+import type { EvoState, NurtureState, Palette3 } from "./p6Types.ts";
 
-export const SIZE_CLASSES = ["XS", "S", "M", "L", "XL"] as const;
-export type SizeClass = typeof SIZE_CLASSES[number];
-export const SLOT_COST: Record<SizeClass, number> = { XS: 1, S: 1, M: 2, L: 3, XL: 4 };
-/**
- * Relative combat-power budget per class. Per-slot parity is the target ([SPEC B3]: big vs swarm at
- * equal slots within 35-65%, measured by tools/balance.ts); big bodies get slightly less than 1.0
- * per slot because they also hit harder in contact, cleave in melee and shrug off knockback.
- */
-export const POWER_BUDGET: Record<SizeClass, number> = { XS: 0.85, S: 1, M: 2, L: 2.9, XL: 3.9 };
-export const MASS_THRESHOLDS: Record<Exclude<SizeClass, "XL">, number> = { XS: 6, S: 45, M: 260, L: 1100 };
+export { POWER_BUDGET, SIZE_CLASSES, type SizeClass, SLOT_COST } from "../data/sizeBudget.ts";
+import { POWER_BUDGET, type SizeClass, SLOT_COST } from "../data/sizeBudget.ts";
+export const MASS_THRESHOLDS: Record<Exclude<SizeClass, "XXL">, number> = { XS: 6, S: 45, M: 260, L: 1100, XL: 6000 };
 
 export interface Stats {
   hp: number;
@@ -125,6 +119,10 @@ export interface Phenotype {
   offense: { physical: number; special: number };
   /** Physical / special split of the guard (higher = takes less), geometric mean 1: hard, heavy hides vs wise, vital minds. */
   guard: { physical: number; special: number };
+  /** Pass 6 (optional, filled by express when the producers exist): evolution phase, nurture shifts, 3-colour palette. */
+  evo?: EvoState;
+  nurture?: NurtureState;
+  palette3?: Palette3;
 }
 
 const SHAPE_K: Record<BodyKind, number> = { quadruped: 0.16, biped: 0.09, hexapod: 0.1, serpent: 0.07, avian: 0.07, blob: 0.22 };
@@ -265,7 +263,8 @@ function sizeClassOf(mass: number): SizeClass {
   if (mass < MASS_THRESHOLDS.S) return "S";
   if (mass < MASS_THRESHOLDS.M) return "M";
   if (mass < MASS_THRESHOLDS.L) return "L";
-  return "XL";
+  if (mass < MASS_THRESHOLDS.XL) return "XL";
+  return "XXL";
 }
 
 /** Reference energy regeneration (per second) at which regen is neutral in the power index. */

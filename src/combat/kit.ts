@@ -119,8 +119,8 @@ const AURA_SLOPE = 0.4;
 /** 1 + slope x (x - population mean), clamped to the band. */
 const lin = (x: number, mean: number, slope: number) => clamp(1 + slope * (x - mean), BAND_LO, BAND_HI);
 /** Population reference mass (kg, geometric mean per class, 400 random level-35 Genemon). */
-export const MASS_REF: Record<SizeClass, number> = { XS: 2.7, S: 21, M: 104, L: 430, XL: 2050 };
-export const HEIGHT_REF: Record<SizeClass, number> = { XS: 0.4, S: 0.69, M: 1.07, L: 1.49, XL: 2.29 };
+export const MASS_REF: Record<SizeClass, number> = { XS: 2.7, S: 21, M: 104, L: 430, XL: 2050, XXL: 9000 };
+export const HEIGHT_REF: Record<SizeClass, number> = { XS: 0.4, S: 0.69, M: 1.07, L: 1.49, XL: 2.29, XXL: 3.8 };
 
 /**
  * Power multiplier in [0.7, 1.35] from the body part that delivers the move. Plan genes have a
@@ -188,7 +188,7 @@ export function learnCheck(m: Move, ph: Phenotype, helix?: MorphHelix): { ok: bo
   // Size.
   const small = ph.sizeClass === "XS" || ph.sizeClass === "S";
   if (cat === "physical" && part === "mass" && small && (m.tags.includes("massScaled") || m.power >= 75)) reasons.push("too small (needs M+)");
-  if (m.shape === "dash" && ph.sizeClass === "XL" && part !== "mass") reasons.push("too big to dash (XL)");
+  if (m.shape === "dash" && (ph.sizeClass === "XL" || ph.sizeClass === "XXL") && part !== "mass") reasons.push(`too big to dash (${ph.sizeClass})`);
   if (m.shape === "cone" && part === "mouth" && ph.kind === "blob" && ph.plan.jaw < 0.4) reasons.push("no jaw to breathe from");
   // Energy.
   if (slot === "ultimate" && ph.stats.regen < ULTIMATE_REGEN) reasons.push(`not enough energy (regen ${ph.stats.regen.toFixed(1)} < ${ULTIMATE_REGEN})`);

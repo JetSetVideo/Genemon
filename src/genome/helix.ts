@@ -451,7 +451,7 @@ const TOOTH_LEN: Record<TeethKind, [number, number]> = {
 function mouthOf(m: MorphAlleles, ph: Phenotype): MouthGenes {
   const a = ph.axes, prim = ph.elements.primary, kind = ph.kind;
   const pos = (v: number) => Math.max(0, v);
-  const big = ph.sizeClass === "L" || ph.sizeClass === "XL";
+  const big = ph.sizeClass === "L" || ph.sizeClass === "XL" || ph.sizeClass === "XXL";
   const w = [
     kind === "blob" ? 3.0 : 0.12, // none
     0.3 + 1.2 * pos(a.temper) + 0.8 * ph.plan.jaw, // fangs
@@ -776,7 +776,7 @@ function bodyP5(m: MorphAlleles, ph: Phenotype, fractalDepth: number, chaos: num
   };
   const hg = recessive(m, "p5.hump", 0.65 - 0.2 * pos(a.weight) - 0.1 * pos(a.might));
   if (limbed && hg >= 0) shoulder.hump = r3(0.15 + 0.85 * hg);
-  const big = ph.sizeClass === "L" || ph.sizeClass === "XL";
+  const big = ph.sizeClass === "L" || ph.sizeClass === "XL" || ph.sizeClass === "XXL";
   const shape = pickBy(TAILS, [
     1.0, // taper
     1.6 * (has("earth") + has("metal")) + 0.8 * pos(a.hardness) * pos(a.might) + (kind === "quadruped" && big ? 0.4 : 0), // club

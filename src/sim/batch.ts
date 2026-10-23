@@ -113,9 +113,9 @@ export const WEAK_ROW = 0.35;
 /** A cell needs this many decisive battles before it can be flagged. */
 export const MIN_FLAG_N = 4;
 
-const STATURE_GUESS: Record<SizeClass, number> = { XS: -0.85, S: -0.5, M: 0.05, L: 0.55, XL: 0.85 };
+const STATURE_GUESS: Record<SizeClass, number> = { XS: -0.85, S: -0.5, M: 0.05, L: 0.55, XL: 0.85, XXL: 1 };
 const STATURES = Array.from({ length: 20 }, (_, i) => -0.95 + i * 0.1);
-const CLASS_FOR_SLOTS: Record<number, SizeClass> = { 1: "S", 2: "M", 3: "L", 4: "XL" };
+const CLASS_FOR_SLOTS: Record<number, SizeClass> = { 1: "S", 2: "M", 3: "L", 4: "XL", 6: "XXL" };
 
 /**
  * The archetype as a GenomeBias crossed with an element: the element signature at 0.8, then the

@@ -23,7 +23,7 @@ import { wilsonLike } from "./_stats.ts";
 const SEEDS = Number(Deno.args[0] ?? 10);
 const t0 = performance.now();
 const EL = ELEMENT_IDS.filter((e) => e !== "neutral");
-const STATURE_GUESS: Record<SizeClass, number> = { XS: -0.85, S: -0.5, M: 0.05, L: 0.55, XL: 0.85 };
+const STATURE_GUESS: Record<SizeClass, number> = { XS: -0.85, S: -0.5, M: 0.05, L: 0.55, XL: 0.85, XXL: 1 };
 const STATURES = Array.from({ length: 20 }, (_, i) => -0.95 + i * 0.1);
 let built = 0, failed = 0;
 

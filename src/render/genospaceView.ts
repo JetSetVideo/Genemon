@@ -20,7 +20,7 @@ export interface GenoPoint {
   coords?: [number, number, number];
 }
 
-const SIZE_SCALE = { XS: 0.6, S: 0.8, M: 1, L: 1.3, XL: 1.6 } as const;
+const SIZE_SCALE = { XS: 0.6, S: 0.8, M: 1, L: 1.3, XL: 1.6, XXL: 2 } as const;
 
 export class GenospaceView implements View {
   private group = new THREE.Group();

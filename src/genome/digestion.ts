@@ -59,7 +59,7 @@ export const DIET_MATCH: Record<DietClass, Record<FoodKind, number>> = {
 };
 
 /** Stomach size in food units per size class (before appetite). */
-export const STOMACH_UNITS: Record<SizeClass, number> = { XS: 2, S: 3, M: 5, L: 8, XL: 12 };
+export const STOMACH_UNITS: Record<SizeClass, number> = { XS: 2, S: 3, M: 5, L: 8, XL: 12, XXL: 18 };
 /** Hunger drop per absorbed nutrition unit (same rate as the legacy feed()). */
 export const HUNGER_PER_NUTRITION = 0.15;
 
