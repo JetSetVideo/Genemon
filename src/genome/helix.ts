@@ -65,7 +65,6 @@ import {
   type LimbStyle,
   type MorphHelix,
   type MorphOp,
-  type MorphOpKind,
   type MorphP5,
   type MorphRegion,
   type MouthGenes,
@@ -85,6 +84,10 @@ import type { Genome, PlanGene } from "./genome.ts";
 import type { Phenotype } from "./phenotype.ts";
 import type { BodyCounts, NurtureTrait } from "./p6Types.ts";
 import { complexityOf, describeComplexity } from "./complexity.ts";
+import { P7_MORPH_GENES, p7Of, type P7GeneId } from "./helix7.ts";
+import type { MorphP7 } from "./p7Types.ts";
+import { paretoRemap } from "./pareto.ts";
+import { PARETO_CALIB } from "../data/paretoCalib.ts";
 
 // ------------------------------------------------------------------ genes
 /** Pass-4 genes (the order is frozen: `deriveMorph` draws them first, so legacy derivations never move). */
@@ -183,7 +186,8 @@ export const P5_MORPH_GENES = [
   "p5.outline",
   "p5.overlays",
 ] as const;
-export const MORPH_GENES = [...P4_MORPH_GENES, ...P5_MORPH_GENES] as const;
+/** Pass-7 genes [P7-G1] (src/genome/helix7.ts) are appended last, after the pass-5 list. */
+export const MORPH_GENES = [...P4_MORPH_GENES, ...P5_MORPH_GENES, ...P7_MORPH_GENES] as const;
 export type MorphGeneId = typeof MORPH_GENES[number];
 /** Allele pairs in [0, 1]; for bounded traits a0/a1 are the min and the max gene (order-free). */
 export type MorphAlleles = Record<MorphGeneId, [number, number]>;
@@ -225,9 +229,38 @@ export function genePair(a: readonly [number, number]): GenePair {
   return { lo: Math.min(a[0], a[1]), hi: Math.max(a[0], a[1]) };
 }
 
-/** Physical value of a bounded trait: R0 + (R1 - R0) * boundTrait(pair, drive). */
+/**
+ * Pareto layer [P7-D1]: the calibration probe (tools/pareto.ts records every RAW normalised expression by
+ * key) and the rank collector of the helix being expressed (its signature traits). Both are null outside
+ * those two synchronous windows.
+ */
+export const PARETO_PROBE: { log: ((key: string, raw: number) => void) | null } = { log: null };
+let rankSink: Map<string, number> | null = null;
+
+/** Raw normalised value v (0..1) of `key` -> Pareto-remapped value (identity when the key is uncalibrated). */
+function pareto(key: string, v: number): number {
+  PARETO_PROBE.log?.(key, v);
+  const r = paretoRemap(PARETO_CALIB[key], v);
+  if (rankSink && PARETO_CALIB[key]) {
+    const prev = rankSink.get(key);
+    if (prev === undefined || Math.abs(r.rank - 0.5) > Math.abs(prev - 0.5)) rankSink.set(key, r.rank);
+  }
+  return r.value;
+}
+
+/**
+ * Physical value of a bounded trait: R0 + (R1 - R0) * pareto(boundTrait(pair, drive)). The bounding equation
+ * gives the raw value inside the gene band; the Pareto remap [P7-D1] shapes the population (median kept,
+ * bounds reached, 20 % of creatures carry 80 % of the deviation).
+ */
 function trait(m: MorphAlleles, gene: MorphGeneId, drive: number, r0 = 0, r1 = 1): number {
-  return r0 + (r1 - r0) * boundTrait(genePair(m[gene]), drive);
+  return r0 + (r1 - r0) * pareto(gene, boundTrait(genePair(m[gene]), drive));
+}
+
+/** A gene pair whose two alleles are each Pareto-remapped by the same monotone map (keeps lo <= hi). */
+function paretoPair(m: MorphAlleles, gene: MorphGeneId): GenePair {
+  const p = genePair(m[gene]);
+  return { lo: pareto(`${gene}#allele`, p.lo), hi: pareto(`${gene}#allele`, p.hi) };
 }
 
 const CHANNEL_RANGE: Record<AnimChannel, readonly [number, number]> = {
@@ -555,7 +588,7 @@ function animOf(m: MorphAlleles, ph: Phenotype, wings: WingKind): Record<AnimCha
       else if (wings === "none") W1 = A0 + 0.3 * w;
       else if (ph.abilities.fly) W1 = A0 + (A1 - A0) * clamp(w + 0.15, 0.4, 1);
     }
-    const p = genePair(m[animGene(ch)]);
+    const p = paretoPair(m, animGene(ch));
     const lo = r3(W0 + (W1 - W0) * 0.6 * p.lo);
     const hi = r3(W0 + (W1 - W0) * (0.4 + 0.6 * p.hi));
     out[ch] = { lo, hi, value: r3(boundTrait({ lo, hi }, 0.5)) };
@@ -587,7 +620,7 @@ const CURVE: Record<ElementId, number> = {
 
 /** Physical value of a gene pair mapped into a creature window [W0, W1] (min gene low 60 %, max gene high 60 %). */
 function band(m: MorphAlleles, gene: MorphGeneId, w0: number, w1: number): GenePair {
-  const p = genePair(m[gene]);
+  const p = paretoPair(m, gene);
   return { lo: r3(w0 + (w1 - w0) * 0.6 * p.lo), hi: r3(w0 + (w1 - w0) * (0.4 + 0.6 * p.hi)) };
 }
 
@@ -726,7 +759,7 @@ function mouthP5(m: MorphAlleles, ph: Phenotype, mo: MouthGenes, eyes: EyeGenes,
 
 function growthP5(m: MorphAlleles, ph: Phenotype, curvature: number): GrowthGenes {
   const a = ph.axes;
-  const ang = genePair(m["p5.growAngle"]);
+  const ang = paretoPair(m, "p5.growAngle");
   const A = 0.08 + 0.3 * ph.elasticity + 0.1 * Math.max(0, curvature);
   return {
     length: band(m, "p5.growLength", 0.7, 1.35),
@@ -745,8 +778,9 @@ function growthP5(m: MorphAlleles, ph: Phenotype, curvature: number): GrowthGene
 
 const TAILS: readonly TailShape[] = ["taper", "club", "fin", "fan", "spade", "whip", "flame", "leaf", "rattle", "split"];
 const BIG_TIP: ReadonlySet<TailShape> = new Set(["club", "flame", "spade", "fan", "leaf"]);
-const OP_KINDS: readonly MorphOpKind[] = ["carve", "merge", "compress", "decompress", "difference", "twist", "bulge", "pinch"];
-const OP_SIGN: Record<MorphOpKind, number> = {
+type P5OpKind = "carve" | "merge" | "compress" | "decompress" | "difference" | "twist" | "bulge" | "pinch";
+const OP_KINDS: readonly P5OpKind[] = ["carve", "merge", "compress", "decompress", "difference", "twist", "bulge", "pinch"];
+const OP_SIGN: Record<P5OpKind, number> = {
   carve: -1,
   merge: 1,
   compress: -1,
@@ -943,6 +977,25 @@ export function p5Of(
 // ------------------------------------------------------------------ the helix
 /** Express the morph helix of a genome given its phenotype (version 1). Deterministic. */
 export function helixOf(g: Genome, ph: Phenotype): MorphHelix {
+  const outer = rankSink;
+  rankSink = new Map();
+  try {
+    return expressHelix(g, ph, rankSink);
+  } finally {
+    rankSink = outer;
+  }
+}
+
+/** Signature traits [P7-D1]: the remapped genes ranked furthest from the median (|rank - 0.5| >= 0.4), at most 6. */
+function signatureOf(ranks: Map<string, number>): MorphP7["signature"] {
+  return [...ranks.entries()]
+    .filter(([, r]) => Math.abs(r - 0.5) >= 0.4)
+    .sort((x, y) => Math.abs(y[1] - 0.5) - Math.abs(x[1] - 0.5) || (x[0] < y[0] ? -1 : 1))
+    .slice(0, 6)
+    .map(([gene, rank]) => ({ gene: gene.replace("#allele", ""), rank: r3(rank) }));
+}
+
+function expressHelix(g: Genome, ph: Phenotype, ranks: Map<string, number>): MorphHelix {
   const m = ensureMorph(g);
   const a = ph.axes;
   const chaos = Math.max(0, -a.structure);
@@ -1000,6 +1053,14 @@ export function helixOf(g: Genome, ph: Phenotype): MorphHelix {
 
   const p5 = p5Of(m, ph, { eyes, mouth, surface, fractalDepth, chaos, counts });
   bendByNurture(ph, eyes, wings, surface, p5);
+  const anim = animOf(m, ph, wings.kind);
+  const p7core = p7Of(
+    (gene: P7GeneId, drive: number, r0 = 0, r1 = 1) => trait(m, gene, drive, r0, r1),
+    m["p7.ops"],
+    ph,
+    { fractalDepth, chaos, angularity, curvature: p5.body.curvature, frills: p5.skin.frills, hasWings: wings.kind !== "none" },
+  );
+  const p7: MorphP7 = { ...p7core, signature: signatureOf(ranks) };
   return {
     version: 1,
     asymmetry: r3(asymmetry),
@@ -1014,9 +1075,10 @@ export function helixOf(g: Genome, ph: Phenotype): MorphHelix {
     surface,
     fusion: r3(fusion),
     angularity: r3(angularity),
-    anim: animOf(m, ph, wings.kind),
+    anim,
     p5,
     p6: { version: 6, complexity },
+    p7,
   };
 }
 

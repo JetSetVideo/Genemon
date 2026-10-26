@@ -133,6 +133,8 @@ export interface MorphHelix {
   p5?: MorphP5;
   /** Pass-6: complexity profile and body counts (src/genome/complexity.ts). Absent = derive / pass-5 look. */
   p6?: import("./p6Types.ts").MorphP6;
+  /** Pass-7: Pareto-shaped extra operators, relief, horns, spikes, motion and fx genes (src/genome/p7Types.ts). Absent = P7_DEFAULTS. */
+  p7?: import("./p7Types.ts").MorphP7;
 }
 
 // ====================================================================== PASS 5 CONTRACT (types only)
@@ -184,7 +186,28 @@ export interface MouthP5 {
   lipCurve: number;
 }
 /** A morphogenetic OPERATOR applied after growth (grow, then carve / merge / squash the forms). */
-export type MorphOpKind = "carve" | "merge" | "compress" | "decompress" | "difference" | "twist" | "bulge" | "pinch";
+/**
+ * Pass 5: carve, merge, compress, decompress, difference, twist, bulge, pinch.
+ * Pass 7 [P7-G1]: ridge (sharp crest), flute (several grooves around the section), facet (flat planes),
+ * scallop (radius ripple along the region), segment (annular bands), knob (local boss), spiral (a crest
+ * whose angle winds along the region). Consumers that do not know a kind ignore it.
+ */
+export type MorphOpKind =
+  | "carve"
+  | "merge"
+  | "compress"
+  | "decompress"
+  | "difference"
+  | "twist"
+  | "bulge"
+  | "pinch"
+  | "ridge"
+  | "flute"
+  | "facet"
+  | "scallop"
+  | "segment"
+  | "knob"
+  | "spiral";
 export type MorphRegion = "torso" | "neck" | "head" | "tail" | "limb" | "all";
 export interface MorphOp {
   kind: MorphOpKind;

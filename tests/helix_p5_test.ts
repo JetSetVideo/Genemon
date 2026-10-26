@@ -2,6 +2,7 @@
 // heritably; distributions over 2000 seeds (eye counts, coats by element / body, curvature by element,
 // rare tentacles / serpent legs / limb drift, mostly-avian beaks, forked tongues on serpents).
 import { assert, assertEquals } from "./_assert.ts";
+import { P7_MORPH_GENES } from "../src/genome/helix7.ts";
 import { type Genome, randomGenome } from "../src/genome/genome.ts";
 import { express, type Phenotype } from "../src/genome/phenotype.ts";
 import { emptyConditions } from "../src/genome/epigenetics.ts";
@@ -116,7 +117,9 @@ Deno.test("p5: determinism - same genome -> identical p5; legacy pass-4 derivati
   const m = deriveMorph(randomGenome(7));
   assertEquals(m.eyeStyle, [0.27370887994766235, 0.7218487001955509]);
   assertEquals(m["anim.squash"], [0.3629225834738463, 0.8801905566360801]);
-  assertEquals(MORPH_GENES.length, P4_MORPH_GENES.length + P5_MORPH_GENES.length);
+  // Pass 7 appends its genes after pass 5 (src/genome/helix7.ts): the pass-4 and pass-5 draws keep their places.
+  assertEquals(MORPH_GENES.length, P4_MORPH_GENES.length + P5_MORPH_GENES.length + P7_MORPH_GENES.length);
+  assertEquals(MORPH_GENES.slice(P4_MORPH_GENES.length, P4_MORPH_GENES.length + P5_MORPH_GENES.length).join(), P5_MORPH_GENES.join(), "pass-5 genes second");
   assertEquals(MORPH_GENES.slice(0, P4_MORPH_GENES.length).join(), P4_MORPH_GENES.join(), "pass-4 genes first");
 });
 
