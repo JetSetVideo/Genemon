@@ -296,8 +296,22 @@ Deno.test("p5 heritability: recessive eye counts breed true; Mendelian alleles c
     }
     return sxy / Math.sqrt(sxx * syy);
   };
-  const rChild = corr(fam.map((f) => f[0]), fam.map((f) => f[1]));
-  const rStranger = corr(fam.map((f) => f[0]), fam.map((f) => f[2]));
+  // Pass 7 [P7-D1]: expressed traits are Pareto-remapped (heavy tails, a rank-preserving map), so the
+  // heritability is measured on RANKS (Spearman): Pearson on a heavy-tailed trait is dominated by a few
+  // extreme creatures. The remap is monotone, so the rank correlation is the one the genes control.
+  const ranks = (xs: number[]) => {
+    const idx = xs.map((v, i) => [v, i] as const).sort((p, q) => p[0] - q[0]);
+    const r = new Array<number>(xs.length);
+    for (let i = 0; i < idx.length;) {
+      let j = i;
+      while (j + 1 < idx.length && idx[j + 1][0] === idx[i][0]) j++;
+      for (let k = i; k <= j; k++) r[idx[k][1]] = (i + j) / 2;
+      i = j + 1;
+    }
+    return r;
+  };
+  const rChild = corr(ranks(fam.map((f) => f[0])), ranks(fam.map((f) => f[1])));
+  const rStranger = corr(ranks(fam.map((f) => f[0])), ranks(fam.map((f) => f[2])));
   assert(rChild > 0.5, `parent-child socket correlation ${rChild}`);
   assert(rChild > rStranger + 0.2, `child ${rChild} vs stranger ${rStranger}`);
   // Operators are seeded by the ORDER-FREE ops pair: swapping the alleles keeps the same operators.

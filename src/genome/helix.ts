@@ -84,9 +84,9 @@ import type { Genome, PlanGene } from "./genome.ts";
 import type { Phenotype } from "./phenotype.ts";
 import type { BodyCounts, NurtureTrait } from "./p6Types.ts";
 import { complexityOf, describeComplexity } from "./complexity.ts";
-import { P7_MORPH_GENES, p7Of, type P7GeneId } from "./helix7.ts";
+import { P7_MORPH_GENES, P7_ONE_SIDED, p7Of, type P7GeneId } from "./helix7.ts";
 import type { MorphP7 } from "./p7Types.ts";
-import { paretoRemap } from "./pareto.ts";
+import { paretoQ, paretoRemap } from "./pareto.ts";
 import { PARETO_CALIB } from "../data/paretoCalib.ts";
 
 // ------------------------------------------------------------------ genes
@@ -234,16 +234,30 @@ export function genePair(a: readonly [number, number]): GenePair {
  * key) and the rank collector of the helix being expressed (its signature traits). Both are null outside
  * those two synchronous windows.
  */
-export const PARETO_PROBE: { log: ((key: string, raw: number) => void) | null } = { log: null };
+export const PARETO_PROBE: { log: ((key: string, raw: number) => void) | null; bypass: boolean } = { log: null, bypass: false };
 let rankSink: Map<string, number> | null = null;
+
+/**
+ * Small-range integer traits keep their designed raw shape (a two-sided Pareto would round nearly every
+ * creature to one value and erase the variety): fractal depth 0..3, teeth count, wing fingers, fractal arm
+ * branch / depth, cel bands, overlay layers. tools/pareto.ts reports them as `discrete`.
+ */
+const RAW_KEYS: ReadonlySet<string> = new Set(["fractal", "teeth", "wingFingers", "p5.armBranch", "p5.armDepth", "p5.celBands", "p5.overlays"]);
+/** One-sided keys: the p7 extra-feature genes and the strength of every open recessive gate (`#gate`). */
+const oneSided = (key: string) => P7_ONE_SIDED.has(key) || key.endsWith("#gate");
 
 /** Raw normalised value v (0..1) of `key` -> Pareto-remapped value (identity when the key is uncalibrated). */
 function pareto(key: string, v: number): number {
+  if (RAW_KEYS.has(key)) return v;
   PARETO_PROBE.log?.(key, v);
-  const r = paretoRemap(PARETO_CALIB[key], v);
+  if (PARETO_PROBE.bypass) return v;
+  const one = oneSided(key);
+  const r = paretoRemap(PARETO_CALIB[key], v, one);
   if (rankSink && PARETO_CALIB[key]) {
+    // A one-sided gene is only a signature at its HIGH end (its low end is the plain pass-6 look).
+    const rank = one ? 0.5 + Math.max(0, r.rank - 0.5) : r.rank;
     const prev = rankSink.get(key);
-    if (prev === undefined || Math.abs(r.rank - 0.5) > Math.abs(prev - 0.5)) rankSink.set(key, r.rank);
+    if (prev === undefined || Math.abs(rank - 0.5) > Math.abs(prev - 0.5)) rankSink.set(key, rank);
   }
   return r.value;
 }
@@ -253,14 +267,25 @@ function pareto(key: string, v: number): number {
  * gives the raw value inside the gene band; the Pareto remap [P7-D1] shapes the population (median kept,
  * bounds reached, 20 % of creatures carry 80 % of the deviation).
  */
-function trait(m: MorphAlleles, gene: MorphGeneId, drive: number, r0 = 0, r1 = 1): number {
-  return r0 + (r1 - r0) * pareto(gene, boundTrait(genePair(m[gene]), drive));
+function trait(m: MorphAlleles, gene: MorphGeneId, drive: number, r0 = 0, r1 = 1, cls = ""): number {
+  // `cls` calibrates a trait whose range depends on a design class (avian vs. gliding wings, tooth kind...)
+  // inside that class, so the Pareto rule holds per class instead of over a mixture.
+  return r0 + (r1 - r0) * pareto(cls ? `${gene}@${cls}` : gene, boundTrait(genePair(m[gene]), drive));
 }
 
-/** A gene pair whose two alleles are each Pareto-remapped by the same monotone map (keeps lo <= hi). */
-function paretoPair(m: MorphAlleles, gene: MorphGeneId): GenePair {
-  const p = genePair(m[gene]);
-  return { lo: pareto(`${gene}#allele`, p.lo), hi: pareto(`${gene}#allele`, p.hi) };
+/**
+ * Pareto remap of a FINAL physical value v inside its declared range [r0, r1] (used where the value is not a
+ * single trait: creature windows, sums of element signatures). Rank preserving, so ordering is kept.
+ */
+function paretoOut(key: string, v: number, r0: number, r1: number): number {
+  if (!(r1 > r0)) return v;
+  return r0 + (r1 - r0) * pareto(key, clamp01((v - r0) / (r1 - r0)));
+}
+
+/** A bounded pair remapped as a whole: lo and hi each by their own key, then lo <= hi re-enforced. */
+function paretoBand(key: string, b: GenePair, r0: number, r1: number): GenePair {
+  const lo = r3(paretoOut(`${key}.lo`, b.lo, r0, r1));
+  return { lo, hi: Math.max(lo, r3(paretoOut(`${key}.hi`, b.hi, r0, r1))) };
 }
 
 const CHANNEL_RANGE: Record<AnimChannel, readonly [number, number]> = {
@@ -333,14 +358,23 @@ export function ensureMorph(g: Genome): MorphAlleles {
   return out;
 }
 
-/** Mendelian inheritance: one allele from each parent per gene, then a small clamped normal jitter. */
+/**
+ * Mendelian inheritance: one allele from each parent per gene, then a rare mutation whose STEP is Pareto-tailed
+ * [P7-H1]: |step| = MUTATION_SCALE * paretoQ(u) (median 0.007, mean 0.026, rare steps up to 0.5), so heirs stay
+ * close to their parents and once in a while a lineage jumps. Every gene, pass 4 to pass 7, is inherited.
+ */
+export const MUTATION_SCALE = 0.5;
+export function mutationStep(rng: Rng): number {
+  const u = rng.next();
+  return (rng.chance(0.5) ? -1 : 1) * MUTATION_SCALE * paretoQ(u);
+}
 export function inheritMorph(a: Genome, b: Genome, rng: Rng, mutationRate = 0.04): MorphAlleles {
   const ma = ensureMorph(a), mb = ensureMorph(b);
   const out = {} as MorphAlleles;
   for (const id of MORPH_GENES) {
     let x = rng.pick(ma[id]), y = rng.pick(mb[id]);
-    if (rng.chance(mutationRate)) x = clamp01(x + rng.normal(0, 0.1));
-    if (rng.chance(mutationRate)) y = clamp01(y + rng.normal(0, 0.1));
+    if (rng.chance(mutationRate)) x = clamp01(x + mutationStep(rng));
+    if (rng.chance(mutationRate)) y = clamp01(y + mutationStep(rng));
     out[id] = rng.chance(0.5) ? [x, y] : [y, x];
   }
   return out;
@@ -502,6 +536,7 @@ function mouthOf(m: MorphAlleles, ph: Phenotype): MouthGenes {
     0.5 * u01(a.temper) + 0.3 * u01(a.might) + 0.2 * ph.plan.jaw,
     l0,
     l1,
+    teeth,
   );
   const width = trait(m, "mouthWidth", 0.65 * ph.plan.jaw + 0.35 * ph.plan.head, 0.3, 1);
   const tongue = kind === "serpent" || prim === "poison" || (width >= 0.7 && a.mood > 0.15);
@@ -530,6 +565,7 @@ function wingsOf(m: MorphAlleles, ph: Phenotype, fractalDepth: number, hasWings:
     else wk = "membrane";
   }
   if (wk === "none") return { kind: "none", span: 0, fingers: 0, detail: 0 };
+  const wcls = kind === "avian" ? "avian" : ph.abilities.fly ? "fly" : "glide";
   const [s0, s1] = kind === "avian" ? [2.0, 3.2] : ph.abilities.fly ? [1.6, 2.6] : [1.2, 1.8];
   const span = trait(
     m,
@@ -537,6 +573,7 @@ function wingsOf(m: MorphAlleles, ph: Phenotype, fractalDepth: number, hasWings:
     0.5 * ph.plan.wings + 0.3 * u01(a.altitude) + 0.2 * (1 - u01(a.weight)),
     s0,
     s1,
+    wcls,
   );
   const [f0, f1] = FINGERS[wk];
   const fingers = Math.round(trait(m, "wingFingers", fractalDepth / 3, f0, f1));
@@ -588,9 +625,15 @@ function animOf(m: MorphAlleles, ph: Phenotype, wings: WingKind): Record<AnimCha
       else if (wings === "none") W1 = A0 + 0.3 * w;
       else if (ph.abilities.fly) W1 = A0 + (A1 - A0) * clamp(w + 0.15, 0.4, 1);
     }
-    const p = paretoPair(m, animGene(ch));
-    const lo = r3(W0 + (W1 - W0) * 0.6 * p.lo);
-    const hi = r3(W0 + (W1 - W0) * (0.4 + 0.6 * p.hi));
+    const p = genePair(m[animGene(ch)]);
+    // The creature window and the genes give the raw band; the Pareto remap [P7-D1] shapes the population
+    // of each bound over the channel's absolute range (rank kept, lo <= value <= hi re-enforced).
+    const raw = { lo: W0 + (W1 - W0) * 0.6 * p.lo, hi: W0 + (W1 - W0) * (0.4 + 0.6 * p.hi) };
+    // Wing flap is calibrated per class so the avian floor (0.6 rad) and the wingless cap survive the remap.
+    const cls = ch !== "wingFlap" ? "" : ph.kind === "avian" ? "@avian" : wings === "none" ? "@none" : ph.abilities.fly ? "@fly" : "@wing";
+    const [R0, R1] = cls === "@avian" ? [0.6, 1.5] : cls === "@none" ? [A0, A0 + 0.3] : [A0, A1];
+    const { lo, hi } = paretoBand(`anim.${ch}${cls}`, raw, R0, R1);
+    // `value` keeps its contract: the resting expression boundTrait({lo, hi}, 0.5) of the remapped bounds.
     out[ch] = { lo, hi, value: r3(boundTrait({ lo, hi }, 0.5)) };
   }
   return out;
@@ -620,7 +663,7 @@ const CURVE: Record<ElementId, number> = {
 
 /** Physical value of a gene pair mapped into a creature window [W0, W1] (min gene low 60 %, max gene high 60 %). */
 function band(m: MorphAlleles, gene: MorphGeneId, w0: number, w1: number): GenePair {
-  const p = paretoPair(m, gene);
+  const p = genePair(m[gene]);
   return { lo: r3(w0 + (w1 - w0) * 0.6 * p.lo), hi: r3(w0 + (w1 - w0) * (0.4 + 0.6 * p.hi)) };
 }
 
@@ -628,7 +671,8 @@ function band(m: MorphAlleles, gene: MorphGeneId, w0: number, w1: number): GeneP
 function recessive(m: MorphAlleles, gene: MorphGeneId, t: number): number {
   const p = genePair(m[gene]);
   if (p.lo <= t) return -1;
-  return clamp01((p.lo - t) / Math.max(1e-6, 1 - t));
+  // The gate's ODDS are untouched (raw alleles); how strongly an open gate expresses is one-sided Pareto.
+  return pareto(`${gene}#gate`, clamp01((p.lo - t) / Math.max(1e-6, 1 - t)));
 }
 
 const EYE_SHAPES: readonly EyeShape[] = ["round", "almond", "tear", "crescent", "hooded", "diamond", "oval"];
@@ -723,9 +767,9 @@ function mouthP5(m: MorphAlleles, ph: Phenotype, mo: MouthGenes, eyes: EyeGenes,
   }
   const lenDrive = 0.5 * ph.plan.jaw + 0.3 * u01(a.reach) + 0.2 * u01(a.stature);
   const [l0, l1] = BEAK_LEN[beak];
-  const beakLength = beak === "none" ? 0 : trait(m, "p5.beakLength", lenDrive, l0, l1);
+  const beakLength = beak === "none" ? 0 : trait(m, "p5.beakLength", lenDrive, l0, l1, beak);
   const [q0, q1] = BEAK_ROUND[beak];
-  const beakRound = trait(m, "p5.beakRound", 0.5 * u01(a.mood) + 0.5 * (1 - u01(a.temper)), q0, q1);
+  const beakRound = trait(m, "p5.beakRound", 0.5 * u01(a.mood) + 0.5 * (1 - u01(a.temper)), q0, q1, beak);
   const sx = trait(m, "p5.mouthScaleX", 0.6 * ph.plan.jaw + 0.4 * mo.width, 0.75, 1.35);
   const sy = trait(m, "p5.mouthScaleY", 0.5 * u01(a.temper) + 0.5 * ph.plan.jaw, 0.7, 1.4);
   const sz = trait(m, "p5.mouthScaleZ", ph.plan.head, 0.75, 1.3);
@@ -759,12 +803,16 @@ function mouthP5(m: MorphAlleles, ph: Phenotype, mo: MouthGenes, eyes: EyeGenes,
 
 function growthP5(m: MorphAlleles, ph: Phenotype, curvature: number): GrowthGenes {
   const a = ph.axes;
-  const ang = paretoPair(m, "p5.growAngle");
+  const ang = genePair(m["p5.growAngle"]);
   const A = 0.08 + 0.3 * ph.elasticity + 0.1 * Math.max(0, curvature);
+  const AMAX = 0.48;
   return {
-    length: band(m, "p5.growLength", 0.7, 1.35),
-    strength: band(m, "p5.growStrength", 0.7 + 0.1 * u01(a.might), 1.35),
-    angle: { lo: r3(-A * (0.4 + 0.6 * ang.lo)), hi: r3(A * (0.4 + 0.6 * ang.hi)) },
+    length: paretoBand("growth.length", band(m, "p5.growLength", 0.7, 1.35), 0.7, 1.35),
+    strength: paretoBand("growth.strength", band(m, "p5.growStrength", 0.7 + 0.1 * u01(a.might), 1.35), 0.7, 1.35),
+    angle: {
+      lo: r3(paretoOut("growth.angle.lo", -A * (0.4 + 0.6 * ang.lo), -AMAX, 0)),
+      hi: r3(paretoOut("growth.angle.hi", A * (0.4 + 0.6 * ang.hi), 0, AMAX)),
+    },
     spiral: r3(trait(
       m,
       "p5.spiral",
@@ -796,9 +844,16 @@ function bodyP5(m: MorphAlleles, ph: Phenotype, fractalDepth: number, chaos: num
   const pos = (v: number) => Math.max(0, v);
   const has = (el: ElementId) => prim === el ? 1 : sec === el ? 0.5 * ph.elements.secondaryLevel : 0;
   // Curvature: element signature (primary + weighted secondary) + fluid / elastic / hard axes + a gene nudge.
-  const curvature = clamp(
-    CURVE[prim] + (sec ? 0.4 * ph.elements.secondaryLevel * CURVE[sec] : 0) + 0.2 * a.form +
-      0.3 * (ph.elasticity - 0.5) - 0.15 * a.hardness + 0.5 * (trait(m, "p5.curvature", 0.5) - 0.5),
+  // Calibrated per PRIMARY ELEMENT: the element signature (water curvy, metal angular) is a design class,
+  // and the Pareto rule shapes the spread around each element's own median.
+  const curvature = paretoOut(
+    `p5.curvature#out@${prim}`,
+    clamp(
+      CURVE[prim] + (sec ? 0.4 * ph.elements.secondaryLevel * CURVE[sec] : 0) + 0.2 * a.form +
+        0.3 * (ph.elasticity - 0.5) - 0.15 * a.hardness + 0.5 * (trait(m, "p5.curvature", 0.5) - 0.5),
+      -1,
+      1,
+    ),
     -1,
     1,
   );
@@ -873,7 +928,7 @@ function bodyP5(m: MorphAlleles, ph: Phenotype, fractalDepth: number, chaos: num
     ratio: r3(trait(m, "p5.armRatio", 0.5 + 0.3 * curvature * 0.5, 0.45, 0.75)),
     twist: mode === "none"
       ? 0
-      : r3(mode === "spiral" ? trait(m, "p5.armTwist", u01(a.form), 0.4, 1.4) : trait(m, "p5.armTwist", u01(a.form), 0, 0.4)),
+      : r3(mode === "spiral" ? trait(m, "p5.armTwist", u01(a.form), 0.4, 1.4, "spiral") : trait(m, "p5.armTwist", u01(a.form), 0, 0.4, mode)),
     mode,
   };
   // Morph operators: 0..4, most creatures 0-1. Seeded by the ORDER-FREE ops allele pair, so a child that
@@ -941,9 +996,9 @@ function skinP5(m: MorphAlleles, ph: Phenotype, s: SurfaceGenes): SkinP5 {
   const fr = recessive(m, "p5.frills", 0.55 - 0.15 * (has("water") + (ph.plan.spikes > 0.6 ? 1 : 0)));
   const frills = fr >= 0 ? r3(0.2 + 0.8 * fr) : 0;
   const stripes = ph.pattern === "stripes"
-    ? trait(m, "p5.stripes", 0.7, 0.5, 1)
+    ? trait(m, "p5.stripes", 0.7, 0.5, 1, "pattern")
     : recessive(m, "p5.stripes", 0.6) >= 0
-    ? trait(m, "p5.stripes", 0.3, 0.1, 0.6)
+    ? trait(m, "p5.stripes", 0.3, 0.1, 0.6, "gate")
     : 0;
   return {
     coat,
@@ -986,10 +1041,12 @@ export function helixOf(g: Genome, ph: Phenotype): MorphHelix {
   }
 }
 
-/** Signature traits [P7-D1]: the remapped genes ranked furthest from the median (|rank - 0.5| >= 0.4), at most 6. */
+/** A trait is a signature when its population rank is in the outer 1.5 % (either end; one-sided: top end only). */
+export const SIGNATURE_RANK = 0.485;
+/** Signature traits [P7-D1]: the remapped genes ranked furthest from the median (|rank - 0.5| >= SIGNATURE_RANK), at most 6. */
 function signatureOf(ranks: Map<string, number>): MorphP7["signature"] {
   return [...ranks.entries()]
-    .filter(([, r]) => Math.abs(r - 0.5) >= 0.4)
+    .filter(([, r]) => Math.abs(r - 0.5) >= SIGNATURE_RANK)
     .sort((x, y) => Math.abs(y[1] - 0.5) - Math.abs(x[1] - 0.5) || (x[0] < y[0] ? -1 : 1))
     .slice(0, 6)
     .map(([gene, rank]) => ({ gene: gene.replace("#allele", ""), rank: r3(rank) }));
@@ -1027,7 +1084,7 @@ function expressHelix(g: Genome, ph: Phenotype, ranks: Map<string, number>): Mor
   const asymmetricSide: -1 | 1 = prng.chance(0.5) ? -1 : 1;
   if (asym.lo > t) {
     const n = (v: number) => (v - t) / (1 - t);
-    asymmetry = 0.1 + 0.3 * boundTrait({ lo: n(asym.lo), hi: n(asym.hi) }, 0.5 + 0.5 * chaos);
+    asymmetry = 0.1 + 0.3 * pareto("asymmetry#gate", boundTrait({ lo: n(asym.lo), hi: n(asym.hi) }, 0.5 + 0.5 * chaos));
     const avail = ASYM_PARTS.filter((p) =>
       p === "eye" || p === "pattern" ||
       (p === "horn" && ph.plan.horns > 0.35) || (p === "ear" && ph.plan.ears > 0.35) ||
@@ -1163,7 +1220,52 @@ export function describeHelix(h: MorphHelix): string[] {
   lines.push(`Motion: ${motion.join(", ")}`);
   if (h.p5) lines.push(...describeP5(h.p5));
   if (h.p6) lines.push(describeComplexity(h.p6.complexity));
+  if (h.p7) lines.push(...describeP7(h.p7));
   return lines;
+}
+
+/** Readable names of the most common signature genes (the rest print their gene id). */
+const SIGNATURE_WORD: Record<string, string> = {
+  eyeSize: "eye size",
+  mouthWidth: "mouth width",
+  wingSpan: "wing span",
+  "p5.tailLength": "tail length",
+  "p5.shoulderW": "shoulder width",
+  "p5.tongue": "tongue",
+  plates: "armour plates",
+  fur: "fur",
+  sheen: "sheen",
+  claw: "claws",
+};
+const sigWord = (gene: string) => {
+  const base = gene.split("@")[0];
+  return SIGNATURE_WORD[base] ?? base.replace(/^p[57]\./, "").replace(/^anim\./, "motion ");
+};
+
+/** Pass-7 lines [P7-D1]: signature traits, relief / horns / spikes / extra operators, motion and fx. */
+export function describeP7(p: MorphP7): string[] {
+  const out: string[] = [];
+  out.push(p.signature.length
+    ? `Signature: ${p.signature.map((s) => `${s.rank >= 0.5 ? "high" : "low"} ${sigWord(s.gene)}`).join(", ")}`
+    : "Signature: none (a typical Genemon)");
+  const r = p.relief, bits: string[] = [];
+  if (r.ridges) bits.push(`${r.ridges} ridge${r.ridges > 1 ? "s" : ""}`);
+  if (r.flutes) bits.push(`${r.flutes} flute${r.flutes > 1 ? "s" : ""}`);
+  if (r.segments) bits.push(`${r.segments} segment bands`);
+  if (r.knobs >= 0.2) bits.push(`knobs ${f2(r.knobs)}`);
+  if (r.facets >= 0.2) bits.push(`facets ${f2(r.facets)}`);
+  if (r.scallop >= 0.2) bits.push(`scallops ${f2(r.scallop)}`);
+  if (p.horns.pairs > 1) bits.push(`${p.horns.pairs} horn pairs`);
+  if (p.horns.branch) bits.push(`antlers x${p.horns.branch}`);
+  if (p.horns.curl >= 0.3) bits.push(`horn curl ${p.horns.curl.toFixed(1)} turns`);
+  if (p.spikes.rows > 1) bits.push(`${p.spikes.rows} spike rows`);
+  out.push(`Relief: ${bits.length ? bits.join(", ") : "plain"}`);
+  if (p.ops.length) out.push(`Extra ops: ${p.ops.map((o) => `${o.kind} ${o.region}`).join(", ")}`);
+  const m = p.motion;
+  out.push(`Motion: follow-through ${f2(m.followThrough)}, anticipation ${f2(m.anticipation)}, jitter ${f2(m.jitter)}, sway ${f2(m.sway)}, bounce ${f2(m.bounce)}, stiffness ${f2(m.stiffness)}`);
+  const x = p.fx;
+  out.push(`Effects: intensity ${f2(x.intensity)}, trail ${f2(x.trail)}, sparkle ${f2(x.sparkle)}, pulse ${f2(x.pulse)}, hue ${sgn(x.hueShift)}`);
+  return out;
 }
 
 const sgn = (v: number) => (v >= 0 ? "+" : "") + v.toFixed(2);

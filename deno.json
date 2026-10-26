@@ -28,6 +28,7 @@
     "balance": "deno run --allow-read --allow-write=artifacts tools/balance.ts",
     "lists": "deno run --allow-read --allow-write=docs,artifacts --allow-run tools/gen-lists.ts",
     "capture": "deno run -A tools/capture.ts",
-    "batch": "deno run --allow-read --allow-write=artifacts tools/batch.ts"
+    "batch": "deno run --allow-read --allow-write=artifacts tools/batch.ts",
+    "pareto": "deno run --allow-read --allow-write=src/data,artifacts tools/pareto.ts"
   }
 }

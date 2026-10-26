@@ -47,6 +47,27 @@ export const P7_MORPH_GENES = [
 ] as const;
 export type P7GeneId = typeof P7_MORPH_GENES[number];
 
+/**
+ * Pass-7 genes expressed ONE-SIDED [P7-D1]: their neutral value is the minimum (no ridge, one horn pair, one
+ * spike row, no extra operator, no motes, no pulse), so most creatures keep the pass-6 look and a Pareto few
+ * carry the elaboration. Every other p7 gene is two-sided around its median (a personality everyone has).
+ */
+export const P7_ONE_SIDED: ReadonlySet<string> = new Set<P7GeneId>([
+  "p7.ops",
+  "p7.ridges",
+  "p7.flutes",
+  "p7.segments",
+  "p7.knobs",
+  "p7.facets",
+  "p7.scallop",
+  "p7.hornPairs",
+  "p7.hornBranch",
+  "p7.hornCurl",
+  "p7.spikeRows",
+  "p7.sparkle",
+  "p7.pulse",
+]);
+
 /** Every operator kind (pass 5 + pass 7). */
 export const ALL_OP_KINDS: readonly MorphOpKind[] = [
   "carve",

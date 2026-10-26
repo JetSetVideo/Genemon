@@ -98,7 +98,7 @@ export interface MorphP7 {
   fx: FxP7;
   /**
    * The creature's SIGNATURE traits: the remapped genes whose population rank is most extreme
-   * (|rank - 0.5| >= 0.4), most extreme first, at most 6. Empty = a perfectly typical Genemon.
+   * (|rank - 0.5| >= SIGNATURE_RANK = 0.485 in helix.ts; one-sided genes: high end only), most extreme first, at most 6. Empty = a perfectly typical Genemon.
    */
   signature: { gene: string; rank: number }[];
 }
