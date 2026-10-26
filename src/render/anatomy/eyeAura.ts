@@ -11,6 +11,10 @@
  *
  * Pass 5: up to 8 eyes. The total emission grows like 2 sqrt(n / 2) past two eyes (`auraWeight`), not
  * linearly, so an eight-eyed creature smokes twice as much as a pair, not four times (less effect spam).
+ *
+ * Pass 7: `setSignature({ intensity, hueShift })` (MorphP7.fx, wired by BattleView) scales the emission
+ * rate by the creature's fx intensity (0.6..1.6; the ring buffer capacity still caps the live count) and
+ * shifts the aura hue by its hueShift (+-0.08 turn). Absent = the pass-6 aura.
  */
 import * as THREE from "../../lib/three.ts";
 import type { EyeAura as AuraKind } from "../../genome/morphTypes.ts";
@@ -82,6 +86,9 @@ export class EyeAura {
   private readonly world: THREE.Vector3[];
   private readonly emitters: THREE.Vector3[];
   private intensity = 1;
+  /** Pass-7 fx intensity (rate multiplier, 0.6..1.6). */
+  private sigRate = 1;
+  private readonly baseHex: number;
   private debt = 0;
   private next = 0;
 
@@ -106,6 +113,7 @@ export class EyeAura {
     this.tex = spriteTexture(kind);
     const p = this.prof;
     if (p) this.base.setHex(p.color);
+    this.baseHex = p?.color ?? 0xffffff;
     this.mat = new THREE.PointsMaterial({
       size: (p?.size ?? 1) * radius,
       map: this.tex,
@@ -127,6 +135,23 @@ export class EyeAura {
     this.intensity = Math.max(0, Math.min(2, Number.isFinite(k) ? k : 0));
   }
 
+  /** Pass-7 effects signature: emission rate x intensity, hue shifted by hueShift turns (both clamped). */
+  setSignature(fx: { intensity: number; hueShift: number }): void {
+    this.sigRate = Math.max(0.6, Math.min(1.6, Number.isFinite(fx.intensity) ? fx.intensity : 1));
+    const h = Math.max(-0.08, Math.min(0.08, Number.isFinite(fx.hueShift) ? fx.hueShift : 0));
+    this.base.setHex(this.baseHex);
+    if (h !== 0) {
+      const hsl = { h: 0, s: 0, l: 0 };
+      this.base.getHSL(hsl);
+      this.base.setHSL((((hsl.h + h) % 1) + 1) % 1, hsl.s, hsl.l);
+    }
+  }
+
+  /** Current tint of the aura particles (QA / tests). */
+  tint(): number {
+    return this.base.getHex();
+  }
+
   /** Number of live particles (QA / tests). */
   alive(): number {
     let n = 0;
@@ -142,7 +167,7 @@ export class EyeAura {
     for (let e = 0; e < this.emitters.length; e++) this.world[e].copy(this.emitters[e]).applyMatrix4(headWorldMatrix);
     const cap = this.age.length;
     // Spawn.
-    this.debt += p.rate * (0.35 + this.intensity) * auraWeight(this.emitters.length) * dt;
+    this.debt += p.rate * (0.35 + this.intensity) * this.sigRate * auraWeight(this.emitters.length) * dt;
     while (this.debt >= 1) {
       this.debt -= 1;
       const i = this.next;

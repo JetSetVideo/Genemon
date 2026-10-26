@@ -64,6 +64,7 @@ export const P7_ONE_SIDED: ReadonlySet<string> = new Set<P7GeneId>([
   "p7.hornBranch",
   "p7.hornCurl",
   "p7.spikeRows",
+  "p7.fxTrail",
   "p7.sparkle",
   "p7.pulse",
 ]);

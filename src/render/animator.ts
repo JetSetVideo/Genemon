@@ -20,6 +20,22 @@
  *   velocity follows the ground speed, and REAR UP on a charge / strike (front lifts, rear stays down).
  * - Mouths: the jaw breathes, chews (feed()) and roars.
  * Every amplitude still goes through env() = boundTrait(helix.anim[ch]) / REF [P4-V2].
+ *
+ * Pass 7 [P7 motion lane] - a heritable MOTION PERSONALITY (`helix.p7.motion`, Pareto-shaped genes):
+ * - followThrough: tail / neck(+head) chains and ears LAG the body (overlapping action): each chain joint's
+ *   world angle is tracked by an underdamped spring (springStepDamped) whose stiffness falls and whose
+ *   overshoot grows toward the tip; the chain's local angles are rebuilt from the lagged world angles.
+ * - anticipation: a counter-motion opposite to the coming strike late in the wind-up (inside the windup
+ *   envelope w), so the strike starts from further back.
+ * - jitter: idle micro-saccades of the head, ear / tail-tip twitches, a fine spine tremor, from a
+ *   per-creature deterministic noise stream; events are timed inside the frame (frame-rate independent).
+ * - sway: a slow idle weight shift (body roll, spine lean, level head, a drifting neck).
+ * - bounce: a vertical bob in the gait (high between footfalls) and a squash kick at each footfall.
+ * - stiffness: multiplies every posture / flinch / jaw / squash / follow-through spring omega.
+ * Two input-driven improvements: hit(strength, crit, fromYaw) recoils AWAY from the attacker, and
+ * AnimInput.turnRate banks the body into a turn, leads with the head, trails the tail.
+ * Identity: with no helix.p7 (or P7_DEFAULTS) and no fromYaw / turnRate, every pose is bit-identical to
+ * the pass-6 animator (tests/p7_motion_test.ts drives both side by side).
  */
 import { balanceOf, constrainPose, forwardKinematics, type Pose, type Skeleton, type Vec3 } from "../body/skeleton.ts";
 import type { Move } from "../combat/moves.ts";
@@ -29,6 +45,7 @@ import { clamp } from "../core/math.ts";
 import type { AnimChannel, MorphHelix } from "../genome/morphTypes.ts";
 import type { LifePhase, LifeState } from "../genome/lifeTypes.ts";
 import { boundTrait } from "../genome/helix.ts";
+import { type MotionP7, P7_DEFAULTS } from "../genome/p7Types.ts";
 
 /**
  * Reference amplitude of each channel in the pre-helix animator: a channel's envelope multiplies the
@@ -52,6 +69,48 @@ export function springStep(x: number, v: number, target: number, omega: number, 
   const k = v + omega * e;
   const ex = Math.exp(-omega * dt);
   return [target + (e + k * dt) * ex, (v - omega * k * dt) * ex];
+}
+
+/**
+ * One exact step of a damped spring toward `target` with damping ratio `zeta` (< 1 = underdamped: it
+ * overshoots a step by exp(-pi zeta / sqrt(1 - zeta^2))). Closed form, so frame-rate independent for a
+ * held target. zeta >= 1 falls back to the critically damped springStep. Returns [x, v].
+ */
+export function springStepDamped(x: number, v: number, target: number, omega: number, zeta: number, dt: number): [number, number] {
+  if (zeta >= 1) return springStep(x, v, target, omega, dt);
+  if (dt <= 0 || omega <= 0) return [x, v];
+  const z = Math.max(0.05, zeta);
+  const wd = omega * Math.sqrt(1 - z * z);
+  const e = x - target;
+  const ex = Math.exp(-z * omega * dt), c = Math.cos(wd * dt), s = Math.sin(wd * dt);
+  const B = (v + z * omega * e) / wd;
+  return [target + ex * (e * c + B * s), ex * (v * c - ((omega * omega * e + z * omega * v) / wd) * s)];
+}
+
+/**
+ * Damped spring step toward a target that moves LINEARLY from `from` to `to` during dt (first-order
+ * hold): exact, so a smoothly moving target gives the same trajectory at any frame rate. The particular
+ * solution of x'' + 2 zeta w x' + w^2 (x - (a + r t)) = 0 is a + r t - 2 zeta r / w; the rest is homogeneous.
+ */
+export function springStepRamp(x: number, v: number, from: number, to: number, omega: number, zeta: number, dt: number): [number, number] {
+  if (dt <= 0 || omega <= 0) return [x, v];
+  const r = (to - from) / dt, lagK = (2 * Math.min(1, zeta) * r) / omega;
+  const [y, vy] = springStepDamped(x - (from - lagK), v - r, 0, omega, zeta, dt);
+  return [y + to - lagK, vy + r];
+}
+
+/** Motion-personality genes clamped to their declared ranges (P7_DEFAULTS when absent). */
+export function motionOf(helix?: MorphHelix): MotionP7 {
+  const m = (helix?.p7 ?? P7_DEFAULTS).motion;
+  const u = (x: number) => (Number.isFinite(x) ? clamp(x, 0, 1) : 0);
+  return {
+    followThrough: u(m.followThrough),
+    anticipation: u(m.anticipation),
+    jitter: u(m.jitter),
+    sway: u(m.sway),
+    bounce: u(m.bounce),
+    stiffness: Number.isFinite(m.stiffness) ? clamp(m.stiffness, 0.6, 1.6) : 1,
+  };
 }
 
 /** Angle wrapped to (-pi, pi]. */
@@ -250,6 +309,11 @@ export interface AnimInput {
   lookWeight?: number;
   /** Life-state drives (hunger, sleep, bloat, age tempo); absent = a rested adult [P5-A2]. */
   state?: Partial<AnimState>;
+  /**
+   * Body heading rate (rad/s, + = turning toward + lookYaw, i.e. left). Absent = no turn reaction
+   * (pass-6 behaviour). Present: the body banks into the turn, the head leads it, the tail trails.
+   */
+  turnRate?: number;
 }
 
 export interface AnimOutput {
@@ -324,6 +388,34 @@ export class Animator {
   /** Feed reaction clock (s since feed(), < 0 = none) and its kind. */
   private feedT = -1;
   private feedKind: FeedKind = "food";
+  // ---- pass 7: motion personality (all inert at P7_DEFAULTS)
+  /** Clamped motion genes (P7_DEFAULTS when the helix has no p7). */
+  readonly motion: MotionP7;
+  /** Follow-through chains: joint ids base -> tip, ancestor ids, lagged world angles F / velocities V
+   *  per joint and axis ([k * 2 + axis], axes pitch / yaw), ear side (0 = a chain, +-1 = an ear). */
+  private ftChains: { ids: string[]; anc: string[]; F: Float64Array; V: Float64Array; T: Float64Array; ear: number; tail: boolean }[] = [];
+  private ftPrimed = false;
+  /** Directed hit: recoil pitch factor (+1 = from the front) and lateral factor; null side = legacy flinch. */
+  private hitDirected = false;
+  private hitPitchK = 1;
+  private hitLat = 0;
+  /** Jitter: deterministic per-creature noise state, micro-saccade target / spring, twitch clock. */
+  private nz = 1;
+  private jitT = 0;
+  private jitTY = 0;
+  private jitTP = 0;
+  private jitY = 0;
+  private jitVY = 0;
+  private jitP = 0;
+  private jitVP = 0;
+  private twT = 0.8;
+  private twAge = 1e3;
+  private twJ = 0;
+  private twS = 1;
+  private tremPh = 0;
+  private twitchers: { id: string; axis: number; amp: number }[] = [];
+  private swayPh = 0;
+  private lastFoot = NaN;
 
   constructor(readonly sk: Skeleton, readonly ph: Phenotype, readonly helix?: MorphHelix, rand: () => number = Math.random) {
     this.gaze = new Gaze(rand);
@@ -380,6 +472,55 @@ export class Animator {
     }
     const hl = lim("head", 0.75);
     if (hl) this.lookIds.push("head"), this.lookLim.push(hl), this.lookW.push(1.4);
+
+    // ---- pass 7 motion personality
+    this.motion = motionOf(helix);
+    // Per-creature deterministic noise seed (render-only): skeleton shape + mass.
+    let h = 2166136261 >>> 0;
+    for (const v of [sk.joints.length, Math.round(sk.height * 1e4), Math.round(sk.totalMass * 100), Math.round(ph.elasticity * 1e4)]) {
+      h = Math.imul(h ^ (v & 0xffffffff), 16777619) >>> 0;
+    }
+    this.nz = h || 1;
+    this.twT = 0.4 + 1.6 * this.rnd();
+    // Follow-through chains: every tail chain, every neck chain (+ the head on the main neck), each ear.
+    const ancestors = (n: number): string[] => {
+      const out: string[] = [];
+      for (let p = sk.joints[n].parent; p >= 0; p = sk.joints[p].parent) out.push(sk.joints[p].id);
+      return out;
+    };
+    const groups = new Map<string, number[]>();
+    sk.joints.forEach((j, n) => {
+      if (j.role === "tail" || j.role === "neck") {
+        const key = `${j.role}:${j.chain}`;
+        const g = groups.get(key);
+        if (g) g.push(n);
+        else groups.set(key, [n]);
+      }
+    });
+    const headIdx = sk.index.get("head");
+    for (const [key, idx] of groups) {
+      const tip = idx[idx.length - 1];
+      if (key.startsWith("neck") && headIdx !== undefined && sk.joints[headIdx].parent === tip) idx.push(headIdx);
+      const n = idx.length;
+      this.ftChains.push({ ids: idx.map((k) => sk.joints[k].id), anc: ancestors(idx[0]), F: new Float64Array(n * 2), V: new Float64Array(n * 2), T: new Float64Array(n * 2), ear: 0, tail: key.startsWith("tail") });
+    }
+    sk.joints.forEach((j, n) => {
+      if (j.role === "ear") this.ftChains.push({ ids: [j.id], anc: ancestors(n), F: new Float64Array(2), V: new Float64Array(2), T: new Float64Array(2), ear: j.side >= 0 ? 1 : -1, tail: false });
+    });
+    // Twitchers (jitter): ears flick (z), tail tips flick (yaw); the head nods when there are neither.
+    for (const c of this.ftChains) {
+      if (c.ear) this.twitchers.push({ id: c.ids[0], axis: 2, amp: 0.25 });
+      else if (c.tail) this.twitchers.push({ id: c.ids[c.ids.length - 1], axis: 1, amp: 0.3 });
+    }
+    if (this.twitchers.length === 0 && this.roles.has("head")) this.twitchers.push({ id: "head", axis: 0, amp: 0.06 });
+  }
+
+  /** Render-only deterministic noise in [0, 1) (mulberry32 on the creature seed). */
+  private rnd(): number {
+    let t = (this.nz = (this.nz + 0x6d2b79f5) >>> 0);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   }
 
   /** Envelope of a channel at a drive in [0, 1], relative to the legacy amplitude (1 = unchanged). */
@@ -393,10 +534,22 @@ export class Animator {
     return this.helix ? boundTrait(this.helix.anim.wingFlap, drive) : 0.85;
   }
 
-  hit(strength: number, crit: boolean): void {
+  /**
+   * A hit landed. `fromYaw` (optional, creature space, + = left, 0 = straight ahead) is where the blow
+   * came from: the body recoils AWAY from it (pitches back from a frontal blow, lurches forward from
+   * behind, bends and tips away from a side blow). Without it, the pass-6 alternating flinch.
+   */
+  hit(strength: number, crit: boolean, fromYaw?: number): void {
     this.hitT = clamp(this.hitT + strength * (crit ? 1.6 : 1), 0, 1.4);
     this.hitSide = -this.hitSide;
     this.squashV -= strength * (crit ? 4.5 : 2.2) * (0.4 + this.ph.elasticity);
+    if (fromYaw !== undefined && Number.isFinite(fromYaw)) {
+      const c = Math.cos(fromYaw), s = Math.sin(fromYaw);
+      this.hitDirected = true;
+      // A side blow still flinches back a little (startle); |pitchK|, |lat| <= 1 keep the legacy envelope.
+      this.hitPitchK = clamp(c + 0.3 * (1 - Math.abs(c)), -1, 1);
+      this.hitLat = -s;
+    } else this.hitDirected = false;
   }
 
   land(speed: number): void {
@@ -454,6 +607,8 @@ export class Animator {
     const amp = (0.65 + 0.35 * i.energy01) * (1 + 0.35 * e.anger) * (1 - 0.3 * e.sadness);
     const H = this.sk.height;
     const serpent = this.sk.kind === "serpent";
+    const mo = this.motion;
+    const stiff = mo.stiffness;
 
     // ---- breathing (slow; deeper and slower asleep, quicker when aroused) and emotion posture
     const brHz = (0.32 + 0.45 * arousal) * tempo * (1 - 0.35 * asleep) + 0.08 * (1 - i.energy01);
@@ -528,6 +683,8 @@ export class Animator {
       if (!serpent) for (const [k, s] of this.segs.entries()) o(s, 0, Math.sin(this.gait * 0.8 - k * 0.7) * 0.32 * amp * moving);
       for (const [k, pd] of this.pods.entries()) o(pd, Math.sin(this.gait + (k * TAU) / Math.max(1, this.pods.length)) * 0.4 * A);
       for (const s of this.spine) o(s, 0, Math.sin(this.gait) * 0.05 * A);
+      // Bounce [P7]: the spine pitches with the vertical bob (twice per stride, nose dips at footfalls).
+      if (mo.bounce > 0) for (const s of this.spine) o(s, -mo.bounce * 0.06 * A * Math.cos(2 * this.gait) / Math.max(1, this.spine.length / 2));
     }
     // Serpent slither: travelling yaw wave along root + segments, phase velocity from the ground speed
     // (wave speed ~ body speed over a wavelength of the body / 1.2), a slow idle undulation at rest.
@@ -546,6 +703,28 @@ export class Animator {
     roll += Math.sin(this.gait * 0.5 + this.brPh * 0.25) * 0.07 * bloat * this.env("gait", 0.5);
     let lift = this.sk.kind === "biped" || this.sk.kind === "avian" ? Math.abs(Math.sin(this.gait)) * 0.04 * H * sp * moving : 0;
     if (this.sk.kind === "blob") lift += Math.max(0, Math.sin(this.gait * 2)) * 0.06 * H * sp * moving;
+    // Bounce [P7]: the body rides high between footfalls (|cos gait| = 0 at each footfall, where
+    // sin gait = +-1 plants a foot) and each footfall kicks the squash spring. Serpents glide.
+    if (mo.bounce > 0 && !serpent && moving > 1e-3) {
+      const bA = mo.bounce * 0.07 * H * clamp(sp, 0, 1.2) * moving * this.env("gait", clamp(sp, 0, 1));
+      lift += bA * Math.abs(Math.cos(this.gait));
+      const foot = Math.floor((this.gait - Math.PI / 2) / Math.PI);
+      if (foot !== this.lastFoot) {
+        // Kick per footfall scaled by the step period, so a fast cadence never piles the squash up.
+        const stepT = Math.PI / Math.max(1e-3, (i.speed / Math.max(0.2, legLen * 1.6)) * TAU);
+        if (Number.isFinite(this.lastFoot)) this.squashV -= mo.bounce * 1.1 * clamp(sp, 0, 1.2) * moving * (0.3 + this.ph.elasticity) * clamp(stepT / 0.3, 0.15, 1);
+        this.lastFoot = foot;
+      }
+    }
+    // Turn reaction [P7, input-driven]: bank into the turn, the head leads it, the tail trails outward.
+    let turn = 0;
+    if (i.turnRate !== undefined) {
+      turn = this.smooth("turn", clamp(Number.isFinite(i.turnRate) ? i.turnRate : 0, -4, 4), 6, dt);
+      const tk = clamp(0.35 + 0.65 * sp, 0, 1.2) * ground;
+      roll += clamp(-0.05 * turn * tk, -0.15, 0.15);
+      necks(P, 0, clamp(0.1 * turn, -0.3, 0.3));
+      for (const [k, t] of this.tail.entries()) p(t, 0, clamp(-0.08 * turn, -0.25, 0.25) / (k + 1));
+    }
 
     // ---- attack phases (posture targets; the phase spring blends them)
     let charge = 0;
@@ -613,6 +792,33 @@ export class Animator {
           for (const s of this.spine) o(s, 0, 0, Math.sin(i.t * 23) * 0.015 * r);
         }
         if (serpent) this.rearUp(P, w, pr);
+        // Anticipation [P7]: late in the wind-up, a counter-motion OPPOSITE to the coming strike (the body
+        // loads back before it springs), scaled by the windup envelope w so the genes never exceed it.
+        if (mo.anticipation > 0) {
+          const c = mo.anticipation * w * smooth01((pr - 0.15) / 0.6);
+          const nSp = Math.max(1, this.spine.length / 2);
+          if (melee) {
+            for (const s of this.spine) p(s, -0.2 * c / nSp);
+            necks(P, -0.4 * c), p("head", -0.2 * c);
+            for (const lg of this.legs) {
+              if (lg.front) p(lg.hip, 0.4 * c), p(lg.knee, 0.15 * c);
+              else p(lg.knee, 0.3 * c);
+            }
+          } else if (ranged) {
+            for (const s of this.spine) p(s, 0.1 * c / nSp);
+            necks(P, -0.35 * c), p("head", -0.15 * c);
+          } else if (m.shape === "burst") {
+            for (const lg of this.legs) p(lg.hip, (lg.front ? 0.3 : -0.3) * c), p(lg.knee, 0.25 * c);
+            p("head", 0.25 * c);
+          } else {
+            necks(P, 0.25 * c), p("head", 0.2 * c);
+          }
+          for (const a of this.arms) p(a.id, -0.5 * c);
+          for (const el of this.elbows) p(el, -0.35 * c);
+          for (const wg of this.wings) if (wg.role === "wingRoot") p(wg.id, 0, 0, wg.side * 0.4 * c);
+          for (const [k, t] of this.tail.entries()) p(t, -0.2 * c / (k + 1));
+          if (serpent) this.rearUp(P, 0.6 * c, pr);
+        }
       } else if (i.phase === "active") {
         const s = impulse(pr, m.shape === "cone" ? 0.12 : 0.25) * amp * weight * this.env("strike", clamp(m.power / 140, 0, 1));
         charge = 1 - pr;
@@ -699,7 +905,7 @@ export class Animator {
     }
 
     // ---- smooth the posture (exact critically-damped spring per joint and axis)
-    const omega = (i.koT > 0 ? 3 : OMEGA[i.phase]) * tempo * (1 - 0.5 * asleep);
+    const omega = (i.koT > 0 ? 3 : OMEGA[i.phase]) * tempo * (1 - 0.5 * asleep) * stiff;
     const pose: Pose = {};
     for (const j of this.sk.joints) {
       const tgt = P[j.id] ?? [0, 0, 0];
@@ -718,7 +924,7 @@ export class Animator {
 
     // ---- mouth: the jaw breathes (subtle), opens on wind-ups / strikes / roars, chews (smoothed)
     const jawBreath = (0.02 + 0.03 * (0.5 + 0.5 * br) * (0.4 + arousal + 0.6 * (1 - i.energy01))) * eBreath * (1 - 0.6 * asleep) + 0.04 * hunger * (1 - asleep);
-    const jawT = this.smooth("jaw", clamp(jawOpen, 0, 0.65), i.phase === "active" ? 20 : 9, dt);
+    const jawT = this.smooth("jaw", clamp(jawOpen, 0, 0.65), (i.phase === "active" ? 20 : 9) * stiff, dt);
     const jaw = clamp(jawT + jawBreath + jawOsc, 0, 0.65);
     if (this.roles.has("jaw")) pose.jaw = [jaw, 0, 0];
     if (this.roles.has("jaw_2")) pose["jaw_2"] = [jaw, 0, 0];
@@ -741,25 +947,163 @@ export class Animator {
     });
     const gaze: [number, number] = [clamp(this.gaze.eyeYaw - headYaw, -0.3, 0.3), clamp(this.gaze.eyePitch - headPitch, -0.3, 0.3)];
 
+    // ---- pass 7: jitter (idle micro-motion) and sway (slow weight shift), strongest when idle
+    if (mo.jitter > 0 || mo.sway > 0) {
+      const idleK = this.smooth("p7idle", (i.phase === "idle" ? 1 - 0.7 * moving : 0.3) * (1 - asleep) * (i.koT > 0 ? 0 : 1), 3, dt);
+      if (mo.jitter > 0) this.jitterStep(pose, dt, idleK * (1 + 0.5 * clamp(arousal, 0, 1)), tempo);
+      if (mo.sway > 0) roll += this.swayStep(pose, dt, idleK, tempo);
+    }
+
     // ---- hit flinch (spring toward a decaying impulse: a soft, quick recoil), stagger wobble
     this.hitT = Math.max(0, this.hitT - dt * 2.4);
-    [this.hitK, this.hitV] = springStep(this.hitK, this.hitV, this.hitT, 22, dt);
+    [this.hitK, this.hitV] = springStep(this.hitK, this.hitV, this.hitT, 22 * stiff, dt);
     if (this.hitK > 1e-3) {
       const rk = this.hitK * this.env("recoil", clamp(this.hitK / 1.4, 0, 1));
-      for (const s of this.spine) {
-        const a = (pose[s] ??= [0, 0, 0]);
-        a[0] -= 0.26 * rk;
-        a[2] += 0.16 * rk * this.hitSide;
+      if (this.hitDirected) {
+        // Away from the attacker: pitch back (front) / forward (behind), bend, turn and tip away (side).
+        const pk = this.hitPitchK, lat = this.hitLat;
+        for (const s of this.spine) {
+          const a = (pose[s] ??= [0, 0, 0]);
+          a[0] -= 0.26 * rk * pk;
+          a[2] -= 0.16 * rk * lat;
+        }
+        const a = (pose.head ??= [0, 0, 0]);
+        a[0] -= 0.36 * rk * pk;
+        a[1] += 0.18 * rk * lat;
+        roll -= 0.08 * rk * lat;
+      } else {
+        for (const s of this.spine) {
+          const a = (pose[s] ??= [0, 0, 0]);
+          a[0] -= 0.26 * rk;
+          a[2] += 0.16 * rk * this.hitSide;
+        }
+        const a = (pose.head ??= [0, 0, 0]);
+        a[0] -= 0.36 * rk;
+        a[1] += 0.18 * rk * this.hitSide;
       }
-      const a = (pose.head ??= [0, 0, 0]);
-      a[0] -= 0.36 * rk;
-      a[1] += 0.18 * rk * this.hitSide;
     }
     const stag = this.smooth("stagger", i.stagger > 0 ? 1 : 0, 6, dt);
     this.wobPh += dt * 9;
     if (stag > 1e-3) for (const s of this.spine) (pose[s] ??= [0, 0, 0])[2] += Math.sin(this.wobPh) * 0.1 * stag;
 
+    // ---- pass 7: follow-through (tails, neck + head, ears lag the body; overlapping action)
+    if (mo.followThrough > 0) this.followStep(pose, dt, i.turnRate !== undefined && Number.isFinite(i.turnRate) ? clamp(i.turnRate, -6, 6) : 0);
+
     return this.finish(pose, i, charge, roll, lift, gaze, lids, jaw, chewing);
+  }
+
+  /**
+   * Follow-through [P7]: per chain and axis (pitch, yaw), the WORLD angle of joint k (ancestors + the
+   * chain up to k) is tracked by an underdamped spring (zeta 1 -> 0.4 with the gene) whose omega falls
+   * toward the tip, so the tip lags most and overshoots most; local angles are rebuilt from the lagged
+   * world angles and blended in by the gene (each joint's change capped at 0.6 rad, then constrainPose).
+   * Ears flop on z against the head's pitch / yaw motion. A body turn shifts the lagged tail angles.
+   */
+  private followStep(pose: Pose, dt: number, turnRate: number): void {
+    const ft = this.motion.followThrough, st = this.motion.stiffness;
+    const zeta = 1 - 0.6 * ft;
+    const prime = !this.ftPrimed;
+    this.ftPrimed = true;
+    for (const c of this.ftChains) {
+      const n = c.ids.length;
+      if (c.ear) {
+        let W = 0;
+        for (const id of c.anc) {
+          const a = pose[id];
+          if (a) W += a[0] + 0.5 * c.ear * a[1];
+        }
+        if (prime) (c.F[0] = W), (c.V[0] = 0), (c.T[0] = W);
+        const r = springStepRamp(c.F[0], c.V[0], c.T[0], W, (11 * st) / (1 + 0.8 * ft), zeta, dt);
+        c.T[0] = W;
+        c.F[0] = r[0];
+        c.V[0] = r[1];
+        (pose[c.ids[0]] ??= [0, 0, 0])[2] += c.ear * ft * 1.4 * clamp(r[0] - W, -0.4, 0.4);
+        continue;
+      }
+      for (let ax = 0; ax < 2; ax++) {
+        let base = 0;
+        for (const id of c.anc) base += pose[id]?.[ax] ?? 0;
+        if (c.tail && ax === 1 && !prime && turnRate !== 0) for (let k = 0; k < n; k++) (c.F[k * 2 + 1] -= turnRate * dt), (c.T[k * 2 + 1] -= turnRate * dt);
+        let cum = base, prevF = base;
+        for (let k = 0; k < n; k++) {
+          const a = (pose[c.ids[k]] ??= [0, 0, 0]);
+          const drv = a[ax];
+          cum += drv;
+          const q = k * 2 + ax;
+          if (prime) (c.F[q] = cum), (c.V[q] = 0), (c.T[q] = cum);
+          const r = springStepRamp(c.F[q], c.V[q], c.T[q], cum, (14 * st) / (1 + (1.8 * ft * (k + 1)) / n), zeta, dt);
+          c.T[q] = cum;
+          c.F[q] = r[0];
+          c.V[q] = r[1];
+          a[ax] = drv + ft * clamp(r[0] - prevF - drv, -0.6, 0.6);
+          prevF = r[0];
+        }
+      }
+    }
+  }
+
+  /**
+   * Jitter [P7]: micro-saccades of the head (a new tiny offset every 0.1-0.6 s, reached by a fast
+   * spring), ear / tail-tip twitches (a quick flick, x e^(1-x) shaped) and a fine spine tremor. Events fire
+   * at their exact time inside the frame (the frame is split there), so 30 and 120 fps agree.
+   */
+  private jitterStep(pose: Pose, dt: number, k: number, tempo: number): void {
+    const J = this.motion.jitter, wS = 38 * this.motion.stiffness, tp = Math.max(0.4, tempo);
+    let rem = dt;
+    while (rem > 1e-9) {
+      const h = Math.min(rem, Math.max(0, this.jitT), Math.max(0, this.twT));
+      if (h > 0) {
+        [this.jitY, this.jitVY] = springStep(this.jitY, this.jitVY, this.jitTY, wS, h);
+        [this.jitP, this.jitVP] = springStep(this.jitP, this.jitVP, this.jitTP, wS, h);
+        this.twAge += h;
+        this.jitT -= h;
+        this.twT -= h;
+        rem -= h;
+      }
+      if (this.jitT <= 1e-12) {
+        this.jitTY = (this.rnd() - 0.5) * 0.14 * J;
+        this.jitTP = (this.rnd() - 0.5) * 0.08 * J;
+        this.jitT = (0.15 + 0.85 * this.rnd()) / ((0.6 + J) * tp);
+      }
+      if (this.twT <= 1e-12) {
+        this.twAge = 0;
+        this.twJ = Math.min(this.twitchers.length - 1, Math.floor(this.rnd() * this.twitchers.length));
+        this.twS = this.rnd() < 0.5 ? -1 : 1;
+        this.twT = (1 + 3.5 * this.rnd()) / ((0.35 + J) * tp);
+      }
+    }
+    const eH = this.env("headBob", clamp(0.3 + 0.7 * J, 0, 1));
+    if (this.roles.has("head")) {
+      const a = (pose.head ??= [0, 0, 0]);
+      a[0] += this.jitP * k * eH;
+      a[1] += this.jitY * k * eH;
+    }
+    const tw = this.twitchers[this.twJ];
+    if (tw && this.twAge < 1.2) {
+      const x = this.twAge / 0.07;
+      (pose[tw.id] ??= [0, 0, 0])[tw.axis] += tw.amp * J * x * Math.exp(1 - x) * this.twS * k * this.env("tail", J);
+    }
+    this.tremPh += dt * TAU * 9;
+    const tr = 0.005 * J * k * (Math.sin(this.tremPh) + 0.6 * Math.sin(this.tremPh * 1.73 + 1));
+    for (const s of this.spine) (pose[s] ??= [0, 0, 0])[0] += tr;
+  }
+
+  /**
+   * Sway [P7]: a slow (~6-10 s) idle weight shift: the body rolls and the spine leans to one side, the
+   * hips shift under it, the head stays level, the neck drifts in a slow figure. Returns the body roll.
+   */
+  private swayStep(pose: Pose, dt: number, k: number, tempo: number): number {
+    const S = this.motion.sway;
+    this.swayPh += dt * TAU * (0.1 + 0.06 * S) * Math.max(0.4, tempo);
+    const s = Math.sin(this.swayPh) * S * k * this.env("gait", 0.3);
+    const nSp = Math.max(1, this.spine.length);
+    for (const id of this.spine) (pose[id] ??= [0, 0, 0])[2] += (0.08 * s) / nSp;
+    if (this.roles.has("head")) (pose.head ??= [0, 0, 0])[2] -= 0.05 * s;
+    if (this.sk.kind !== "serpent") for (const lg of this.legs) (pose[lg.hip] ??= [0, 0, 0])[2] += 0.06 * s;
+    const nN = Math.max(1, this.necks.length);
+    const drift = (0.1 * S * k * Math.sin(this.swayPh * 0.5 + 1.3)) / nN;
+    for (const id of this.necks) (pose[id] ??= [0, 0, 0])[1] += drift;
+    return 0.05 * s;
   }
 
   /**
@@ -782,7 +1126,8 @@ export class Animator {
     const c = constrainPose(this.sk, pose);
     this.lastPose = c.pose;
     // Squash & stretch spring (elastic bodies wobble longer), sub-stepped so it is frame-rate independent.
-    const k = 60, damp = 6 - 4 * this.ph.elasticity;
+    const st = this.motion.stiffness;
+    const k = 60 * st * st, damp = (6 - 4 * this.ph.elasticity) * st;
     let left = Math.max(0, Math.min(i.dt, 0.1));
     while (left > 1e-6) {
       const h = Math.min(left, 1 / 120);

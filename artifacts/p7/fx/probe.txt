@@ -1,0 +1,46 @@
+# 1. fx genes over 400 random genomes
+param | min | p10 | median | mean | p90 | max | share20 | distinct
+intensity | 0.608 | 1.024 | 1.04 | 1.049 | 1.088 | 1.572 | 0.814 | 109
+trail | 0.029 | 0.379 | 0.4 | 0.401 | 0.425 | 0.912 | 0.786 | 112
+sparkle | 0 | 0.001 | 0.01 | 0.044 | 0.093 | 0.887 | 0.837 | 110
+pulse | 0 | 0.001 | 0.01 | 0.037 | 0.088 | 0.745 | 0.802 | 106
+hueShift | -0.073 | -0.004 | 0 | 0.001 | 0.005 | 0.077 | 0.822 | 50
+derived.countMult(10 x intensity) | 6 | 10 | 10 | 10.24 | 11 | 16 | 0.925 | 9
+derived.trailLife(0.2) | 0.209 | 0.314 | 0.32 | 0.32 | 0.328 | 0.474 | 0.786 | 112
+derived.streakLength m | 0.07 | 0.91 | 0.96 | 0.963 | 1.02 | 2.189 | 0.786 | 112
+derived.moteRate /s | 0 | 0.012 | 0.114 | 0.529 | 1.116 | 10.644 | 0.837 | 110
+derived.pulseAmp | 0 | 0 | 0.005 | 0.017 | 0.04 | 0.335 | 0.802 | 106
+
+# 2. heredity over 200 breedings: r(child, mid-parent) vs r(unrelated, mid-parent)
+intensity: r=0.527 control=0.048
+trail: r=0.353 control=0.095
+sparkle: r=0.379 control=-0.083
+pulse: r=0.507 control=0.022
+hueShift: r=0.297 control=0.066
+
+# 3. real battles (3v3, meadow) replayed at 60 fps: none = no signature, sig = real helix signatures
+seed 1: events 246; light[i1.04 t0.412 s0.058 p0.695 h0] water[i1.041 t0.406 s0.007 p0.002 h-0.002] shadow[i1.034 t0.142 s0.085 p0.005 h-0.001] light[i1.061 t0.375 s0.346 p0.007 h-0.001] psychic[i1.037 t0.366 s0.001 p0.008 h0]
+  none: {"secs":29.767,"glowSpawned":435,"smokeSpawned":306,"motes":0,"peakGlow":57,"peakSmoke":31,"peakTransients":3,"flashes":1}
+  sig : {"secs":29.767,"glowSpawned":685,"smokeSpawned":316,"motes":23,"peakGlow":78,"peakSmoke":31,"peakTransients":3,"flashes":1}
+seed 2: events 318; light[i1.084 t0.395 s0.032 p0.024 h-0.001] poison[i1.035 t0.396 s0.041 p0.001 h-0.001] shadow[i1.043 t0.413 s0 p0.07 h0.007] light[i1.067 t0.337 s0.014 p0.035 h-0.005] poison[i1.06 t0.404 s0.005 p0.003 h-0.001]
+  none: {"secs":33.067,"glowSpawned":468,"smokeSpawned":395,"motes":0,"peakGlow":29,"peakSmoke":52,"peakTransients":4,"flashes":0}
+  sig : {"secs":33.067,"glowSpawned":808,"smokeSpawned":410,"motes":29,"peakGlow":45,"peakSmoke":51,"peakTransients":4,"flashes":0}
+seed 3: events 411; earth[i1.04 t0.401 s0.008 p0.018 h0.002] light[i1.041 t0.397 s0.004 p0.003 h-0.001] psychic[i1.04 t0.377 s0.005 p0.016 h0] void[i1.046 t0.4 s0.002 p0.605 h0] light[i1.044 t0.395 s1 p0.001 h0]
+  none: {"secs":57.7,"glowSpawned":445,"smokeSpawned":612,"motes":0,"peakGlow":27,"peakSmoke":53,"peakTransients":4,"flashes":1}
+  sig : {"secs":57.7,"glowSpawned":1482,"smokeSpawned":620,"motes":707,"peakGlow":54,"peakSmoke":54,"peakTransients":4,"flashes":1}
+seed 4: events 600; psychic[i1.042 t0.289 s0.006 p0.004 h-0.002] air[i1.04 t0.414 s0.046 p0.002 h0] psychic[i1.045 t0.398 s0.002 p0.04 h-0.001] psychic[i1.043 t0.404 s0.024 p0.503 h0.001] void[i1.059 t0.379 s0.07 p0.004 h0.001] shadow[i1.039 t0.399 s0.003 p0.013 h0.003]
+  none: {"secs":94,"glowSpawned":1142,"smokeSpawned":518,"motes":0,"peakGlow":61,"peakSmoke":46,"peakTransients":5,"flashes":0}
+  sig : {"secs":94,"glowSpawned":1633,"smokeSpawned":535,"motes":6,"peakGlow":71,"peakSmoke":47,"peakTransients":5,"flashes":0}
+
+# 4. identity vs src/render/zz_fx_head_tmp.ts: spawns per event type (budgets lifted), old -> new(P7_DEFAULTS)
+hit: 1354 -> 1382  (CHANGED)
+interrupt: 60 -> 60  (equal)
+ko: 234 -> 234  (equal)
+miss: 432 -> 432  (equal)
+phase:beam: 680 -> 680  (equal)
+phase:cone: 108 -> 108  (equal)
+phase:dash: 696 -> 696  (equal)
+phase:emerge: 42 -> 42  (equal)
+physics:bump: 228 -> 228  (equal)
+projectileEnd: 392 -> 392  (equal)
+terrain: 36 -> 36  (equal)

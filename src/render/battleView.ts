@@ -19,16 +19,17 @@ import { ELEMENTS } from "../data/elements.ts";
 import { GROUNDS } from "../data/grounds.ts";
 import { hashSeed } from "../core/rng.ts";
 import { ArenaView } from "./arenaView.ts";
-import { Animator, animStateFromLife, type AnimState, springAngle, springStep } from "./animator.ts";
+import { Animator, animStateFromLife, type AnimState, springAngle, springStep, wrapAngle } from "./animator.ts";
 import type { Genemon } from "../genome/genemon.ts";
 import type { LifePhase } from "../genome/lifeTypes.ts";
 import { BattleCamera, type CameraMode } from "./battleCamera.ts";
 import { CreatureView } from "./creature.ts";
-import { FxDirector } from "./fx.ts";
+import { FxDirector, pulseGlow } from "./fx.ts";
 import type { Stage, View } from "./stage.ts";
 import { textSprite } from "./textures.ts";
 import { displayScale } from "./display.ts";
 import { helixOf } from "../genome/helix.ts";
+import { type FxP7, P7_DEFAULTS } from "../genome/p7Types.ts";
 import { atmosphere } from "./post.ts";
 
 /** Side colours: team 0 (you) sky blue, team 1 (rival) orange - shared by the 3D markers and the HUD. */
@@ -47,6 +48,8 @@ export const PLAYBACK_PACE = 0.75;
 /** Slow-motion time scales (gentle) and how long they hold, seconds of real time. */
 const SLOWMO = { crit: { k: 0.6, hold: 0.35 }, ko: { k: 0.5, hold: 0.8 } };
 
+/** Optional pass-7 hook on the eye aura (intensity / hue of the fx signature). */
+type SignatureAware = { setSignature?(fx: Pick<FxP7, "intensity" | "hueShift">): void };
 /** Optional pass-5 cosmetics on CreatureView (pupils follow the gaze, lids droop when sleepy). */
 type GazeAware = { setGaze?(yaw: number, pitch: number): void; setLids?(minClosed: number): void };
 
@@ -93,6 +96,10 @@ export class BattleView implements View {
   private markers: SideMarker[] = [];
   /** Display scale per fighter (small bodies drawn larger; physics untouched). */
   private ds: number[] = [];
+  /** Pass-7 effects signature per fighter (MorphP7.fx; P7_DEFAULTS.fx = the pass-6 look). */
+  readonly fxSig: FxP7[] = [];
+  /** Scratch colour for per-frame emitters (no per-frame allocation). */
+  private tmpC = new THREE.Color();
 
   private undoFog: (() => void) | null = null;
   private fogBase = { color: 0xcfe8ff, density: 0 };
@@ -129,6 +136,11 @@ export class BattleView implements View {
       stage.scene.add(cv.root);
       this.creatures.push(cv);
       this.animators.push(new Animator(sk, f.ph, helix));
+      // Pass 7: the heritable effects signature drives this fighter's particles, trails, motes and glow.
+      const sig = helix.p7?.fx ?? P7_DEFAULTS.fx;
+      this.fx.setFighterFx(this.creatures.length - 1, sig);
+      this.fxSig.push(this.fx.sigOf(this.creatures.length - 1) as FxP7);
+      (cv.aura as unknown as SignatureAware | null)?.setSignature?.(this.fxSig[this.fxSig.length - 1]);
       this.strain.push(0);
       this.stability.push(1);
       this.markers.push(this.makeMarker(f.team, f.name, f.body.radius * ds));
@@ -242,7 +254,10 @@ export class BattleView implements View {
       case "hit": {
         const t = b.fighters[e.b!];
         const k = Math.min(1, (e.value ?? 0) / Math.max(1, t.maxHp) * 3);
-        this.animators[e.b!].hit(k, !!e.crit);
+        // Pass 7: the body recoils AWAY from the attacker (yaw of the source in the target's drawn frame).
+        const src = e.a !== undefined && e.a !== e.b ? b.fighters[e.a] : undefined;
+        const fromYaw = src ? wrapAngle(Math.atan2(src.body.pos.x - t.body.pos.x, src.body.pos.z - t.body.pos.z) - this.visYaw[e.b!]) : undefined;
+        this.animators[e.b!].hit(k, !!e.crit, fromYaw);
         this.cam.addTrauma(0.05 + 0.18 * k + (e.crit ? 0.28 : 0));
         if (e.crit) {
           this.cam.punch(4, (Math.random() - 0.5) * 0.05);
@@ -306,6 +321,7 @@ export class BattleView implements View {
       const local = { x: n.x * cy - n.z * sy, y: n.y, z: n.x * sy + n.z * cy };
       const out = this.animators[i].update({
         dt,
+        turnRate: dt > 0 ? this.visYawV[i] : 0,
         t: t + i * 0.37,
         phase: f.phase,
         progress: f.phaseDur > 0 ? f.phaseT / f.phaseDur : 0,
@@ -333,6 +349,13 @@ export class BattleView implements View {
       cv.pivot.position.y = out.lift - (body.submerged * f.ph.heightM * 0.35);
       const chargeColor = f.move ? ELEMENTS[f.move.element].color : undefined;
       cv.setCharge(out.charge * (f.move ? Math.min(1.3, f.move.power / 60) : 0), chargeColor);
+      // Pass 7 pulse: a slow emissive breathing on top of the charge glow (setCharge resets it every frame).
+      const sig = this.fxSig[i];
+      const pg = f.ko ? 0 : pulseGlow(sig.pulse, t, i * 1.7);
+      if (pg > 0) {
+        cv.skin.emissiveIntensity += pg * 0.65;
+        cv.accent.emissiveIntensity += pg;
+      }
       cv.setPupils(f.emotions.fear, f.emotions.anger);
       const ga = cv as unknown as GazeAware;
       ga.setGaze?.(out.gaze[0], out.gaze[1]);
@@ -360,8 +383,8 @@ export class BattleView implements View {
       mk.hp.center.set(0.5 / Math.max(0.01, frac), 0);
       // Charge motes drawn in toward the head: ~14/s (was 0.6 per frame = 36-72/s).
       if (f.phase === "charge" && f.move) {
-        const n = this.fx.glowBudget.take(this.fx.countFor(14, dt));
-        const c = new THREE.Color(ELEMENTS[f.move.element].color);
+        const n = this.fx.glowBudget.take(this.fx.countFor(14 * sig.intensity, dt));
+        const c = this.fx.tintInto(this.tmpC, i, f.move.element);
         for (let k = 0; k < n; k++) {
           const h = this.headOf(i);
           const a = Math.random() * Math.PI * 2, r = f.ph.heightM * 0.8;
@@ -373,12 +396,17 @@ export class BattleView implements View {
         const h = this.headOf(i), aim = target ? Math.atan2(target.body.pos.x - body.pos.x, target.body.pos.z - body.pos.z) : body.yaw;
         h.x += Math.sin(aim) * f.body.radius * this.ds[i] * 0.8;
         h.z += Math.cos(aim) * f.body.radius * this.ds[i] * 0.8;
-        this.fx.coneStream(h, aim, f.move.element, f.move.range, f.move.arc ?? 0.45, dt, 0.38 + 0.1 * f.ph.heightM);
+        this.fx.coneStream(h, aim, f.move.element, f.move.range, f.move.arc ?? 0.45, dt, 0.38 + 0.1 * f.ph.heightM, 55, i);
       }
       // Stunned: dizzy sparks circling the head.
-      if (f.status.has("stunned") && !f.ko && this.fx.countFor(16, dt) > 0) {
+      if (f.status.has("stunned") && !f.ko && this.fx.countFor(16, dt) > 0 && this.fx.glowBudget.take(1) > 0) {
         const h = this.headOf(i), a = t * 4 + i, r = 0.25 + f.ph.heightM * this.ds[i] * 0.35;
-        this.fx.glow.spawn(h.x + Math.cos(a) * r, h.y + 0.25, h.z + Math.sin(a) * r, 0, 0.15, 0, new THREE.Color(0xfff3a0), 0.18, 0.35, { drag: 2 });
+        this.fx.glow.emit(h.x + Math.cos(a) * r, h.y + 0.25, h.z + Math.sin(a) * r, 0, 0.15, 0, this.tmpC.setHex(0xfff3a0), 0.18, 0.35, 0, 0, 2);
+      }
+      // Pass 7 sparkle: ambient emissive motes around the body (rate-based, budgeted; 0 = none).
+      if (!f.ko && cv.root.visible) {
+        const ds = this.ds[i], hgt = f.ph.heightM * ds;
+        this.fx.ambient(i, body.pos.x, body.pos.y + hgt * 0.5, body.pos.z, f.body.radius * ds * 1.15, hgt * 1.1, f.ph.elements.primary, dt);
       }
       if (body.mode === "burrow" && this.fx.countFor(12, dt) > 0) this.fx.dust({ x: body.pos.x, y: b.arena.heightAt(body.pos.x, body.pos.z), z: body.pos.z }, 2, 0x7a5a3a, 0.7);
     });
@@ -404,7 +432,7 @@ export class BattleView implements View {
       winner: b.winner,
       weather: b.weather,
       playback: { speed: this.speed, pace: this.pace, timeScale: Math.round(this.timeScale * 1000) / 1000, slowmo: this.slowmo > 0 },
-      fx: { flashes: this.fx.flashCount },
+      fx: { flashes: this.fx.flashCount, ...this.fx.stats(), signatures: this.fxSig.map((s) => ({ ...s })) },
       post: this.stage.post?.snapshot() ?? null,
       arena: b.arena.spec.kind,
       viewPx: [W, H],
