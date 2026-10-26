@@ -218,7 +218,7 @@ export interface MorphOp {
   amount: number;
   /** Falloff width along the region 0..1. */
   width: number;
-  /** Angle around the section, radians (0 = dorsal). */
+  /** Angle around the section, radians, loft frame (0 = +x lateral, PI/2 = dorsal, -PI/2 = ventral). */
   angle: number;
 }
 /** Growth envelope of the skeleton nodes: min and max per node, bounded like every helix trait. */

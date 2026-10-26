@@ -17,6 +17,9 @@
  * Fire [P5-V6]: a fire-primary creature (or one whose tail gene is "flame") grows flame tongues (accent
  * material) off the trailing edge of membrane panels and off the primary-feather tips.
  *
+ * Scallop [P7-G2]: helix.p7.relief.scallop adds three extra notches to every membrane hand panel and fin panel
+ * trailing edge (and a finer grid so they resolve); 0 = the pass-6 wing exactly.
+ *
  * Built for the side +1 canon and mirrored; the rare asymmetry ("wing" part) scales the tip (hand) meshes.
  * perJoint keys are POSITIONS in the given joints array (0 root, 1 mid, 2 tip): the caller maps them.
  */
@@ -124,6 +127,9 @@ export function buildWing(
   const fire = ph.elements.primary === "fire" || helix.p5?.body.tail.shape === "flame";
   // Pass 6: a dense colossus on the low tier (smallRadial 4) drops the vein strips (budget).
   const veins = detail > 0.5 && res.smallRadial > 4;
+  const scP = Number.isFinite(helix.p7?.relief.scallop) ? clamp01(helix.p7!.relief.scallop) : 0;
+  /** Extra trailing-edge notches of a panel (0 at both ends and when scallop is 0). */
+  const notch = (u: number) => (scP > 0 ? 0.12 * scP * Math.sin(3 * Math.PI * u) ** 2 : 0);
 
   if (kind === "membrane") {
     const F = Math.max(2, Math.min(5, Math.round(helix.wings.fingers)));
@@ -154,10 +160,10 @@ export function buildWing(
     surf[1].push({ geo: gridSurface(midP, nu, nv), slots: ["membrane"] });
     for (let k = 0; k + 1 < F; k++) {
       const P = (u: number, v: number): V3 => {
-        const e = mul3(lerp3(tips[k], tips[k + 1], u), 1 - sc * Math.sin(Math.PI * u));
+        const e = mul3(lerp3(tips[k], tips[k + 1], u), 1 - sc * Math.sin(Math.PI * u) - notch(u));
         return sagged(mul3(e, v), u, v, len3(e) * 0.5);
       };
-      surf[2].push({ geo: gridSurface(P, Math.max(3, Math.round(nu * 0.6)), nv), slots: ["membrane"] });
+      surf[2].push({ geo: gridSurface(P, Math.max(3, Math.round(nu * 0.6)) * (scP > 0 ? 2 : 1), nv), slots: ["membrane"] });
       if (veins) bones[2].push({ geo: strip(sample((v) => add3(P(0.5, v), [0, rv * 0.6, 0]), 5, 0.12, 0.95), rv, rv * 0.5, res), slots: ["skin"] });
     }
     if (fire) {
@@ -255,8 +261,8 @@ export function buildWing(
     for (let k = 0; k < nR; k++) tips.push(mul3(norm3(rotate3(d0, UP, (k / (nR - 1)) * 1.2)), Lf * (1 - (0.45 * k) / (nR - 1))));
     const sc = 0.08 + 0.15 * detail;
     for (let k = 0; k + 1 < nR; k++) {
-      const P = (u: number, v: number): V3 => mul3(mul3(lerp3(tips[k], tips[k + 1], u), 1 - sc * Math.sin(Math.PI * u)), v);
-      surf[0].push({ geo: gridSurface(P, Math.max(3, Math.round(nu * 0.5)), nv), slots: ["membrane"] });
+      const P = (u: number, v: number): V3 => mul3(mul3(lerp3(tips[k], tips[k + 1], u), 1 - sc * Math.sin(Math.PI * u) - notch(u)), v);
+      surf[0].push({ geo: gridSurface(P, Math.max(3, Math.round(nu * 0.5)) * (scP > 0 ? 2 : 1), nv), slots: ["membrane"] });
     }
     for (const t of tips) bones[0].push({ geo: strip(sample((u) => add3(mul3(t, u), [0, rv * 0.4, 0]), 4, 0.02, 1), rv * 1.6, rv * 0.5, res), slots: ["accent"] });
     bones[0].push(...limbPieces(c0, undefined, "wing", ph, helix, res, c0.length * 0.25));

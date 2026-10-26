@@ -27,16 +27,29 @@
  * - tail tips: taper, club, fin, fan, spade, whip, flame, leaf, rattle, split (tipSize);
  * - armFractal: branch / spiral / mandelbrot-like sub-branches on hands, front claws and horn tips (budgeted);
  * - tentacle chains (`tent<i>`) lofted as one tapering surface with a belly-coloured underside.
+ *
+ * Pass 7 [P7-G1, P7-G2] (genes: helix.p7 ?? P7_DEFAULTS; P7_DEFAULTS builds the pass-6 body exactly):
+ * - p7.ops run after the pass-5 ops (one angle convention, the loft frame, every lobe op mirror-paired: ops.ts);
+ * - relief on every chain section (dorsal ridges, flutes, facets, segment BANDS whose count scales with the
+ *   chain's length against the trunk, extra stations so the bands resolve), limbs at half strength;
+ *   knobs = mirrored bosses rooted on the trunk / neck / tail; scallop = rippled ears and tail fins / spades /
+ *   leaves / fans (and wing trailing edges, wings.ts);
+ * - horns: pairs (extra, smaller pairs seated on the skull ellipsoid in front of the skeleton's horns),
+ *   branch (antler tines, 1..3 levels), curl (a ram spiral: a helix about the horn's lateral axis whose
+ *   turning radius never drops under 1.4 x the local horn radius and whose pitch clears the previous turn);
+ * - spikes: rows (1 dorsal, 2 dorsolateral, 3 both), length and density, under a per-body spike budget.
+ * Every count is budgeted (spikes, knobs; tines skipped on dense colossi) so bodyTriangleCap still holds.
  */
 import * as THREE from "../../lib/three.ts";
 import type { BodyPlan6, JointDef, Skeleton } from "../../body/skeleton.ts";
 import type { Phenotype } from "../../genome/phenotype.ts";
 import { type MorphHelix, type MorphOp, type MorphP5, type MorphRegion, P5_DEFAULTS } from "../../genome/morphTypes.ts";
+import { type MorphP7, P7_DEFAULTS, type ReliefGenes } from "../../genome/p7Types.ts";
 import type { BodyParts, JointMeshes, SkinMaterials } from "./types.ts";
 import { asymScale } from "./hitbox.ts";
 import { buildDigits, canon, canonJoint, DENSE_JOINTS, fractalPieces, limbPieces, type LimbPart, liteResolution, meshOf, type Quality, type Res, resolutionFor, type Slot, socketK, VERY_DENSE_JOINTS } from "./limbs.ts";
 import { buildWing, feather } from "./wings.ts";
-import { applyOps, opsFor, regionOfChain } from "./ops.ts";
+import { applyOps, applyRelief, opsFor, regionOfChain, reliefActive, sanitizeRelief } from "./ops.ts";
 import {
   add3,
   bezier3,
@@ -45,8 +58,10 @@ import {
   bump,
   clamp01,
   clampExponent,
+  cross3,
   curveRings,
   type Lobe,
+  len3,
   loftRings,
   mergePieces,
   mul3,
@@ -55,6 +70,7 @@ import {
   type Piece,
   type Ring,
   rotate3,
+  safeSection,
   type Section,
   smoothstep,
   sphereGeo,
@@ -85,6 +101,16 @@ interface Ctx {
   /** Pass 6: the resolved body plan (sk.plan6), armour plates / molting shell pieces per joint (own meshes). */
   P: BodyPlan6 | null;
   shells: Piece<Slot>[][][];
+  /** Pass 7 genes (P7_DEFAULTS = the pass-6 body) and the sanitised relief. */
+  p7: MorphP7;
+  relief: ReliefGenes;
+  /** Total trunk (torso chains) length: segment bands per chain = segments x chain length / trunkLen. */
+  trunkLen: number;
+  /** Pass 7 budgets: spikes per row per joint, knob PAIRS per chain joint. */
+  spikePerRow: number;
+  knobPairs: number;
+  /** Pass 7 detail level (buildBody's budget cascade). */
+  detail: Detail;
 }
 
 /** Effective angularity [P5-V2, P5-V6]: element curvature bends it (rock / metal up, water / air down), babies are round. */
@@ -309,11 +335,19 @@ function chainPieces(ctx: Ctx, ids: number[]): void {
   const tent = js[0].chain.startsWith("tent");
   const bounds = cum.slice(1).map((c) => c / T);
   const w = 0.35 * Math.min(...lens) / T;
-  const ops = ctx.ops(regionOfChain(js[0].chain));
+  const region = regionOfChain(js[0].chain);
+  const ops = ctx.ops(region);
+  // Pass 7 relief: never on the globe's hidden base; bands scale with this chain's length against the trunk.
+  const rel = ctx.relief;
+  const globeBase = !!ctx.P?.globe && js[0].chain === "stack";
+  const bands = !globeBase && rel.segments > 0 && rel.segmentDepth > 0 ? Math.max(0, Math.min(16, Math.round((rel.segments * T) / ctx.trunkLen))) : 0;
+  const relOn = !globeBase && reliefActive(rel, bands);
+  const relK = region === "limb" ? 0.5 : 1;
   const sectionAt = (s: number): Section => {
     let pinch = 1;
     for (const b of bounds) pinch -= cfg.pinch * bump(s, b, w);
-    return applyOps(cfg.section(clamp01(s), rb(s) * pinch), clamp01(s), ops);
+    const sec = applyOps(cfg.section(clamp01(s), rb(s) * pinch), clamp01(s), ops);
+    return relOn ? applyRelief(sec, clamp01(s), rel, relK, bands) : sec;
   };
   for (let k = 0; k < n; k++) {
     const j = js[k];
@@ -322,9 +356,14 @@ function chainPieces(ctx: Ctx, ids: number[]): void {
     const ovPrev = first ? 0 : rb(cum[k] / T) * (0.25 + 0.75 * F);
     const ovNext = last ? 0 : rb((cum[k] + L) / T) * (0.25 + 0.75 * F);
     const a = first ? -cfg.extStart * rS[0] : -ovPrev;
-    const b = last ? L + cfg.extEnd * rE[n - 1] : L + ovNext;
+    let b = last ? L + cfg.extEnd * rE[n - 1] : L + ovNext;
+    // Pass 7 robustness: a chain's FIRST segment must reach past the socket sphere its parent puts on its pivot
+    // (a short neck0 / tail0 at low fusion lay wholly inside that socket and the parent: "buried").
+    if (first && j.parent >= 0 && sk.joints[j.parent].chain !== j.chain) b = Math.max(b, 1.3 * socketK(j.role) * Math.max(1e-4, j.r0));
     // Pass 6: a dense colossus on the low tier lofts each (short, straight) tentacle segment with 2 stations.
-    const nSt = (tent ? (res.limbStations > 5 ? 4 : res.dense && res.limbStations <= 2 ? 2 : 3) : res.stations) + (a < -0.3 * L || b > 1.3 * L ? 2 : 0);
+    let nSt = (tent ? (res.limbStations > 5 ? 4 : res.dense && res.limbStations <= 2 ? 2 : 3) : res.stations) + (a < -0.3 * L || b > 1.3 * L ? 2 : 0);
+    // Pass 7: enough stations for ~4 per segment band (capped: 3x the base stations, 2x on a dense colossus).
+    if (bands > 0 && ctx.detail < 2) nSt = Math.max(nSt, Math.min((res.dense || ctx.detail === 1 ? 2 : 3) * res.stations + 1, Math.ceil((4 * bands * (b - a)) / T) + 1));
     const st: Station[] = [];
     for (let m = 0; m < nSt; m++) {
       const t = a + ((b - a) * m) / (nSt - 1);
@@ -345,6 +384,7 @@ function chainPieces(ctx: Ctx, ids: number[]): void {
       slots: cfg.belly > 0 ? ["skin", "belly"] : ["skin"],
     });
     if (cfg.spikes && ph.plan.spikes > 0.55) spikePieces(ctx, ids[k], frame, L, (t) => sectionAt((cum[k] + t) / T), rb((cum[k] + L / 2) / T));
+    if (rel.knobs > 0 && ctx.knobPairs > 0 && !globeBase && !tent) knobPieces(ctx, ids[k], frame, L, (t) => sectionAt((cum[k] + t) / T), rb((cum[k] + L / 2) / T));
     // Pass 6 [P6-E4]: armour plates (armor+) on the trunk; a molting body's shell cracks into pieces.
     const P = ctx.P;
     const trunk = js[0].chain === "spine" || js[0].chain === "body" || js[0].chain === "abdomen" || (js[0].chain === "stack" && !P?.globe && P?.form !== "cocoon");
@@ -455,6 +495,9 @@ function mawMesh(ctx: Ctx, hi: number, mats: SkinMaterials, quality: Quality): {
 /** Curved cones along the dorsal surface, rooted ON the loft (the section's dorsal point), leaning back. */
 function spikePieces(ctx: Ctx, idx: number, frame: { t: V3; x: V3; y: V3 }, L: number, secAt: (t: number) => Section, rb: number): void {
   const { ph, A, res } = ctx;
+  const sp = ctx.p7.spikes;
+  const rows = Math.max(0, Math.min(3, Math.round(Number.isFinite(sp.rows) ? sp.rows : 0)));
+  if (rows > 0) return spikeRows(ctx, idx, frame, L, secAt, rb, rows);
   const n = Math.max(1, Math.round(ph.plan.spikes * 3));
   const h = rb * (0.45 + 0.7 * (ph.plan.spikes - 0.55)) * (1 + 0.3 * A);
   const rS = rb * 0.16;
@@ -484,6 +527,92 @@ function spikePieces(ctx: Ctx, idx: number, frame: { t: V3; x: V3; y: V3 }, L: n
 }
 
 /**
+ * Pass-7 spike rows [P7-G2]: 1 = the dorsal row, 2 = a mirrored dorsolateral pair of rows (+-1.0 rad off the
+ * dorsal axis), 3 = both; length x0.5..2 and density x0.5..2 (count per row capped by the body's spike budget).
+ * Lateral rows are staggered half a step and a little shorter; every spike roots inside the guarded section.
+ */
+function spikeRows(ctx: Ctx, idx: number, frame: { t: V3; x: V3; y: V3 }, L: number, secAt: (t: number) => Section, rb: number, rows: number): void {
+  const { ph, A, res } = ctx;
+  const sp = ctx.p7.spikes;
+  const fin = (v: number, lo: number, hi: number, d: number) => (Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : d);
+  const lenK = fin(sp.length, 0.5, 2, 1), denK = fin(sp.density, 0.5, 2, 1);
+  const n = Math.max(1, Math.min(ctx.spikePerRow, Math.round(ph.plan.spikes * 3 * denK)));
+  const h0 = rb * (0.45 + 0.7 * (ph.plan.spikes - 0.55)) * (1 + 0.3 * A) * lenK;
+  // Flank rows at +-1.0 rad off the dorsal axis (at +-0.62 they lined up with the dorsal row from every camera).
+  const LAT = 1.0;
+  const angles = rows === 1 ? [HALF_PI] : rows === 2 ? [HALF_PI - LAT, HALF_PI + LAT] : [HALF_PI, HALF_PI - LAT, HALF_PI + LAT];
+  const ns = res.limbStations > 5 ? 6 : 4;
+  for (const th of angles) {
+    const lateral = th !== HALF_PI;
+    // Lateral rows 0.9x the dorsal row (0.72x read as a single row in real Chrome captures).
+    const h = h0 * (lateral ? 0.9 : 1);
+    const rS = rb * 0.16 * (lateral ? 0.9 : 1) * (0.85 + 0.15 * lenK);
+    for (let k = 0; k < n; k++) {
+      const t = lateral ? L * (0.2 + (0.6 * (k + 0.5)) / n) : n === 1 ? L * 0.5 : L * (0.2 + (0.6 * k) / (n - 1));
+      const s = safeSection(secAt(t), res.radial);
+      const [px, py] = superSection(th, s.rx, s.ry, s.exp ?? 2, s.lobes);
+      const p = add3(add3(mul3(frame.t, t), mul3(frame.x, px + (s.offsetX ?? 0))), mul3(frame.y, py + (s.offsetY ?? 0)));
+      const nrm = lateral ? norm3(add3(mul3(frame.x, px), mul3(frame.y, py))) : frame.y;
+      const dirS = norm3(sub3(mul3(nrm, Math.cos(0.4)), mul3(frame.t, Math.sin(0.4))));
+      const pts: V3[] = [];
+      for (let i = 0; i < ns; i++) {
+        pts.push(bezier3(
+          sub3(p, mul3(dirS, h * 0.25 + rS * 0.5)),
+          add3(p, mul3(dirS, h * 0.35)),
+          sub3(add3(p, mul3(dirS, h * 0.7)), mul3(frame.t, h * 0.1)),
+          sub3(add3(p, mul3(dirS, h * 0.95)), mul3(frame.t, h * 0.3)),
+          i / (ns - 1),
+        ));
+      }
+      const sec = (u: number): Section => {
+        const r = rS * Math.pow(1 - u, 1.1) + rS * 0.03;
+        return { rx: r * 0.75, ry: r };
+      };
+      ctx.pieces[idx].push({ geo: loftRings(curveRings(pts, sec, frame.t), { radial: res.smallRadial, capRings: 1, capScale: [0.5, 0.8] }), slots: ["accent"] });
+    }
+  }
+}
+
+/** Fractional part (deterministic low-discrepancy placement of knobs: no Math.random in geometry). */
+const frac = (x: number) => x - Math.floor(x);
+
+/**
+ * Knobs [P7-G2]: mirrored bosses (warts / tubercles; bony when knobs >= 0.6) on one chain joint, rooted on the
+ * GUARDED section surface (the loft's own safeSection) and sunk 85 % of their radius, from the flank up to near
+ * the spine (a pair collapses to one dorsal knob near the axis). Positions are a golden-ratio sequence of the
+ * joint index: deterministic per genome.
+ */
+function knobPieces(ctx: Ctx, idx: number, frame: { t: V3; x: V3; y: V3 }, L: number, secAt: (t: number) => Section, rb: number): void {
+  const { res } = ctx;
+  const kn = ctx.relief.knobs;
+  const pairs = Math.min(ctx.knobPairs, Math.round(kn * 4));
+  const high = res.limbStations > 5;
+  const [sw, sh] = high ? [8, 6] : [6, 4];
+  const slot: Slot = kn >= 0.6 ? "keratin" : "skin";
+  for (let q = 0; q < pairs; q++) {
+    const h1 = frac(0.6180339887 * (q + 1) + 0.4142135624 * idx);
+    const h2 = frac(0.7548776662 * (q + 1) + 0.5698402910 * idx);
+    const h3 = frac(0.5698402910 * (q + 1) + 0.7548776662 * idx + 0.3);
+    const t = L * (0.12 + 0.76 * h1);
+    const th = -0.25 + (HALF_PI + 0.25 - 0.1) * h2;
+    const rk = rb * (0.06 + 0.1 * kn) * (0.75 + 0.5 * h3);
+    const s = safeSection(secAt(t), res.radial);
+    const one = Math.abs(th - HALF_PI) < 0.18;
+    for (const a of one ? [HALF_PI] : [th, Math.PI - th]) {
+      const [px, py] = superSection(a, s.rx, s.ry, s.exp ?? 2, s.lobes);
+      const n = norm3(add3(mul3(frame.x, px), mul3(frame.y, py)));
+      const c = add3(add3(add3(mul3(frame.t, t), mul3(frame.x, px + (s.offsetX ?? 0))), mul3(frame.y, py + (s.offsetY ?? 0))), mul3(n, 0.15 * rk));
+      ctx.pieces[idx].push({ geo: sphereGeo(c, rk, sw, sh), slots: [slot] });
+    }
+  }
+}
+
+/** Scalloped outline factor [P7-G2]: four notches along u (1 at both ends and when scallop is 0). */
+function scallopK(sc: number, u: number, notches = 4): number {
+  return sc > 0 ? 1 - 0.22 * sc * (0.5 - 0.5 * Math.cos(2 * Math.PI * notches * u)) : 1;
+}
+
+/**
  * Tail tip shapes [P5-V6] on the LAST tail joint (its frame: bone along dir, dorsal +Y): every piece starts
  * inside the tip of the tail loft so it is connected. Size = the tail root radius x tipSize.
  */
@@ -498,6 +627,7 @@ function tailTipPieces(ctx: Ctx, last: JointDef, rootR: number): Piece<Slot>[] {
   const at = (z: number, x = 0, y = 0): V3 => add3(add3(mul3(f.t, z), mul3(f.x, x)), mul3(f.y, y));
   const r1 = Math.max(1e-4, last.r1);
   const out: Piece<Slot>[] = [];
+  const sc = ctx.relief.scallop;
   const along = (z0: number, z1: number, n: number, sec: (u: number) => Section, slot: Slot, caps: [number, number] = [0.6, 0.9], radial = res.limbRadial) => {
     const st: Station[] = [];
     for (let i = 0; i < n; i++) {
@@ -508,7 +638,8 @@ function tailTipPieces(ctx: Ctx, last: JointDef, rootR: number): Piece<Slot>[] {
   };
   const curve = (pts: V3[], sec: (u: number) => Section, slot: Slot, radial = res.smallRadial) =>
     out.push({ geo: loftRings(curveRings(pts, sec, f.y), { radial, capRings: 1, capScale: [0.5, 0.9] }), slots: [slot] });
-  const nS = high ? 9 : 5;
+  // Pass 7: a scalloped fin / spade / leaf needs more stations to show its notches.
+  const nS = sc > 0 && (shape === "fin" || shape === "spade" || shape === "leaf") ? (high ? 17 : 11) : high ? 9 : 5;
   switch (shape) {
     case "club":
       along(L - 0.4 * s0, L + 1.7 * s0, nS, (u) => {
@@ -517,10 +648,10 @@ function tailTipPieces(ctx: Ctx, last: JointDef, rootR: number): Piece<Slot>[] {
       }, "accent", [0.5, 0.8]);
       break;
     case "fin":
-      along(L - 2.6 * s0, L + 0.9 * s0, nS, (u) => ({ rx: s0 * 0.16 + r1 * 0.3, ry: r1 + s0 * 1.5 * Math.sin(Math.PI * (0.08 + 0.84 * u)) ** 0.7, exp: 2 }), "accent", [0.5, 1.2]);
+      along(L - 2.6 * s0, L + 0.9 * s0, nS, (u) => ({ rx: s0 * 0.16 + r1 * 0.3, ry: r1 + s0 * 1.5 * Math.sin(Math.PI * (0.08 + 0.84 * u)) ** 0.7 * scallopK(sc, u), exp: 2 }), "accent", [0.5, 1.2]);
       break;
     case "spade":
-      along(L - 0.5 * s0, L + 2.2 * s0, nS, (u) => ({ rx: r1 * 0.6 + s0 * 1.25 * Math.sin(Math.PI * Math.pow(u, 0.55)) ** 1.1, ry: r1 * 0.35 + s0 * 0.16, exp: 2.2 }), "accent", [0.5, 1.6]);
+      along(L - 0.5 * s0, L + 2.2 * s0, nS, (u) => ({ rx: r1 * 0.6 + s0 * 1.25 * Math.sin(Math.PI * Math.pow(u, 0.55)) ** 1.1 * scallopK(sc, u, 3), ry: r1 * 0.35 + s0 * 0.16, exp: 2.2 }), "accent", [0.5, 1.6]);
       break;
     case "leaf": {
       const pts: V3[] = [];
@@ -528,7 +659,7 @@ function tailTipPieces(ctx: Ctx, last: JointDef, rootR: number): Piece<Slot>[] {
         const u = i / (nS - 1);
         pts.push(at(L - 0.5 * s0 + 3.2 * s0 * u, 0, -0.5 * s0 * u * u));
       }
-      curve(pts, (u) => ({ rx: r1 * 0.5 + s0 * 1.1 * Math.sin(Math.PI * u) ** 0.8, ry: r1 * 0.3 + s0 * 0.1, lobes: [{ angle: HALF_PI, amp: 0.6, sharp: 14 }] }), "accent", res.limbRadial);
+      curve(pts, (u) => ({ rx: r1 * 0.5 + s0 * 1.1 * Math.sin(Math.PI * u) ** 0.8 * scallopK(sc, u, 5), ry: r1 * 0.3 + s0 * 0.1, lobes: [{ angle: HALF_PI, amp: 0.6, sharp: 14 }] }), "accent", res.limbRadial);
       break;
     }
     case "whip": {
@@ -562,7 +693,7 @@ function tailTipPieces(ctx: Ctx, last: JointDef, rootR: number): Piece<Slot>[] {
       for (let k = 0; k < n; k++) {
         const a = (k / (n - 1) - 0.5) * 1.8;
         const dir = norm3(add3(mul3(f.t, Math.cos(a)), add3(mul3(f.x, Math.sin(a)), mul3(f.y, 0.25))));
-        out.push({ geo: feather(at(L - 0.3 * s0), dir, s0 * (3.2 - 0.9 * Math.abs(a)), s0 * 0.9, res), slots: ["accent"] });
+        out.push({ geo: feather(at(L - 0.3 * s0), dir, s0 * (3.2 - 0.9 * Math.abs(a)) * (sc > 0 && k % 2 === 1 ? 1 - 0.3 * sc : 1), s0 * 0.9, res), slots: ["accent"] });
       }
       break;
     }
@@ -590,36 +721,87 @@ function tailTipPieces(ctx: Ctx, last: JointDef, rootR: number): Piece<Slot>[] {
   return out;
 }
 
-/** A curved, ridged, tapering horn along a bezier (canonical frame); tines at fractalDepth 3. */
-function hornPieces(ctx: Ctx, j: JointDef): Piece<Slot>[] {
+/**
+ * Pass-7 ram curl [P7-G2]: the horn path as a helix about its lateral axis. The direction turns by up to
+ * `curl` turns (concentrated toward the tip, u^1.3), but never with a turning radius under 1.4 x the local horn
+ * radius (a fat short horn curls less instead of folding its own tube), and drifts outward by 2.6 x the root
+ * radius per turn so a turn never cuts through the previous one.
+ */
+export function curlPath(P0: V3, d: V3, L: number, curl: number, rAt: (u: number) => number, r0: number, n: number): V3[] {
+  let ax = cross3(d, [0, 0, -1]);
+  if (len3(ax) < 0.2) ax = [-1, 0, 0];
+  ax = norm3(ax);
+  const outward: V3 = ax[0] < 0 ? mul3(ax, -1) : ax;
+  const step = (L * (1 + 0.4 * curl)) / Math.max(1, n - 1);
+  const pts: V3[] = [P0];
+  let p = P0, dir = norm3(d), done = 0;
+  for (let i = 1; i < n; i++) {
+    const u = i / (n - 1);
+    const want = curl * 2 * Math.PI * Math.pow(u, 1.3) - done;
+    const dth = Math.max(0, Math.min(want, step / (1.4 * Math.max(1e-6, rAt(u)))));
+    done += dth;
+    dir = norm3(rotate3(dir, ax, dth));
+    p = add3(add3(p, mul3(dir, step)), mul3(outward, (2.6 * r0 * dth) / (2 * Math.PI)));
+    pts.push(p);
+  }
+  return pts;
+}
+
+/** Point at parameter u of a sampled polyline (uniform in index). */
+function polyAt(pts: V3[], u: number): V3 {
+  const x = clamp01(u) * (pts.length - 1);
+  const i = Math.min(pts.length - 2, Math.floor(x));
+  const f = x - i;
+  return add3(mul3(pts[i], 1 - f), mul3(pts[i + 1], f));
+}
+
+interface HornSpec {
+  origin: V3;
+  d: V3;
+  L: number;
+  r0: number;
+  /** p7 antler levels 0..3 and ram curl in turns 0..1.5. */
+  branch: number;
+  curl: number;
+  /** The skeleton's own horn: it alone keeps the fractalDepth tines and the armFractal antlers. */
+  main: boolean;
+}
+
+/** A curved, ridged, tapering horn along a bezier (canonical frame); tines at fractalDepth 3; p7 antlers / curl. */
+function hornOne(ctx: Ctx, h: HornSpec): Piece<Slot>[] {
   const { helix, A, res } = ctx;
-  const d = norm3(j.dir);
-  const L = Math.max(1e-4, j.length), r0 = Math.max(1e-4, j.r0);
+  const d = h.d;
+  const L = h.L, r0 = h.r0, O = h.origin;
   const curlAmt = 0.55 - 0.4 * A;
   const curl = norm3([0.6, -0.25, -1]);
-  const P0 = mul3(d, -r0 * 0.8);
-  const P1 = mul3(d, L * 0.35);
-  const P2 = add3(mul3(d, L * 0.7), mul3(curl, L * 0.25 * curlAmt));
-  const P3 = add3(mul3(d, L * (0.95 - 0.2 * curlAmt)), mul3(curl, L * 0.6 * curlAmt));
+  const P0 = add3(O, mul3(d, -r0 * 0.8));
+  const P1 = add3(O, mul3(d, L * 0.35));
+  const P2 = add3(O, add3(mul3(d, L * 0.7), mul3(curl, L * 0.25 * curlAmt)));
+  const P3 = add3(O, add3(mul3(d, L * (0.95 - 0.2 * curlAmt)), mul3(curl, L * 0.6 * curlAmt)));
   const high = res.limbStations > 5;
   const depth = Math.round(helix.fractalDepth);
   const ringsN = 4 + Math.round(3 * clamp01(helix.wings.detail + helix.surface.plates) / 2 + depth);
   const ridge = high ? 0.04 + 0.03 * Math.min(3, depth) : 0;
-  const samples = high ? Math.max(14, ringsN * 3) : 7;
-  const pts: V3[] = [];
-  for (let i = 0; i < samples; i++) pts.push(bezier3(P0, P1, P2, P3, i / (samples - 1)));
   const rAt = (u: number) => r0 * Math.pow(1 - u, 0.9) + r0 * 0.05;
+  const ram = h.curl > 0.01;
+  const samples0 = high ? Math.max(14, ringsN * 3) : 7;
+  const samples = ram ? Math.max(samples0, (high ? 16 : 8) + Math.ceil(h.curl * (high ? 16 : 8))) : samples0;
+  let pts: V3[] = [];
+  if (ram) pts = curlPath(P0, d, L, h.curl, rAt, r0, samples);
+  else for (let i = 0; i < samples; i++) pts.push(bezier3(P0, P1, P2, P3, i / (samples - 1)));
+  const at = (u: number): V3 => (ram ? polyAt(pts, u) : bezier3(P0, P1, P2, P3, u));
+  const tangent = (u: number): V3 => norm3(sub3(at(Math.min(1, u + 0.02)), at(Math.max(0, u - 0.02))));
   const sec = (u: number): Section => {
     const r = rAt(u) * (1 + ridge * (0.5 + 0.5 * Math.cos(2 * Math.PI * u * ringsN)));
     return { rx: r, ry: r * (1 + 0.15 * A), exp: 2 + 0.4 * A, lobes: A > 0.1 ? [{ angle: HALF_PI, amp: 0.15 * A, sharp: 6 }] : [] };
   };
   const out: Piece<Slot>[] = [{ geo: loftRings(curveRings(pts, sec, [0, 0, 1]), { radial: res.smallRadial + 2, capRings: 2, capScale: [0.6, 1.2] }), slots: ["accent"] }];
   // Pass 6: a dense colossus keeps plain horns (no tines, no fractal antlers): budget.
-  if (depth >= 3 && !res.dense) {
+  if (h.main && depth >= 3 && !res.dense) {
     const tines = high ? [0.42, 0.68] : [0.55];
     tines.forEach((u, i) => {
-      const base = bezier3(P0, P1, P2, P3, u);
-      const tan = norm3(sub3(bezier3(P0, P1, P2, P3, Math.min(1, u + 0.02)), bezier3(P0, P1, P2, P3, Math.max(0, u - 0.02))));
+      const base = at(u);
+      const tan = tangent(u);
       const td = norm3(add3(tan, [0, 0.55, 0.5]));
       const Lt = L * 0.32 * (1 - 0.25 * i);
       const rT = rAt(u) * 0.55;
@@ -631,13 +813,72 @@ function hornPieces(ctx: Ctx, j: JointDef): Piece<Slot>[] {
       out.push({ geo: loftRings(curveRings(tp, (v) => ({ rx: rT * (1 - 0.9 * v) + rT * 0.05, ry: rT * (1 - 0.9 * v) + rT * 0.05 }), [0, 0, 1]), { radial: res.smallRadial, capRings: 1, capScale: [0.5, 1] }), slots: ["accent"] });
     });
   }
+  // Pass 7 antlers: `branch` levels of alternating tines (each tine forks once per further level). Same budget rule.
+  if (h.branch > 0 && !res.dense) {
+    const us = h.branch >= 2 ? [0.42, 0.64, 0.84] : [0.5, 0.74];
+    us.forEach((u, i) => {
+      const tan = tangent(u);
+      const side = i % 2 === 0 ? 1 : -1;
+      // Tines stand OFF the beam (mostly perpendicular, up-forward, alternating sides) so they read as antlers.
+      const w: V3 = [0, 0.55, 0.5];
+      const perp = sub3(w, mul3(tan, w[0] * tan[0] + w[1] * tan[1] + w[2] * tan[2]));
+      const td = norm3(rotate3(norm3(add3(mul3(tan, 0.35), len3(perp) > 1e-3 ? norm3(perp) : [0, 1, 0])), tan, side * 0.7));
+      antler(out, at(u), td, L * 0.5 * (1 - 0.15 * i), rAt(u) * 0.5, h.branch, side, high, Math.max(4, res.smallRadial - 2));
+    });
+  }
   // armFractal on the horn: antler-like sub-branches from the upper horn (depth capped at 3).
   const af = ctx.p5.body.armFractal;
-  if (af.mode !== "none" && af.depth >= 1 && !res.dense) {
+  if (h.main && af.mode !== "none" && af.depth >= 1 && !res.dense) {
     const u0 = 0.62;
-    const base = bezier3(P0, P1, P2, P3, u0);
-    const tan = norm3(sub3(bezier3(P0, P1, P2, P3, u0 + 0.03), bezier3(P0, P1, P2, P3, u0 - 0.03)));
+    const base = at(u0);
+    const tan = ram ? tangent(u0) : norm3(sub3(bezier3(P0, P1, P2, P3, u0 + 0.03), bezier3(P0, P1, P2, P3, u0 - 0.03)));
     out.push(...fractalPieces(base, norm3(add3(tan, [0, 0.4, 0])), L * 0.42, rAt(u0) * 0.8, { ...af, depth: Math.min(3, af.depth) }, res, high ? 9 : 4, "accent"));
+  }
+  return out;
+}
+
+/** One antler tine rooted inside its parent at `base`; forks once more per remaining level (alternating sides). */
+function antler(out: Piece<Slot>[], base: V3, dir: V3, len: number, r: number, level: number, side: number, high: boolean, radial: number): void {
+  if (len < 1e-5 || r < 1e-6) return;
+  const ns = high ? 4 : 3;
+  const P0 = sub3(base, mul3(dir, r * 0.6)), P1 = add3(base, mul3(dir, len * 0.4)), P2 = add3(base, mul3(dir, len * 0.75));
+  const P3 = add3(add3(base, mul3(dir, len)), [0, len * 0.12, 0]);
+  const pts: V3[] = [];
+  for (let k = 0; k < ns; k++) pts.push(bezier3(P0, P1, P2, P3, k / (ns - 1)));
+  out.push({ geo: loftRings(curveRings(pts, (v) => ({ rx: r * (1 - 0.85 * v) + r * 0.06, ry: r * (1 - 0.85 * v) + r * 0.06 }), [0, 0, 1]), { radial, capRings: 1, capScale: [0.5, 1] }), slots: ["accent"] });
+  if (level <= 1) return;
+  const u = 0.6;
+  const fork = bezier3(P0, P1, P2, P3, u);
+  const ax = cross3(dir, [0, 1, 0]);
+  const cd = norm3(rotate3(dir, len3(ax) > 1e-3 ? ax : [1, 0, 0], side * 0.6));
+  antler(out, fork, cd, len * 0.6, r * (1 - 0.85 * u) * 0.9 + r * 0.06, level - 1, -side, high, radial);
+}
+
+/**
+ * The horns of one horn joint (canonical frame): the skeleton's horn plus, on the FRONT-most horn of each side,
+ * `extras` smaller pairs [P7-G2] walking forward and inward along the skull. Each extra root is seated on the
+ * face ellipsoid the skeleton seats its horns on (centre 0.45 L, radii r, 0.95 r, 0.62 L in the head frame) and
+ * sunk a little, then expressed in this horn joint's frame (rest frames are un-rotated: offsets subtract).
+ */
+function hornPieces(ctx: Ctx, j: JointDef, head?: JointDef, extras = 0): Piece<Slot>[] {
+  const h7 = ctx.p7.horns;
+  const branch = Math.max(0, Math.min(3, Math.round(Number.isFinite(h7.branch) ? h7.branch : 0)));
+  const curl = Number.isFinite(h7.curl) ? Math.max(0, Math.min(1.5, h7.curl)) : 0;
+  const L = Math.max(1e-4, j.length), r0 = Math.max(1e-4, j.r0);
+  const d = norm3(j.dir);
+  const out = hornOne(ctx, { origin: [0, 0, 0], d, L, r0, branch: ctx.detail >= 1 ? Math.min(1, branch) : branch, curl, main: true });
+  if (ctx.detail >= 1) extras = Math.min(1, extras);
+  if (extras <= 0 || !head) return out;
+  const headR = Math.max(1e-4, head.r0), headLen = Math.max(1e-4, head.length);
+  const o = j.offset;
+  for (let k = 1; k <= extras; k++) {
+    const hx = Math.max(0.2 * headR, Math.min(0.8 * headR, o[0] * (1 - 0.28 * k)));
+    const hz = Math.min(headLen * (0.45 + 0.62 * 0.75), o[2] + 0.22 * headLen * k);
+    const ex = hx / headR, ez = (hz - headLen * 0.45) / (headLen * 0.62);
+    const hy = 0.95 * headR * Math.sqrt(Math.max(0.04, 1 - ex * ex - ez * ez)) * 0.86;
+    const origin: V3 = [hx - o[0], hy - o[1], hz - o[2]];
+    const dk = norm3([0.25 + 0.1 * d[0], 0.95, -0.15 + 0.12 * k]);
+    out.push(...hornOne(ctx, { origin, d: dk, L: L * Math.pow(0.7, k), r0: r0 * Math.pow(0.78, k), branch: Math.min(branch, 1), curl: curl * 0.5, main: false }));
   }
   return out;
 }
@@ -648,13 +889,14 @@ function earPieces(ctx: Ctx, j: JointDef): Piece<Slot>[] {
   const d = norm3(j.dir);
   const L = Math.max(1e-4, j.length), r0 = Math.max(1e-4, j.r0), r1 = Math.max(1e-4, j.r1);
   const bend = norm3([0.2, 0, -1]);
-  const n = res.limbStations > 5 ? 7 : 4;
+  const sc = ctx.relief.scallop;
+  const n = sc > 0 ? (res.limbStations > 5 ? 13 : 9) : res.limbStations > 5 ? 7 : 4;
   const pts: V3[] = [];
   for (let i = 0; i < n; i++) {
     const u = i / (n - 1);
     pts.push(add3(mul3(d, -r0 * 0.4 + (L + r0 * 0.4) * u), mul3(bend, L * 0.18 * u * u)));
   }
-  const width = (u: number) => r0 * (0.8 + 0.6 * Math.sin(Math.PI * u * 0.9)) * Math.pow(1 - u, 0.5) + r1;
+  const width = (u: number) => (r0 * (0.8 + 0.6 * Math.sin(Math.PI * u * 0.9)) * Math.pow(1 - u, 0.5) + r1) * scallopK(sc, u);
   const outer = (u: number): Section => ({ rx: width(u), ry: width(u) * 0.32, exp: 2 + 0.3 * A, lobes: [{ angle: HALF_PI, amp: -0.45, sharp: 3 }] });
   const inner = (u: number): Section => ({ rx: width(u) * 0.7, ry: width(u) * 0.07, offsetY: width(u) * 0.14 });
   const opts = { radial: res.limbRadial, capRings: 2, capScale: [0.6, 1 + 1.5 * A] as [number, number] };
@@ -701,10 +943,30 @@ export function buildBody(ph: Phenotype, sk: Skeleton, helix: MorphHelix, mats: 
   // Pass 6: a dense colossus (many joints) is meshed coarser; a pass-6 body over its cap is rebuilt one step
   // coarser (dense resolution, then the lite one).
   const dense = sk.joints.length > DENSE_JOINTS;
-  const first = buildBodyAt(ph, sk, helix, mats, quality, resolutionFor(quality, sk.joints.length));
-  if (!sk.plan6 || first.triangles <= bodyTriangleCap(sk, quality)) return first;
-  disposeParts(first);
-  return buildBodyAt(ph, sk, helix, mats, quality, dense ? liteResolution(quality) : resolutionFor(quality, DENSE_JOINTS + 1));
+  const cap = bodyTriangleCap(sk, quality);
+  const res0 = resolutionFor(quality, sk.joints.length);
+  const first = buildBodyAt(ph, sk, helix, mats, quality, res0);
+  if (first.triangles <= cap || (!sk.plan6 && !helix.p7)) return first;
+  const coarse = dense ? liteResolution(quality) : resolutionFor(quality, DENSE_JOINTS + 1);
+  // Pass 7: before coarsening the whole mesh, the p7 detail steps down (lite: fewer spikes / knobs / tines /
+  // extra horns / band stations; then off); then the pass-6 coarser step, then lite and off (the pass-6 coarse body plus
+  // the section-only relief). The first build inside the cap wins, else the lightest. Without helix.p7 this is
+  // exactly the pass-6 rule (full resolution, then the coarser one). A legacy skeleton (no plan6) is never
+  // coarsened (pass-6 rule) but its p7 detail still steps down, so p7 never pushes it over the cap either.
+  const steps: [Res, Detail][] = !sk.plan6 ? [[res0, 1], [res0, 2]] : helix.p7 ? [[res0, 1], [res0, 2], [coarse, 0], [coarse, 1], [coarse, 2]] : [[coarse, 0]];
+  let best = first;
+  for (const [res, detail] of steps) {
+    const next = buildBodyAt(ph, sk, helix, mats, quality, res, detail);
+    if (next.triangles <= cap) {
+      disposeParts(best);
+      return next;
+    }
+    if (next.triangles < best.triangles) {
+      disposeParts(best);
+      best = next;
+    } else disposeParts(next);
+  }
+  return best;
 }
 
 function disposeParts(p: BodyParts): void {
@@ -712,10 +974,28 @@ function disposeParts(p: BodyParts): void {
   for (const m of p.materials ?? []) m.dispose();
 }
 
-function buildBodyAt(ph: Phenotype, sk: Skeleton, helix: MorphHelix, mats: SkinMaterials, quality: Quality, res: Res): BodyParts {
+/** Pass-7 detail level: 0 full, 1 lite (fewer spikes / knobs / tines / extra horns, fewer band stations), 2 off. */
+type Detail = 0 | 1 | 2;
+
+/** The p7 genes a detail level keeps (level 2: no knobs, scallop, horn or spike elaboration). */
+function p7AtDetail(p7: MorphP7, detail: Detail): MorphP7 {
+  if (detail < 2) return p7;
+  return { ...p7, relief: { ...p7.relief, knobs: 0, scallop: 0 }, horns: { pairs: 0, branch: 0, curl: 0 }, spikes: { rows: 0, length: 1, density: 1 } };
+}
+
+function buildBodyAt(ph: Phenotype, sk: Skeleton, helix0: MorphHelix, mats: SkinMaterials, quality: Quality, res: Res, detail: Detail = 0): BodyParts {
+  const helix: MorphHelix = detail === 2 && helix0.p7 ? { ...helix0, p7: p7AtDetail(helix0.p7, 2) } : helix0;
   const p5 = helix.p5 ?? P5_DEFAULTS;
   const curv = Math.max(-1, Math.min(1, Number.isFinite(p5.body.curvature) ? p5.body.curvature : 0));
   const baby = clamp01(sk.dev?.baby ?? 0);
+  // Pass 7: p7 ops after the pass-5 ones, budgets for the counted parts.
+  const p7 = helix.p7 ?? P7_DEFAULTS;
+  const allOps: MorphOp[] = [...(p5.body.ops ?? []), ...(p7.ops ?? [])];
+  const high = quality === "high";
+  const spikeBudget = (high ? 120 : 60) * (res.dense ? 0.5 : 1);
+  const knobBudget = (high ? 96 : 64) * (res.dense ? 0.5 : 1);
+  const chainJoints = sk.joints.filter((j) => CHAIN_ROLES.has(j.role) && !j.chain.startsWith("tent")).length;
+  const trunkJoints = sk.joints.filter((j) => CHAIN_ROLES.has(j.role) && regionOfChain(j.chain) === "torso").length;
   const ctx: Ctx = {
     ph,
     sk,
@@ -726,10 +1006,16 @@ function buildBodyAt(ph: Phenotype, sk: Skeleton, helix: MorphHelix, mats: SkinM
     p5,
     curv,
     baby,
-    ops: (region) => opsFor(p5.body.ops, region),
+    ops: (region) => opsFor(allOps, region),
     pieces: sk.joints.map(() => []),
     P: sk.plan6 ?? null,
     shells: sk.joints.map(() => []),
+    p7,
+    relief: sanitizeRelief(p7.relief),
+    trunkLen: Math.max(1e-3, sk.joints.reduce((a, j) => a + (CHAIN_ROLES.has(j.role) && regionOfChain(j.chain) === "torso" ? Math.max(1e-4, j.length) : 0), 0)),
+    spikePerRow: Math.max(1, Math.min(detail >= 1 ? 2 : 8, Math.floor(spikeBudget / Math.max(1, trunkJoints)))),
+    knobPairs: Math.max(0, Math.min(detail >= 1 ? 1 : 4, Math.floor(knobBudget / 2 / Math.max(1, chainJoints)))),
+    detail,
   };
   const P = ctx.P;
   const materials: THREE.Material[] = [];
@@ -783,6 +1069,23 @@ function buildBodyAt(ph: Phenotype, sk: Skeleton, helix: MorphHelix, mats: SkinM
 
   // 3. Limbs, horns, ears, digits (lateral parts in the side +1 canon).
   const limbOps = ctx.ops("limb");
+  const limbRelief = reliefActive(ctx.relief, 0);
+  // Pass 7 horn pairs: the missing pairs (p7.horns.pairs minus the skeleton's own) grow on the FRONT-most horn
+  // of each side (largest head-frame z), never more than 3 pairs in total.
+  const hornExtras = new Map<number, number>();
+  {
+    const want = Math.max(0, Math.min(3, Math.round(Number.isFinite(p7.horns.pairs) ? p7.horns.pairs : 0)));
+    // Per head and side (a two-headed body gets its extra pairs on both heads).
+    const groups = new Map<string, number[]>();
+    J.forEach((j, i) => {
+      if (j.role === "horn") groups.set(`${j.parent}:${j.side}`, [...(groups.get(`${j.parent}:${j.side}`) ?? []), i]);
+    });
+    for (const hs of groups.values()) {
+      if (want <= hs.length) continue;
+      const front = hs.reduce((a, b) => (J[b].offset[2] > J[a].offset[2] ? b : a));
+      hornExtras.set(front, want - hs.length);
+    }
+  }
   const af = p5.body.armFractal;
   const fractalOn = af.mode !== "none" && af.depth >= 1;
   J.forEach((j, i) => {
@@ -792,7 +1095,7 @@ function buildBodyAt(ph: Phenotype, sk: Skeleton, helix: MorphHelix, mats: SkinM
     if (part) {
       const childIdx = J.findIndex((c) => c.parent === i && (LIMB_PART[c.role] !== undefined || c.role === "ankle"));
       const child = childIdx >= 0 ? canonJoint(J[childIdx]) : undefined;
-      ctx.pieces[i].push(...limbPieces(jc, child, part, ph, helix, res, undefined, { ops: limbOps, u: LIMB_U[part], A: ctx.A, baby, style: p5.body.limbStyle }));
+      ctx.pieces[i].push(...limbPieces(jc, child, part, ph, helix, res, undefined, { ops: limbOps, u: LIMB_U[part], A: ctx.A, baby, style: p5.body.limbStyle, ...(limbRelief ? { relief: ctx.relief, reliefStrength: 0.5 } : {}) }));
       // armFractal: a fractal HAND replaces the fingers of a wrist; front feet get fractal claws from depth 2.
       const frontFoot = j.role === "ankle" && J[J[j.parent]?.parent ?? -1]?.role === "shoulder";
       const fractalHand = fractalOn && j.role === "wrist";
@@ -809,7 +1112,7 @@ function buildBodyAt(ph: Phenotype, sk: Skeleton, helix: MorphHelix, mats: SkinM
         const m = meshOf(fr, mats, `${j.id}:fractal`, j.side < 0);
         if (m) extra.set(i, [...(extra.get(i) ?? []), m]);
       }
-    } else if (j.role === "horn") ctx.pieces[i].push(...hornPieces(ctx, jc));
+    } else if (j.role === "horn") ctx.pieces[i].push(...hornPieces(ctx, jc, J[j.parent], hornExtras.get(i) ?? 0));
     else if (j.role === "ear") ctx.pieces[i].push(...earPieces(ctx, jc));
   });
 

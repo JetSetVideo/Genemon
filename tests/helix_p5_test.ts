@@ -97,7 +97,9 @@ Deno.test("p5: every genome gets a complete MorphP5 inside the contract ranges",
       inR(o.u, 0, 1, "op u");
       inR(o.amount, -1, 1, "op amount");
       inR(o.width, 0, 1, "op width");
-      assert(o.angle === 0 || Math.abs(o.angle - Math.PI) < 1e-2, "ops are dorsal or ventral (mirror-safe)");
+      // Pass 7: loft frame (src/render/anatomy/loft.ts): PI/2 = dorsal, -PI/2 = ventral. The pass-5 values 0 / PI
+      // were lateral in that frame and put every lobe op on one flank (handoff-geometry.md).
+      assert(Math.abs(Math.abs(o.angle) - Math.PI / 2) < 1e-2, "ops are dorsal or ventral (mirror-safe)");
     }
     const s = p.skin;
     inR(s.bellyContrast, 0, 1, "belly");

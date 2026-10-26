@@ -960,7 +960,7 @@ function bodyP5(m: MorphAlleles, ph: Phenotype, fractalDepth: number, chaos: num
       u: r3(orng.range(0.15, 0.85)),
       amount: r3(OP_SIGN[k] * orng.range(0.15, 0.6) * (k === "twist" && orng.chance(0.5) ? -1 : 1)),
       width: r3(orng.range(0.1, 0.5)),
-      angle: orng.chance(0.65) ? 0 : r3(Math.PI), // dorsal or ventral: keeps the bilateral mirror
+      angle: orng.chance(0.65) ? r3(Math.PI / 2) : r3(-Math.PI / 2), // dorsal or ventral (loft frame: PI/2 = dorsal)
     });
   }
   return {

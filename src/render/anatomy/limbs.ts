@@ -11,9 +11,10 @@ import * as THREE from "../../lib/three.ts";
 import type { JointDef, JointRole } from "../../body/skeleton.ts";
 import type { Phenotype } from "../../genome/phenotype.ts";
 import type { BodyP5, LimbStyle, MorphHelix, MorphOp } from "../../genome/morphTypes.ts";
+import type { ReliefGenes } from "../../genome/p7Types.ts";
 import type { SkinMaterials } from "./types.ts";
 import { asymScale } from "./hitbox.ts";
-import { applyOps } from "./ops.ts";
+import { applyOps, applyRelief } from "./ops.ts";
 import {
   add3,
   bezier3,
@@ -155,6 +156,9 @@ export interface LimbOpts {
   /** Baby factor 0..1: softer muscles. */
   baby?: number;
   style?: LimbStyle;
+  /** Pass 7: surface relief on the limb sections (ridges, flutes, facets; no bands) at `reliefStrength` (0.5). */
+  relief?: ReliefGenes;
+  reliefStrength?: number;
 }
 
 /**
@@ -171,7 +175,9 @@ export function limbPieces(j: JointDef, child: JointDef | undefined, part: LimbP
   const [ua, ub] = o.u ?? [0, 1];
   const fin = o.style === "fins" && part === "foot";
   const back = r0 * 0.35;
-  const fwd = child ? Math.max(1e-4, child.r0) * (0.45 + 0.5 * F) : 0;
+  // Pass 7 robustness: the loft reaches past the parent's socket sphere on this pivot (a short baby pod at low
+  // fusion ended inside that socket and the body: "buried").
+  const fwd = child ? Math.max(Math.max(1e-4, child.r0) * (0.45 + 0.5 * F), 1.3 * socketK(j.role) * r0 - L) : 0;
   const n = res.limbStations + (child ? 2 : 0);
   const exp = 1.92 + 0.5 * A;
   const sharp = 2.2 + 5 * A;
@@ -215,7 +221,8 @@ export function limbPieces(j: JointDef, child: JointDef | undefined, part: LimbP
         sec.lobes = [{ angle: Math.PI / 2, amp: 0.15 * bump(u, 0.2, 0.3), sharp: 3 }];
         break;
     }
-    st.push({ ...(ops.length ? applyOps(sec, ua + (ub - ua) * u, ops) : sec), z: t });
+    const opd = ops.length ? applyOps(sec, ua + (ub - ua) * u, ops) : sec;
+    st.push({ ...(o.relief ? applyRelief(opd, u, o.relief, o.reliefStrength ?? 0.5, 0) : opd), z: t });
   }
   const frame = part === "wing" ? boneFrame(j.dir, [0, 1, 0], [0, 0, 1]) : boneFrame(j.dir, [0, 0, 1], [0, 1, 0]);
   const endCap = child ? 0.5 : part === "foot" ? 0.9 : part === "wing" ? 2.2 : 0.85;
