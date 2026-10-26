@@ -10,8 +10,24 @@ Every requirement from the founding brief, with an id, its bound, the file that 
 A requirement silently dropped reads as delivered: OPEN rows are the honest gap list. Update a row only with
 evidence (a test name, a harness number, a capture file). Numbers come from the tools, never typed by hand.
 
-Last updated: 2026-10-22 (pass 4; section P4 below). Measurements: `artifacts/balance/REPORT.md`, `artifacts/scenarios/`,
+Last updated: 2026-10-26 (pass 7; section P7 below). Measurements: `artifacts/balance/REPORT.md`, `artifacts/scenarios/`,
 `artifacts/qa/round-2/REPORT.md` (when written), `docs/EVIDENCE.md`.
+
+## P7 - Pass 7 (founder's request of 2026-10-26: variety of generations passed to heirs, richer models / animations / effects, the Pareto rule on every generated parameter)
+
+Measured by `deno task pareto` (`artifacts/p7/pareto-report.md`), `tests/pareto_test.ts`, `tests/p7_{geometry,motion,fx}_test.ts`,
+`tools/p7geo.ts`, `tools/p7fx.ts`, `tools/p7feat.ts`, real Chrome via `tools/p7showcase.ts` + `tools/p6shots.ts`.
+
+| id | requirement | bound | owner | status |
+|---|---|---|---|---|
+| P7-D1 | Pareto rule on every generated morph / motion / fx parameter (min, max, median, mean) | rank-preserving bounded-Pareto remap (K 120, a 0.8) calibrated on 20000 wild; personality traits two-sided around the median, elaborations and open recessive gates one-sided; mixtures calibrated per design class. 101/101 continuous params with share20 in 0.70-0.90 (overall or per class), median share20 0.415 -> 0.804; median kept, extremes reached, mean off the median. 21 small integer counts reported as discrete. Combat stats NOT remapped [SPEC B1] | `src/genome/pareto.ts`, `helix.ts`, `src/data/paretoCalib.ts`, `tools/pareto.ts` | TESTED + MEASURED; Lab sheet shows the signature (LIVE in the build, not yet captured on the sheet) |
+| P7-H1 | Heirs inherit the variety | every pass-4..7 gene Mendelian; mutation steps Pareto-tailed (median 0.007, rare 0.5); child vs mid-parent rank r 0.48-0.75 (stranger <= 0.10); extreme mid-parent -> child in the same extreme decile 58 % (base 24 %); generations 0-6 keep share20 0.76 | `breeding.ts`, `helix.inheritMorph`, `tests/pareto_test.ts` | TESTED + MEASURED |
+| P7-G1 | More morphogenetic operators | 15 kinds (pass 5 + ridge, flute, facet, scallop, segment, knob, spiral), 0-6 extra per creature (80 % none); lobe ops mirror-paired; p5 op angles fixed to the loft frame (pass-6 bug: every p5 lobe op landed on one flank) | `src/render/anatomy/ops.ts`, `helix7.ts`, `helix.ts` | TESTED (per-kind direction, guards, mirror; 6 ops x every kind x +-1 x every region viable) |
+| P7-G2 | Relief, horns, spikes | ridges 0-5, flutes 0-8, segment bands 0-12, knobs, facets, scallops; 1-3 horn pairs, antlers 0-3, ram curl 0-1.5 turns; 1-3 spike rows on the back and flanks; P7_DEFAULTS bit-identical to pass 6; caps held (0 over cap, 0 non-finite in 224 bodies); triangles low median 8104 -> 8256 | `body.ts`, `limbs.ts`, `wings.ts` | TESTED; LIVE (Chrome): segment bands, antler branches, back + flank spike rows, ridged crest seen; extra horn pairs counted 2 by vision for 3 pairs (geometry +1448 tris measured) |
+| P7-G3 | Robust at every bound | viability sweep 90 cases x fusion 0..1: 14/990 non-viable (pass-6 builder) -> 0/990; every p7 field at max and at min viable | `body.ts`, `limbs.ts`, `tests/p7_geometry_test.ts` | TESTED |
+| P7-M1 | Motion personality genes | follow-through (tail-tip lag 0.13-0.32 s), anticipation (wind-up counter-pitch to -0.38 rad), jitter, sway, bounce, stiffness (settle 1.07 / 0.63 / 0.40 s); 0 rad over coupled limits at all-max / all-min; P7_DEFAULTS Object.is-identical to the pass-6 animator over 27000 frames | `src/render/animator.ts` | TESTED; visual reading not captured |
+| P7-M2 | Directional hit reaction, turn banking | recoil away from the attacker; bank / head lead / tail trail in turns | `animator.ts`, `battleView.ts` | TESTED; wired in battleView |
+| P7-F1 | Element-specific impacts + fx signature | 14 distinct impact profiles (embers, droplets + splash, branching sparks, shards, debris, bubbles, sinking wisps, leaves, glints, rings, swirls, metal sparks); per-creature intensity / trail / sparkle motes / glow pulse / hue shift under the spawn budgets; flash counts unchanged | `src/render/fx.ts`, `battleView.ts`, `anatomy/eyeAura.ts` | TESTED (6 mutants caught); LIVE: fire, water, earth, psychic, signature streak, sparkle motes seen; 10 other elements captured, not reviewed |
 
 ## P6 - Pass 6 (founder's request of 2026-10-23, decoded in `docs/team/PASS6-BRIEF.md`)
 

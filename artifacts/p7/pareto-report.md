@@ -1,6 +1,6 @@
 # Pareto report [P7-D1]
 
-Command: `deno task pareto --write` - 4000 wild Genemon (seeds 1000000..), calibration keys: 143.
+Command: `deno task pareto` - 4000 wild Genemon (seeds 1000000..), calibration keys: 143.
 
 | | BEFORE (remap bypassed) | AFTER (shipped) |
 |---|---|---|
@@ -15,23 +15,23 @@ Command: `deno task pareto --write` - 4000 wild Genemon (seeds 1000000..), calib
 | median share20 of continuous params | 0.415 | 0.804 |
 | distinct silhouettes WITHOUT pass-7 features (the pass-6 game) | 1307 | 1307 |
 | distinct silhouettes WITH pass-7 features (uniform vs Pareto genes) | 3330 | 2756 |
-| signature traits per creature (mean) | 0.00 | 2.44 |
-| creatures with no signature trait | 100.0 % | 9.8 % |
-| helixOf cost | 0.271 ms | 0.150 ms |
+| signature traits per creature (mean) | 0.00 | 2.43 |
+| creatures with no signature trait | 100.0 % | 10.0 % |
+| helixOf cost | 0.317 ms | 0.143 ms |
 
 ## Heredity (1200 families of wild parents, mid-parent vs child)
 
 - 123 parameters; median Pearson r = 0.401; 96 % of parameters with r > 0.2.
-- A child lands in the SAME extreme decile as an extreme mid-parent 57.7 % of the time (either extreme decile when the mid-parent is not extreme: 23.7 %).
+- A child lands in the SAME extreme decile as an extreme mid-parent 57.7 % of the time (either extreme decile when the mid-parent is not extreme: 23.8 %).
 
 ## Generations (random mating, 240 per generation)
 
 | gen | mean share20 | share of continuous params in the 0.70-0.90 band | distinct looks |
 |---|---|---|---|
-| 0 | 0.764 | 0.89 | 215 |
-| 1 | 0.771 | 0.879 | 213 |
+| 0 | 0.765 | 0.89 | 215 |
+| 1 | 0.772 | 0.879 | 213 |
 | 2 | 0.771 | 0.878 | 216 |
-| 3 | 0.763 | 0.878 | 211 |
+| 3 | 0.764 | 0.878 | 211 |
 | 4 | 0.765 | 0.878 | 215 |
 | 5 | 0.769 | 0.889 | 214 |
 | 6 | 0.774 | 0.9 | 212 |
@@ -132,7 +132,7 @@ Command: `deno task pareto --write` - 4000 wild Genemon (seeds 1000000..), calib
 | p7.fx.intensity | pareto | 0.619 | 1.580 | 1.041 | 1.043 | 0.796 (0.385) | 1.019 | 1.066 |
 | p7.fx.pulse | pareto | 0.000 | 0.975 | 0.011 | 0.048 | 0.837 (0.399) | 0.001 | 0.121 |
 | p7.fx.sparkle | pareto | 0.000 | 0.993 | 0.011 | 0.046 | 0.827 (0.381) | 0.001 | 0.109 |
-| p7.fx.trail | pareto | 0.005 | 0.971 | 0.400 | 0.403 | 0.795 (0.399) | 0.379 | 0.430 |
+| p7.fx.trail | pareto | 0.000 | 0.975 | 0.011 | 0.047 | 0.825 (0.399) | 0.001 | 0.117 |
 | p7.horns.branch | discrete | 0.000 | 3.000 | 0.000 | 0.068 | 1.000 (0.381) | 0.000 | 0.000 |
 | p7.horns.curl | gated-pareto | 0.000 | 1.474 | 0.011 | 0.061 | 0.825 (0.369) | 0.000 | 0.149 |
 | p7.horns.pairs | discrete | 0.000 | 3.000 | 1.000 | 0.854 | 0.933 (0.654) | 0.000 | 1.000 |

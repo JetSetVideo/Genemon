@@ -196,3 +196,35 @@ re-run in the parent after integration.
   in a crowded, bright frame). Home Ranked control: league toggle + start + tier + eligibility chips, no overlap.
 - Evolution distribution (lane, 20000 genomes): static 12.0 %, gradual 70.1 %, metamorphosis 9.0 %, molt 8.9 %;
   phases 1..6 = 12.0 / 18.9 / 36.9 / 21.5 / 8.1 / 2.6 %.
+
+## Pass 7 (2026-10-26): Pareto variety, heredity, operators, motion, effects - three lanes + orchestrator, re-measured here
+
+Lanes: geometry, motion, fx (`artifacts/p7/handoff-*.md`); the orchestrator owned the contract (`p7Types.ts`), the Pareto
+layer, the calibration, heredity and integration. Every number below re-run in the parent on the integrated tree.
+
+- Gates: `deno task check` clean; `deno lint` clean (207 files); `deno test`: **563 passed, 0 failed** (517 before).
+- `deno task pareto` (calibration 20000 wild, measurement 4000 disjoint seeds): continuous params in the 0.70-0.90 share20
+  band 0/101 -> 92/101 overall, 101/101 overall or inside every design class; median share20 0.415 -> 0.804; 21 integer
+  counts reported as discrete; silhouettes with pass-7 features 2756 (pass-6 choices alone 1307); signature traits per
+  creature 2.43, 10 % with none; helixOf 0.14 ms. Heredity (1200 families): median Pearson 0.40, 96 % of params r > 0.2;
+  extreme mid-parent -> same extreme decile 58 % (base 24 %). Generations 0..6: mean share20 0.755-0.768, stable.
+- `tests/pareto_test.ts` 10/10 incl. falsifiers (uniform and normal data fail the share20 metric; uncalibrated
+  expressions score < 0.6) and child-vs-stranger rank correlations 0.48-0.75 vs <= 0.10.
+- Balance A/B on scratch copies (pass 6 = 3207f3b vs integrated pass 7): scenarios 6/6 both (SC-06 56.7 -> 52.5 %);
+  13/13 elements in band both; big vs swarm 53/50/48 -> 54/51/48 %; archetypes no flags (held-out: Fast 46, Powerful 55,
+  Clever 51, Tank 55, Sensory 43, Swarm 50 %); colossus brackets 3 cells outside band (pass 6: 4): L10 poor 21 %,
+  L50 poor 42 %, L50 good 73 %.
+- Geometry (`tools/p7geo.ts 200`): low-tier triangles median 8104 -> 8256, max 11432 -> 11464; high 21200 -> 22248;
+  0 over cap, 0 non-finite; viability sweep 14/990 -> 0/990. Pass-6 defect found: pass-5 operator angles (0 / PI) were
+  lateral in the loft frame, so every lobe operator dug one flank; producer now emits PI/2 / -PI/2 and the consumer
+  mirror-pairs any off-axis lobe.
+- Real Chrome (`tools/p7showcase.ts` + `tools/p6shots.ts`, 11 real-seed creatures, 0 page errors): segment bands seen,
+  antler branches seen, flank spike rows seen only after moving them from +-0.62 to +-1.0 rad (the first capture read one
+  row), ridged crest seen only after raising the ridge lobe 0.08 -> 0.16 (back displacement 3.5 -> 6.4 % of height,
+  `tools/p7feat.ts`); vision counted 2 horns where 3 pairs are built and no curl - geometry adds +1448 / +840 tris, so
+  unresolved at this camera distance. The one gap over 4 % (`max-knobs`, chest maw 6.1 %) is the probe's 200-point
+  subsampling: all-vertex distance 0.34 %, 0.32 % with pass-7 genes off.
+- Motion (`tests/p7_motion_test.ts`): identity with pass 6 over 27000 frames; gene effects and bounds as in SPEC P7-M1.
+- FX (`tools/p7fx.ts`): fx gene shares 0.79-0.84; child vs mid-parent r 0.30-0.53; 4 real 3v3 battles: peak live glow
+  particles 57 -> 78 at most, flashes unchanged. `fxTrail` made one-sided after the lane found a typical creature's
+  trails 1.6x longer (median 0.40 -> 0.011).
