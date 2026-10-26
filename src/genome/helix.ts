@@ -1251,7 +1251,7 @@ export function describeP7(p: MorphP7): string[] {
   const r = p.relief, bits: string[] = [];
   if (r.ridges) bits.push(`${r.ridges} ridge${r.ridges > 1 ? "s" : ""}`);
   if (r.flutes) bits.push(`${r.flutes} flute${r.flutes > 1 ? "s" : ""}`);
-  if (r.segments) bits.push(`${r.segments} segment bands`);
+  if (r.segments) bits.push(`${r.segments} segment band${r.segments > 1 ? "s" : ""}`);
   if (r.knobs >= 0.2) bits.push(`knobs ${f2(r.knobs)}`);
   if (r.facets >= 0.2) bits.push(`facets ${f2(r.facets)}`);
   if (r.scallop >= 0.2) bits.push(`scallops ${f2(r.scallop)}`);
