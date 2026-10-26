@@ -5,6 +5,9 @@
  * record), character, statistics, attacks (the Q/W/E/R kit as move cards), associated objects (gear,
  * cosmetics, imprints), senses + resonance, digestion, scars and the evolution plan [P6-E1..E5]: kind, the
  * phases as a timeline (forms, unlocks, costs), the XP bar on the lineage's curve and the fertility window.
+ * Pass 7 [P7-D1]: "Form & genes" - the creature's SIGNATURE traits (its Pareto-extreme genes, and which owned
+ * parent carried the same signature), relief / horns / spikes / extra operators, motion and effects genes, and the
+ * full morph helix description.
  * Section titles sit on shaded bands, one shade per family (widgets.sec, CSS .ui5-f-*) [P5-U4].
  */
 import type { App } from "./app.ts";
@@ -21,6 +24,7 @@ import { barRow, elChip, sec, statBars, statsBlock } from "./widgets.ts";
 import { kitMoves, kitStrip } from "./moveCard.ts";
 import { iconChip, itemIcon } from "./icons.ts";
 import { cosmeticsOf, gearOf, takeOff, unequip } from "./bagStore.ts";
+import { describeHelix, helixOf } from "../genome/helix.ts";
 import { canRankOf, digestionFor, dietClassOf, fullnessOf, imprintsFor, lifePhaseOf, scarsFor, sensesFor } from "./lifeAdapter.ts";
 
 const NA = (what: string) => h("p", { class: "muted ui5-na" }, `${what}: not available yet.`);
@@ -45,6 +49,7 @@ const TOC: readonly { id: string; label: string }[] = [
   { id: "sh-digestion", label: "Digestion" },
   { id: "sh-scars", label: "Scars" },
   { id: "sh-evolution", label: "Evolution" },
+  { id: "sh-form", label: "Form & genes" },
 ];
 
 function elName(e: string): string {
@@ -298,6 +303,35 @@ function evolution(g: Genemon, ph: Phenotype): HTMLElement {
     h("details", { class: "ui5-more" }, h("summary", {}, "Life stages (egg → ancient)"), lifeStages(g)));
 }
 
+/** Pass 7: signature traits (with the parent that shares each), then the morph description. */
+function form(app: App, g: Genemon, ph: Phenotype): HTMLElement {
+  const hx = safe(() => helixOf(g.genome, ph));
+  if (!hx) return sec("evolution", "Form & genes", { id: "sh-form" }, NA("Morph genes"));
+  const lines = describeHelix(hx);
+  const sig = hx.p7?.signature ?? [];
+  const parents = parentsOf(app, g).filter((p) => p.g).map((p) => {
+    const pg = p.g!;
+    const ps = safe(() => helixOf(pg.genome, phenotypeOf(pg)).p7?.signature ?? []) ?? [];
+    return { name: pg.name, genes: new Map(ps.map((x) => [x.gene, x.rank])) };
+  });
+  const word = (gene: string) => gene.split("@")[0].replace(/^p[57]\./, "").replace(/^anim\./, "motion ");
+  const chips = sig.map((x) => {
+    const from = parents.filter((p) => {
+      const r = p.genes.get(x.gene);
+      return r !== undefined && (r >= 0.5) === (x.rank >= 0.5);
+    }).map((p) => p.name);
+    return h("span", { class: "chip", title: `population rank ${(x.rank * 100).toFixed(1)} %${from.length ? ` · also a signature of ${from.join(" and ")}` : ""}` },
+      `${x.rank >= 0.5 ? "▲" : "▼"} ${word(x.gene)}${from.length ? ` · from ${from.join(" & ")}` : ""}`);
+  });
+  const sigLine = lines.find((l) => l.startsWith("Signature:"));
+  const p7lines = lines.filter((l) => /^(Relief|Extra ops|Motion: follow|Effects):?/.test(l));
+  return sec("evolution", "Form & genes", { id: "sh-form" },
+    h("p", { class: "muted" }, "Most traits of a Genemon are typical; a few are extreme (the 80/20 rule). Its extreme traits are its signature, and heirs tend to inherit them."),
+    chips.length ? h("div", { class: "ui5-objs" }, ...chips) : h("p", { class: "muted" }, sigLine ?? "Signature: none"),
+    ...p7lines.map((l) => h("p", { class: "mono" }, l)),
+    h("details", { class: "ui5-more" }, h("summary", {}, "Full morph helix"), ...lines.filter((l) => l !== sigLine && !p7lines.includes(l)).map((l) => h("div", { class: "mono" }, l))));
+}
+
 /** The full profile page of one Genemon. */
 export function renderGenemonSheet(app: App, g: Genemon): HTMLElement {
   const ph = phenotypeOf(g);
@@ -311,5 +345,6 @@ export function renderGenemonSheet(app: App, g: Genemon): HTMLElement {
     senses(g),
     digestion(g),
     scars(g),
-    evolution(g, ph));
+    evolution(g, ph),
+    form(app, g, ph));
 }
